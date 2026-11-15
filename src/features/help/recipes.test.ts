@@ -66,13 +66,27 @@ describe('help recipes (docs/help/*.md)', () => {
     expect(searchRecipes(list, 'کوٹیشن')).toEqual([])
   })
 
-  it('groups recipes by the area of their first screen, in tab order', () => {
-    const list = [recipe('m', 'admin', 'screens: /money/gst-register, /orders\n'), recipe('t', 'sales', 'screens: /todo\n'), recipe('x', 'sales')]
-    expect(groupByArea(list).map(g => [g.area, g.recipes.map(r => r.id)])).toEqual([
-      ['To do', ['t']],
+  it("groups recipes by the area of their first screen, in the rail's order; the Jobs list is named as the role's rail names it", () => {
+    const list = [
+      recipe('m', 'admin', 'screens: /money/gst-register, /orders\n'),
+      recipe('t', 'sales', 'screens: /todo\n'),
+      recipe('o', 'sales', 'screens: /orders/12\n'),
+      recipe('j', 'sales', 'screens: /jobs\n'),
+      recipe('r', 'sales', 'screens: /rfqs/new\n'),
+      recipe('x', 'sales'),
+    ]
+    const office = [
+      ['Home', ['t']],
+      ['Sell and Deliver', ['o', 'j']],
+      ['RFQs', ['r']],
       ['Money', ['m']],
       ['Other', ['x']],
-    ])
+    ]
+    expect(groupByArea(list).map(g => [g.area, g.recipes.map(r => r.id)])).toEqual(office)
+    expect(groupByArea(list, 'sales').map(g => [g.area, g.recipes.map(r => r.id)])).toEqual(office)
+    expect(groupByArea(list, 'engineer').map(g => g.area)).toEqual(['Home', 'Jobs', 'RFQs', 'Money', 'Other'])
+    // "To do" was the old name of Home: no group carries it any more.
+    expect(groupByArea(allRecipes(), 'admin').map(g => g.area)).not.toContain('To do')
   })
 
   it('finds a recipe by id, or nothing', () => {

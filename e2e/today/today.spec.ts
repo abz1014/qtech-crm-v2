@@ -112,7 +112,7 @@ test.describe('Today: the 1-tap chase (sales)', () => {
     const s = await seedCustomerChase(SALES)
     await openAs(page, 'sales', '/todo')
     await showAllTodo(page)
-    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
 
     const row = rowOf(page, s.ref).filter({ hasText: 'Follow up with customer: questions open' })
     await expect(row).toBeVisible()
@@ -355,22 +355,59 @@ test.describe('Today: role-aware', () => {
   })
 })
 
-test.describe('To do: fits every width, with 44 px buttons', () => {
+/*
+ * The Forest size rule (src/index.css): with a mouse a control is 40 px (--control-h) from 768 up; below 768 a row button keeps the
+ * 44 px touch floor (--hit-touch) even under a mouse; on a touch screen (pointer: coarse) every control is 48 px.
+ */
+const ROW_BUTTONS = 'li[data-due] [data-row-actions] button, li[data-due] button[aria-label="Snooze"]'
+
+test.describe('Home: fits every width, with Forest-sized row buttons', () => {
   for (const [width, height] of [[1440, 900], [1366, 768], [1024, 768], [800, 1024], [375, 812], [320, 640]] as const) {
-    test(`at ${width} px nothing scrolls sideways and every row button is 44 px tall`, async ({ page }) => {
+    const [min, rule] = width >= 768 ? [40, 'the 40 px desktop control'] : [44, 'the 44 px touch floor']
+    test(`at ${width} px nothing scrolls sideways and every row button is at least ${min} px tall (${rule})`, async ({ page }) => {
       await seedOverdueOrder(ADMIN)
       await page.setViewportSize({ width, height })
       await openAs(page, 'admin', '/todo')
       await showAllTodo(page)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'the page scrolls sideways').toBe(true)
-      for (const b of await page.locator('li[data-due] [data-row-actions] button, li[data-due] button[aria-label="Snooze"]').all()) {
-        expect((await b.boundingBox())?.height ?? 0, 'a row button is shorter than 44 px').toBeGreaterThanOrEqual(43.5)
+      const buttons = await page.locator(ROW_BUTTONS).all()
+      expect(buttons.length, 'no row buttons were measured').toBeGreaterThan(0)
+      for (const b of buttons) {
+        expect((await b.boundingBox())?.height ?? 0, `a row button is shorter than ${rule}`).toBeGreaterThanOrEqual(min - 0.5)
+      }
+      // the Forest Home pictures for the lane hand-back (desktop and phone)
+      if (width === 1440 || width === 375) {
+        // every scrolled box back to its top (the list pane on a desktop, #main on a phone), so the picture starts at the hero
+        await page.evaluate(() => {
+          for (const el of Array.from(document.querySelectorAll<HTMLElement>('*'))) if (el.scrollTop > 0) el.scrollTop = 0
+          window.scrollTo(0, 0)
+        })
+        await review(page, `forest-home-admin-${width}`)
       }
       // the colour blocks: Late is red, Today yellow, This week blue, and an empty block is not drawn
       for (const block of await page.locator('section[data-block="late"], section[data-block="today"], section[data-block="week"]').all()) {
         expect(await block.locator('li[data-rule]').count()).toBeGreaterThan(0)
       }
     })
+  }
+})
+
+test('Home on a touch phone: every row button is 48 px tall (Forest touch control)', async ({ browser }, info) => {
+  await seedOverdueOrder(ADMIN)
+  const context = await browser.newContext({ ...info.project.use, viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
+  const page = await context.newPage()
+  try {
+    await openAs(page, 'admin', '/todo')
+    await showAllTodo(page)
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'the context is not a touch screen').toBe(true)
+    const buttons = await page.locator(ROW_BUTTONS).all()
+    expect(buttons.length, 'no row buttons were measured').toBeGreaterThan(0)
+    for (const b of buttons) expect((await b.boundingBox())?.height ?? 0, 'a row button is shorter than 48 px on touch').toBeGreaterThanOrEqual(47.5)
+    // F-826: Companies is not on the phone's bottom bar, so Home ends with it
+    await expect(page.locator('a[data-home-companies]')).toBeVisible()
+    await expect(page.locator('a[data-home-companies]')).toHaveAttribute('href', '/companies')
+  } finally {
+    await context.close()
   }
 })
 
@@ -420,7 +457,7 @@ test.describe('Today: accessibility and mobile', () => {
     const role: Role = 'engineer'
     await openAs(page, role, '/todo')
     await showAllTodo(page)
-    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
     expect(await violations(page), 'axe empty or populated').toEqual([])
   })
 })

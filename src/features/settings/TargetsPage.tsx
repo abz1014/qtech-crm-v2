@@ -33,7 +33,9 @@ import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
 import { Banner } from '@/ui/Banner'
+import { EmptyState } from '@/ui/EmptyState'
 import { Button } from '@/ui/Button'
+import { CARD } from '@/ui/card'
 import { InfoTip } from '@/ui/InfoTip'
 import { PageHeader } from '@/ui/PageHeader'
 import { Money } from '@/ui/Money'
@@ -46,7 +48,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
  * Settings › Targets (M06, admin only). People down the side, quarters across the top. A target is NET cash received (GST
  * left out). One tap on a cell opens it, the amount goes in, Enter saves: that is the whole edit. Under each target one line
  * says what was achieved against it and how far ahead of or behind pace, with a small bar (the tick is where on pace is), as
- * rupee figures straight from v_target_progress; a bare percentage is never shown. Each person sees only their own, on Today.
+ * rupee figures straight from v_target_progress; a bare percentage is never shown. Each person sees only their own, on Home.
  *
  * Audit 2026-10-22: the grid opens on this quarter and the next only ("Show earlier quarters" brings back a year of four), so
  * quarters already over are not a wall of empty boxes; "Copy last quarter" appears only when there is something to copy; an
@@ -146,12 +148,12 @@ export function TargetsPage() {
   const footerQuarter = mode === 'now' ? now.quarter : year === now.year ? now.quarter : null
 
   return (
-    <div className="grid content-start gap-4">
+    <div className="grid content-start gap-card-gap">
       <PageHeader
         title="Targets"
         lede={
           <>
-            Each person sees only their own target, on Today.{' '}
+            Each person sees only their own target, on Home.{' '}
             <InfoTip label="About targets">
               Per person, per quarter, in net cash received (GST left out). Achieved is net cash received and credited to the person in
               that quarter. On pace is the target spread evenly over the days of the quarter, counting today (the tick on the bar).
@@ -173,7 +175,7 @@ export function TargetsPage() {
         ) : null}
         <Button
           variant="quiet"
-          className="max-md:-ml-[13px] max-md:h-touch"
+          className="-ml-4 max-md:h-touch"
           onClick={() => {
             setMode(mode === 'now' ? 'year' : 'now')
             setYear(now.year)
@@ -201,34 +203,37 @@ export function TargetsPage() {
       ) : null}
 
       {failed ? (
-        <Banner tone="danger" title="Could not load targets" action={<Button size="sm" onClick={retry}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="Could not load targets" actions={<Button onClick={retry}>Try again</Button>}>
           {(targetsA.error ?? targetsB.error ?? team.error) instanceof Error ? ((targetsA.error ?? targetsB.error ?? team.error) as Error).message : 'Check your connection, then try again.'}
-        </Banner>
+        </EmptyState>
       ) : loading ? (
-        <div role="status" className="grid gap-px overflow-hidden rounded-panel border bg-line" aria-busy="true" aria-label="Loading targets">
+        <div role="status" className={cn(CARD, 'overflow-hidden')} aria-busy="true" aria-label="Loading targets">
           {[0, 1, 2].map(i => (
-            <div key={i} className="bg-surface p-4">
-              <Skeleton className="h-10 w-full" />
+            <div key={i} className="flex min-h-row-tall items-center gap-3 border-b px-4 py-3 last:border-b-0">
+              <Skeleton className="size-8 rounded-round" />
+              <Skeleton className="h-4 w-1/5" />
+              <Skeleton className="ml-auto h-control w-1/4" />
+              <Skeleton className="h-control w-1/4 max-md:hidden" />
             </div>
           ))}
         </div>
       ) : people.length === 0 ? (
-        <p className="rounded border px-6 py-10 text-center text-sm text-fg-muted">No one to set a target for yet. Add people on the Team screen.</p>
+        <p className={cn(CARD, 'px-card py-10 text-center text-base text-fg-muted')}>No one to set a target for yet. Add people on the Team screen.</p>
       ) : (
         <div
           role="table"
           aria-label={mode === 'now' ? 'Quarterly targets, this quarter and next' : `Quarterly targets for ${year}`}
-          className="overflow-hidden rounded-panel border bg-surface"
+          className={cn(CARD, 'overflow-hidden')}
         >
-          <div role="row" className={cn('grid border-b bg-sunken text-sm font-medium text-fg-muted max-md:sr-only', cols)}>
-            <div role="columnheader" className="px-4 py-2">
+          <div role="row" className={cn('grid border-b text-sm font-medium text-fg-muted max-md:sr-only', cols)}>
+            <div role="columnheader" className="px-4 py-3">
               Person
             </div>
             {quarters.map(q => {
               const current = q.year === now.year && q.quarter === now.quarter
               return (
-                <div key={`${q.year}-${q.quarter}`} role="columnheader" className="flex flex-wrap items-center gap-x-2 px-3 py-2">
-                  <span className="text-fg">{quarterLabel(q.year, q.quarter)}</span>
+                <div key={`${q.year}-${q.quarter}`} role="columnheader" className={cn('flex flex-wrap items-center gap-x-2 px-3 py-3', current && 'bg-selected')}>
+                  <span className="font-card text-fg">{quarterLabel(q.year, q.quarter)}</span>
                   <span>{quarterMonths(q.quarter)}</span>
                   {current ? <Tag>Now</Tag> : null}
                 </div>
@@ -240,7 +245,7 @@ export function TargetsPage() {
               <div role="rowheader" className="flex min-w-0 items-center gap-3 md:px-4 md:py-3">
                 <Avatar name={m.name} />
                 <span className="grid min-w-0">
-                  <span className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{m.name}</span>
+                  <span className="min-w-0 [overflow-wrap:anywhere] text-base font-card">{m.name}</span>
                   <span className="text-sm text-fg-muted">{roleLabel(m.role)}</span>
                 </span>
               </div>
@@ -291,7 +296,7 @@ function TargetCell({ member, q, target, progress, today, editing, onEdit, onClo
     <div
       role="cell"
       data-cell={`${member.id}:${quarter}`}
-      className={cn('grid content-start gap-1 max-md:pb-2 md:px-3 md:py-3', current && 'md:bg-selected/40', 'max-md:grid-cols-[4.5rem_minmax(0,1fr)] max-md:items-start')}
+      className={cn('grid content-start gap-1 max-md:pb-2 md:px-3 md:py-3', current && 'md:bg-selected', 'max-md:grid-cols-[4.5rem_minmax(0,1fr)] max-md:items-start')}
     >
       <span className="pt-3 text-sm font-medium text-fg-muted md:hidden" aria-hidden="true">
         {quarterLabel(year, quarter)}
@@ -304,7 +309,7 @@ function TargetCell({ member, q, target, progress, today, editing, onEdit, onClo
             type="button"
             onClick={onEdit}
             className={cn(
-              'flex h-control min-w-0 items-center justify-end rounded border px-3 text-sm max-md:h-touch',
+              'flex h-control min-w-0 items-center justify-end rounded-control border bg-surface px-3 text-sm transition-colors duration-fast max-md:h-touch',
               target ? 'border-line-input hover:bg-sunken' : 'border-dashed border-line-input text-fg-muted hover:bg-sunken',
             )}
           >
@@ -348,6 +353,8 @@ function Progress({ p, target, year, quarter }: { p: ReturnType<typeof cellProgr
         total={amount}
         marker={amount > 0 ? Math.min(100, Math.max(0, (p.onPace / amount) * 100)) : undefined}
         label={`Achieved ${p.achieved} of ${amount}, on pace ${p.onPace}`}
+        // the current quarter's column is tinted with the track's own colour: a white track keeps the bar visible on it
+        className="bg-surface"
       />
       {p.excluded > 0 ? (
         <p className="text-right text-sm text-fg-muted">

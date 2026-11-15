@@ -215,7 +215,7 @@ test.describe('R25 supplier prices on the RFQ page: listed by name, nothing mark
     // grade-B C3: the price starts on its own line below the name, at the row's left edge, so the name keeps the row's full width.
     const box = async (sel: string) => (await first.locator(sel).first().boundingBox())!
     const name = await first.getByText(s.bravo.name, { exact: true }).boundingBox()
-    const price = await box('.num')
+    const price = await box('[data-price]')
     expect(price.y).toBeGreaterThan(name!.y + name!.height - 1)
     expect(Math.abs(price.x - name!.x)).toBeLessThan(40)
     await first.getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
@@ -334,6 +334,7 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
       dt.setData('text/plain', t)
       document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
     }, `Please quote:\n1) ${desc} - 1 no\nRegards`)
+    await page.getByRole('checkbox', { name: /Ask suppliers now/ }).check() // New RFQ creates the job unless asking is ticked (gate 2)
     await page.getByRole('button', { name: 'Looks right: find suppliers' }).click()
     const row = page.locator('li', { has: page.getByRole('checkbox', { name: supplier.name }) })
     await expect(row).toBeVisible()
@@ -399,6 +400,7 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
         dt.setData('text/plain', t)
         document.body.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }))
       }, `Please quote:\n1) ${desc} - 1 no\nRegards`)
+      await p.getByRole('checkbox', { name: /Ask suppliers now/ }).check() // New RFQ creates the job unless asking is ticked (gate 2)
       await p.getByRole('button', { name: 'Looks right: find suppliers' }).click()
       await expect(p.getByRole('checkbox', { name: replied.name })).toBeVisible()
     }

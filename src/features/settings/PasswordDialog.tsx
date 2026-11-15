@@ -81,8 +81,8 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
           <Avatar name={person.name} size="lg" />
           <div className="grid min-w-0">
             <span className="min-w-0 [overflow-wrap:anywhere] font-medium text-fg">{person.name}</span>
-            <span className="flex min-w-0 gap-2 text-xs text-fg-muted">
-              <span className="num truncate">{person.email}</span>
+            <span className="flex min-w-0 flex-wrap gap-x-2 text-sm text-fg-muted">
+              <span className="num min-w-0 [overflow-wrap:anywhere]">{person.email}</span>
               <span>{roleLabel(person.role)}</span>
             </span>
           </div>
@@ -91,7 +91,8 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
         <div
           data-copied={copy === 'copied' || undefined}
           className={cn(
-            'grid gap-2 rounded-row border px-4 py-3 transition-colors duration-fast ease-out',
+            // mockup 76 .tm-secret: a 2 px dashed box on the canvas until copied, then solid in the done tone
+            'grid min-w-0 gap-2 rounded-control border-2 px-4 py-3 transition-colors duration-fast ease-out',
             copy === 'copied' ? 'border-solid border-tone-success-fg bg-tone-success-bg' : 'border-dashed border-line-input bg-sunken',
           )}
         >
@@ -99,10 +100,10 @@ export function PasswordDialog({ kind, person, password, onClose }: SecretDialog
             <Icon icon={KeyRound} size="sm" />
             {kind === 'created' ? 'Password' : 'New password'}
           </span>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
             <p
               data-testid="generated-password"
-              className="num flex min-w-0 flex-wrap gap-x-3 text-lg font-medium tracking-normal text-fg"
+              className="num flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-lg font-bold tracking-normal text-fg"
             >
               {/* Grouped for reading aloud. Selecting or copying gives the raw password with no separators. */}
               {passwordGroups(password).map((g, i) => (

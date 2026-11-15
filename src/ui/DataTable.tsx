@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Download, RefreshCw } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
@@ -15,6 +15,7 @@ import { TruncateTip } from '@/ui/Tooltip'
 import { useTableDensity } from '@/ui/useTableDensity'
 import { downloadCSV, generateCSV } from '@/lib/csvExport'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { SLOW_LOAD_TEXT, useSlowLoad } from '@/lib/useSlowLoad'
 import { paisaToFixed } from '@/lib/money'
 import {
   columnShowsPaisa,
@@ -135,6 +136,19 @@ export interface DataTableProps<T> {
   /** Below 640px, draw each row as a stacked card with this content instead of columns. */
   mobileRow?: (row: T) => ReactNode
   /**
+   * Cards only: each row is its own Forest card (rounded, edged, raised), a 12 px gap between them, pressed in on a tap, and the table's
+   * frame steps back while there are rows to show (loading, empty and error keep it). The toolbar is then its own card above them.
+   * Without it the cards are rows of the one card, a hairline between them.
+   */
+  cardsApart?: boolean
+  /**
+   * Cards when the table's own box is narrower than this many rem (a list in a pane beside another list), not only under 640 px
+   * wide windows. Measured on the table's box, so the switch follows the room the table really has.
+   */
+  cardsBelow?: number
+  /** What a tap (or Enter) on a card does, when it is not what opening a row does on the full table (Team: the person's actions sheet). */
+  onCardOpen?: (row: T) => void
+  /**
    * Phone cards only, with `group`: the header of a group (a month) as a phone card, given the group's key and its rows. Sum the rows
    * in paisa here (the same rows the table draws) so a subtotal never disagrees with them. Absent: the group's plain label.
    */
@@ -144,8 +158,27 @@ export interface DataTableProps<T> {
    * tap opens it (`onRowOpen`) as before. Enter does what a tap does. Absent: every tap opens the row.
    */
   mobileExpand?: (row: T) => ReactNode | null
+  /**
+   * Forest list pages (20-sell, 40-deliver, 70-companies): the toolbar is its own white card above the table's card, a card gap
+   * between them, instead of a band inside one card.
+   */
+  toolbarCard?: boolean
+  /**
+   * A table that sits straight on a card it is part of (the Order stop's items, mockup 41): no edge, corner, shadow or white of its
+   * own, the toolbar a plain line over the table instead of a band, the first and last columns flush with the card's words, and the
+   * total row a rule rather than a grey band. Not with `toolbarCard`.
+   */
+  flat?: boolean
   className?: string
 }
+
+/** `flat`: the table's own frame taken away (see the prop). The selectors reach the cells the table draws for the default frame. */
+const FLAT_LOOK = cn(
+  'group/dt relative min-w-0 overflow-visible',
+  '[&_td:first-child]:pl-0 [&_th:first-child]:pl-0 [&_td:last-child]:pr-0 [&_th:last-child]:pr-0',
+  '[&_tr[data-row-kind=foot]]:bg-transparent [&_tr[data-row-kind=foot]_td]:border-t-2 [&_tr[data-row-kind=foot]_td]:border-t-fg [&_tr[data-row-kind=foot]_td]:font-semibold',
+  '[&_tr[data-card]]:px-0 [&_td[role=cell]]:px-0',
+)
 
 export function DataTable<T>(props: DataTableProps<T>) {
   return props.sortParam && props.sort === undefined ? <AddressSortTable {...props} sortParam={props.sortParam} /> : <TableView {...props} />
@@ -182,7 +215,10 @@ function TableView<T>(props: DataTableProps<T>) {
     label,
     selection,
     activeRowId,
-    onRowOpen,
+    onRowOpen: onRowOpenProp,
+    onCardOpen,
+    cardsApart = false,
+    cardsBelow,
     group,
     groupStyle,
     columnBands,
@@ -190,6 +226,8 @@ function TableView<T>(props: DataTableProps<T>) {
     noun,
     total,
     toolbar,
+    toolbarCard = false,
+    flat = false,
     exportCsv,
     loading,
     error,
@@ -203,14 +241,17 @@ function TableView<T>(props: DataTableProps<T>) {
     className,
   } = props
   const phone = useMediaQuery('(max-width: 639px)')
-  const cards = !!mobileRow && phone
   const rootRef = useRef<HTMLDivElement>(null)
+  const narrowBox = useBoxNarrowerThan(rootRef, mobileRow ? cardsBelow : undefined)
+  const cards = !!mobileRow && (phone || narrowBox)
+  const onRowOpen = cards && onCardOpen ? onCardOpen : onRowOpenProp
   const [savedDensity, setDensity] = useTableDensity(label, props.density ?? 'comfortable')
   const densityOn = (props.densitySwitch ?? false) && !cards
   const density = densityOn ? savedDensity : (props.density ?? 'comfortable')
   const hasError = !!error
   const errorAt = useMemo(() => (hasError ? new Date() : null), [hasError])
   const what = noun ?? label.toLowerCase()
+  const slow = useSlowLoad(!!loading)
 
   // ---- sort ---------------------------------------------------------------
   const [innerSort, setInnerSort] = useState<SortState | null>(props.defaultSort ?? null)
@@ -287,6 +328,27 @@ function TableView<T>(props: DataTableProps<T>) {
     ro.observe(table)
     return () => ro.disconnect()
   }, [virtual])
+  // A table wider than its card scrolls sideways; the cut edge fades so it never reads as clipped (audit 2: To collect and Overdue
+  // by age at 768 looked cut off).
+  const [cut, setCut] = useState<{ start: boolean; end: boolean }>({ start: false, end: false })
+  const readCut = (el: HTMLElement) => {
+    const start = el.scrollLeft > 1
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+    setCut(prev => (prev.start === start && prev.end === end ? prev : { start, end }))
+  }
+  useLayoutEffect(() => {
+    const box = scrollRef.current
+    if (!box || virtual) return
+    if (!fit.wide) return setCut(prev => (prev.start || prev.end ? { start: false, end: false } : prev))
+    readCut(box)
+  }, [fit.wide, fit.width, virtual])
+  const cutMask =
+    fit.wide && (cut.start || cut.end)
+      ? (() => {
+          const g = `linear-gradient(to right, ${cut.start ? 'transparent, #000 2.5rem' : '#000'}, ${cut.end ? '#000 calc(100% - 2.5rem), transparent' : '#000'})`
+          return { maskImage: g, WebkitMaskImage: g }
+        })()
+      : undefined
   const [scrollTop, setScrollTop] = useState(0)
   const [viewH, setViewH] = useState(600)
   useLayoutEffect(() => {
@@ -326,6 +388,8 @@ function TableView<T>(props: DataTableProps<T>) {
   const pendingFocus = useRef(false)
   const bodyRef = useRef<HTMLTableSectionElement>(null)
   const safeFocus = Math.min(focusDi, Math.max(0, dataRows.length - 1))
+  // cardsApart, with cards to show: each row its own card and the table's frame stepped back.
+  const apart = cards && cardsApart && !loading && !error && dataRows.length > 0
 
   useLayoutEffect(() => {
     if (!pendingFocus.current) return
@@ -474,6 +538,30 @@ function TableView<T>(props: DataTableProps<T>) {
   // ---- totals -------------------------------------------------------------
   const hasTotals = columns.some(c => c.total)
   const firstTotal = columns.findIndex(c => c.total)
+  // A group or footer label spans the columns before the first total. Columns hidden at this width (hideBelowMd, hideClass ...)
+  // are no cells at all, so a colSpan that counted them would reach into the totals and push every subtotal one column right
+  // (audit 2): the span counts only the header cells that are drawn now, read again whenever the window is resized.
+  const leadCols = firstTotal < 0 ? columns.length : firstTotal
+  const hasSelection = !!selection
+  const [shownLead, setShownLead] = useState(leadCols)
+  useLayoutEffect(() => {
+    const table = tableRef.current
+    if (!table || leadCols === 0) return setShownLead(leadCols)
+    const offset = hasSelection ? 1 : 0
+    const measure = () => {
+      const row = table.tHead?.rows[table.tHead.rows.length - 1]
+      if (!row) return setShownLead(leadCols)
+      let n = 0
+      for (let i = 0; i < leadCols; i++) {
+        const th = row.cells[i + offset]
+        if (th && getComputedStyle(th).display !== 'none') n++
+      }
+      setShownLead(Math.max(1, n))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [columns, leadCols, hasSelection])
   const renderTotal = useCallback(
     (col: Column<T>, list: readonly T[]): ReactNode => {
       if (!col.total) return null
@@ -507,7 +595,7 @@ function TableView<T>(props: DataTableProps<T>) {
   const alignRight = (c: Column<T>) => (c.align ?? (c.kind === 'money' || c.kind === 'num' ? 'right' : 'left')) === 'right'
   const monoCell = (c: Column<T>) => c.kind === 'money' || c.kind === 'num' || c.kind === 'date'
   // A cell is one line, except text that asks to break anywhere ([overflow-wrap:anywhere]): that is meant to wrap, and nowrap would make it run out of the cell.
-  const cellBase = 'h-row whitespace-nowrap [&_[class*=overflow-wrap]]:whitespace-normal border-b border-line px-[var(--cell-px)] py-[6px] first:pl-5 last:pr-5'
+  const cellBase = 'h-row whitespace-nowrap [&_[class*=overflow-wrap]]:whitespace-normal border-b border-line px-[var(--cell-px)] py-[6px] font-medium first:pl-5 last:pr-5'
   const hide = (c: Column<T>) => (c.hideClass ?? (c.hideBelowLg ? 'hidden lg:table-cell' : c.hideBelowMd ? 'hidden md:table-cell' : ''))
 
   const toolbarNode = typeof toolbar === 'function' ? toolbar({ selectedCount }) : toolbar
@@ -518,13 +606,14 @@ function TableView<T>(props: DataTableProps<T>) {
   }
 
   // The U07 Checkbox, drawn without a visible label (the aria-label names it). The padded wrapper keeps a 44px touch target.
+  // A div, not a span: the Checkbox draws a div (block content inside a span is invalid HTML, audit 1 minor 24).
   const checkbox = (checked: boolean | 'indeterminate', onChange: (shift: boolean) => void, aria: string) => (
-    <span className="-m-3 flex p-3">
+    <div className="-m-3 flex p-3">
       <Checkbox aria-label={aria} checked={checked} onClick={e => onChange(e.shiftKey)} />
-    </span>
+    </div>
   )
 
-  const labelCols = firstTotal < 0 ? columns.length : firstTotal
+  const labelCols = leadCols
   const summaryRow = (kind: 'group' | 'foot', labelNode: ReactNode, list: readonly T[], key: string, groupIds?: string[], groupKey?: string) =>
     cards && kind === 'group' && mobileGroup && groupKey !== undefined ? (
       <tr key={key} role="row" data-row-kind="group" className="block bg-canvas">
@@ -563,8 +652,9 @@ function TableView<T>(props: DataTableProps<T>) {
         </td>
       ) : null}
       <td
-        colSpan={labelCols}
-        className={cn('h-[2.25rem] whitespace-nowrap border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
+        colSpan={shownLead}
+        // A long group or footer label wraps inside its cells instead of running past them (a windowed table keeps one line: its rows have fixed heights).
+        className={cn('h-[2.25rem] border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', virtual ? 'whitespace-nowrap' : 'py-2 [overflow-wrap:anywhere]', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
       >
         {labelNode}
       </td>
@@ -628,14 +718,17 @@ function TableView<T>(props: DataTableProps<T>) {
             else if (onRowOpen) openRow(row)
           }}
           className={cn(
-            'relative block border-b border-line transition-colors focus-visible:bg-sunken focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
+            'relative block transition-colors focus-visible:bg-sunken focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
+            apart
+              ? 'overflow-clip rounded-card border bg-surface shadow-e1 transition-transform duration-fast ease-out active:scale-press'
+              : 'border-b border-line',
             (onRowOpen || expandable) && 'cursor-pointer',
             ticked || active ? 'bg-selected' : 'active:bg-sunken',
             active && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
           )}
         >
-          <td role="cell" className="flex min-h-[44px] items-start gap-3 px-4 py-3">
-            {selection ? <span className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
+          <td role="cell" className={cn('flex min-h-touch gap-3 px-4', apart ? 'min-h-row-tall items-center py-2' : 'items-start py-3')}>
+            {selection ? <div className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</div> : null}
             <div className="min-w-0 flex-1">
               {mobileRow(row)}
               {isOpen ? (
@@ -676,18 +769,20 @@ function TableView<T>(props: DataTableProps<T>) {
         {columns.map((c, ci) => (
           <td
             key={c.id}
-            style={c.width !== undefined ? { maxWidth: c.width } : undefined}
+            style={cuts(c) ? { maxWidth: c.width } : undefined}
             className={cn(
               cellBase,
               'relative',
-              c.width !== undefined && 'truncate',
+              cuts(c) && 'truncate',
+              // a column of row actions keeps its buttons on one line at its width
+              c.width !== undefined && c.hiddenHeader && 'whitespace-nowrap',
               alignRight(c) && 'text-right',
               monoCell(c) && 'num',
               hide(c),
               active && !selection && ci === 0 && 'before:absolute before:inset-y-0 before:left-0 before:w-[3px] before:bg-brand-green',
             )}
           >
-            {c.width !== undefined ? <TruncateTip style={{ maxWidth: c.width }}>{renderCell(c, row)}</TruncateTip> : renderCell(c, row)}
+            {cuts(c) ? <TruncateTip style={{ maxWidth: c.width }}>{renderCell(c, row)}</TruncateTip> : renderCell(c, row)}
           </td>
         ))}
       </tr>
@@ -714,7 +809,7 @@ function TableView<T>(props: DataTableProps<T>) {
             <EmptyState
               mood="error"
               title={error.title ?? `${what} could not be loaded`}
-              actions={error.onRetry ? <Button variant="primary" icon={RefreshCw} onClick={error.onRetry}>Try again</Button> : undefined}
+              actions={error.onRetry ? <Button onClick={error.onRetry}>Try again</Button> : undefined}
               meta={
                 <>
                   {`Request failed · ${formatStamp(error.at ?? errorAt ?? new Date())}`}
@@ -736,7 +831,7 @@ function TableView<T>(props: DataTableProps<T>) {
     if (loading && cards)
       return Array.from({ length: 4 }, (_, r) => (
         <tr key={r} role="row" aria-hidden="true" className="block border-b border-line">
-          <td role="cell" className="grid min-h-[44px] gap-2 px-4 py-3">
+          <td role="cell" className="grid min-h-touch gap-2 px-4 py-3">
             <Skeleton style={{ width: `${[60, 75, 50, 68][r % 4]}%` }} />
             <Skeleton style={{ width: '40%' }} />
           </td>
@@ -756,7 +851,7 @@ function TableView<T>(props: DataTableProps<T>) {
     if (items.length === 0)
       return (
         <tr>
-          <td colSpan={colCount}>{pinned(empty)}</td>
+          <td colSpan={colCount} className={cn(flat && 'pt-4')}>{pinned(empty)}</td>
         </tr>
       )
     const slice = items.slice(first, last)
@@ -802,21 +897,29 @@ function TableView<T>(props: DataTableProps<T>) {
   }, [countText, firstCount])
   const announced = firstCount !== null && countText !== firstCount ? countText : ''
 
+  // toolbarCard: the table and its foot are their own card under the toolbar's (overflow clip rounds it, as the one card does).
+  // cardsApart: while there are cards to show, the frame steps back and the toolbar is its own card (as with toolbarCard).
+  const ownToolbar = toolbarCard || (cardsApart && !!mobileRow)
+  const framed = (node: ReactNode) =>
+    ownToolbar ? <div className={cn('relative min-w-0', apart ? 'grid' : 'overflow-clip rounded-card border bg-surface shadow-e1')}>{node}</div> : node
+
   return (
     <div
       ref={rootRef}
       data-table-root
       data-density={density === 'compact' ? 'compact' : undefined}
       // overflow: clip, not hidden: it rounds the corners without making a scroll box, so the sticky header follows #main.
-      className={cn('group/dt relative min-w-0 overflow-clip rounded-panel border bg-surface', className)}
+      data-table-flat={flat || undefined}
+      data-cards-apart={apart || undefined}
+      className={cn(flat ? FLAT_LOOK : ownToolbar ? 'group/dt relative grid min-w-0 grid-cols-[minmax(0,1fr)] gap-card-gap' : 'group/dt relative min-w-0 overflow-clip rounded-card border bg-surface shadow-e1', className)}
     >
       <p aria-live="polite" aria-atomic="true" className="sr-only" data-table-count>
         {announced}
       </p>
       {toolbarNode || exportCsv ? (
-        <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
-          {loading ? <span className="text-xs text-fg-muted">{`Loading ${what}`}</span> : null}
+        <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : ownToolbar ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
+          {/* The toolbar's own controls take a whole row on a phone, so the loading line (or Export) goes under them instead of squeezing them (audit 2: Invoices at 375). */}
+          <div className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-3', toolbarNode && 'max-sm:basis-full')}>{toolbarNode}</div>
           {densityOn ? (
             <SegmentedControl
               aria-label="Density"
@@ -836,12 +939,14 @@ function TableView<T>(props: DataTableProps<T>) {
         </div>
       ) : null}
 
+      {framed(
+      <>
       <div
         ref={scrollRef}
         data-virtual={virtual ? '' : undefined}
-        onScroll={virtual ? e => setScrollTop(e.currentTarget.scrollTop) : undefined}
+        onScroll={virtual ? e => setScrollTop(e.currentTarget.scrollTop) : fit.wide ? e => readCut(e.currentTarget) : undefined}
         className={virtual ? 'overflow-auto' : fit.wide ? 'overflow-x-auto' : undefined}
-        style={virtual ? { maxHeight } : undefined}
+        style={virtual ? { maxHeight } : cutMask}
       >
         <table
           ref={tableRef}
@@ -880,7 +985,7 @@ function TableView<T>(props: DataTableProps<T>) {
             ) : null}
             <tr aria-rowindex={virtual ? 1 : undefined}>
               {selection ? (
-                <th className="sticky top-0 z-[1] h-head w-10 border-b-2 border-fg bg-surface px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
+                <th className="sticky top-0 z-base h-head w-10 border-b-2 border-fg bg-surface px-[var(--cell-px)] first:pl-5 last:pr-5 [&_button]:mt-0">
                   {checkbox(headState, () => setMany(ids, !allOn), 'Select all rows')}
                 </th>
               ) : null}
@@ -894,9 +999,9 @@ function TableView<T>(props: DataTableProps<T>) {
                     aria-sort={dir === 'asc' ? 'ascending' : dir === 'desc' ? 'descending' : sortable ? 'none' : undefined}
                     style={c.width !== undefined ? { width: c.width } : undefined}
                     className={cn(
-                      'group sticky top-0 z-[1] h-head whitespace-nowrap border-b-2 border-fg bg-surface px-[var(--cell-px)] text-xs font-semibold first:pl-5 last:pr-5',
+                      'group sticky top-0 z-base h-head whitespace-nowrap border-b-2 border-fg bg-surface px-[var(--cell-px)] text-xs font-card first:pl-5 last:pr-5',
                       alignRight(c) ? 'text-right' : 'text-left',
-                      dir ? 'text-fg' : 'text-fg-2',
+                      dir ? 'text-fg' : 'text-fg-muted',
                       hide(c),
                     )}
                   >
@@ -904,7 +1009,7 @@ function TableView<T>(props: DataTableProps<T>) {
                       <button
                         type="button"
                         onClick={() => cycleSort(c.id)}
-                        className={cn('-mx-1 inline-flex h-6 items-center gap-1 rounded px-1 hover:bg-selected hover:text-fg', alignRight(c) && 'flex-row-reverse')}
+                        className={cn('-mx-1 inline-flex h-6 items-center gap-1 rounded-control px-1 hover:bg-selected hover:text-fg', alignRight(c) && 'flex-row-reverse')}
                       >
                         {c.header}
                         <Icon
@@ -923,7 +1028,7 @@ function TableView<T>(props: DataTableProps<T>) {
               })}
             </tr>
           </thead>
-          <tbody ref={bodyRef} data-row-actions="" role={cards ? 'rowgroup' : undefined} className={cn(cards && 'block')}>
+          <tbody ref={bodyRef} data-row-actions="" role={cards ? 'rowgroup' : undefined} className={cn(cards && (apart ? 'grid gap-3' : 'block'))}>
             {body}
           </tbody>
           {showFoot ? <tfoot>{summaryRow('foot', footerLabel ?? 'Total', dataRows, 'foot')}</tfoot> : null}
@@ -933,17 +1038,25 @@ function TableView<T>(props: DataTableProps<T>) {
       {shown || loading ? (
         // The band's height never depends on focus. A band that appeared while focus was in the table moved the page by its height
         // when focus left, and a click on a control beside the table (Copy and mark reminded) lost its mouseup to that jump.
-        <div className="flex min-h-10 items-center justify-between gap-3 border-t bg-surface px-4 py-2 text-xs text-fg-muted">
-          {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
+        // The toolbar, this band and the first and last cells share one inset (20 px; flush in a flat table), so the words line up down the card.
+        <div className={cn('flex min-h-10 items-center justify-between gap-3 py-2 text-xs text-fg-muted', apart ? 'mt-3 px-1' : 'border-t', !apart && (flat ? 'px-0' : 'bg-surface px-5'))}>
+          {/* the loading line sits where the count will be, under the rows (audit 2: in the toolbar it floated beside the controls) */}
+          {loading && !shown ? (
+            <span data-slow={slow || undefined}>{slow ? SLOW_LOAD_TEXT : `Loading ${what}`}</span>
+          ) : (
+            <span>{shown}</span>
+          )}
           {hintsNode}
         </div>
       ) : hints ? (
         // No summary to show: the legend takes no room of its own (a band that held only an invisible legend was a blank strip under
         // the card). It floats over the card's bottom-right corner while focus is inside the table, and never takes a click.
-        <div className="pointer-events-none absolute bottom-2 right-4 z-[2] rounded border bg-surface px-3 py-1 text-xs text-fg-muted shadow-sm max-sm:hidden invisible group-focus-within/dt:visible">
+        <div className="pointer-events-none absolute bottom-2 right-4 z-sticky rounded-control border bg-surface px-3 py-1 text-xs text-fg-muted shadow-e1 max-sm:hidden invisible group-focus-within/dt:visible">
           {hintsNode}
         </div>
       ) : null}
+      </>,
+      )}
     </div>
   )
 }
@@ -990,4 +1103,32 @@ function useRowMetrics(rootRef: RefObject<HTMLDivElement>, density: Density, vir
   }, [read])
   const remeasure = useCallback(() => read(false), [read])
   return [m, remeasure]
+}
+
+/** A fixed-width column cuts its text, except a column of row actions (hidden header) or one marked `truncate: false`. */
+function cuts<T>(c: Column<T>): boolean {
+  return c.width !== undefined && c.truncate !== false && !c.hiddenHeader
+}
+
+/** True while `ref`'s box is narrower than `rem` (undefined: never). Measured with a ResizeObserver; 0 wide (not laid out) is not narrow. */
+function useBoxNarrowerThan(ref: RefObject<HTMLElement>, rem: number | undefined): boolean {
+  const [narrow, setNarrow] = useState(false)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || rem === undefined) {
+      setNarrow(false)
+      return
+    }
+    const measure = () => {
+      const unit = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+      const next = el.clientWidth > 0 && el.clientWidth < rem * unit
+      setNarrow(prev => (prev === next ? prev : next))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [ref, rem])
+  return narrow
 }

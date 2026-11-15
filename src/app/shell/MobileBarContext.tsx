@@ -1,4 +1,5 @@
 import { createContext, useContext, useLayoutEffect, type ReactNode } from 'react'
+import type { Lane } from '@/app/navConfig'
 
 /*
  * Phone bar configuration (A-82; UX audit 2026-10-19 "phone detail pages use one header bar with back"). By default the
@@ -32,6 +33,11 @@ export interface MobileBarConfig {
   action?: ReactNode
   /** Hide the bottom tab bar while this screen is open: for a page with its own sticky action bar at the bottom. */
   hideTabs?: boolean
+  /**
+   * The lane this page belongs to (a job's page: laneOfJob), so the rail and the bar light Sell or Deliver for a job opened without
+   * ?from= (from Home, Search, a link). Read at every width, not only below 768.
+   */
+  lane?: Lane
 }
 
 export type SetBar = (config: MobileBarConfig | null) => void

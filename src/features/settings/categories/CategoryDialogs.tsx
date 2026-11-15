@@ -78,7 +78,7 @@ function FormDialog({ title, context, icon, tone, busy, error, submit, busyLabel
         size="sm"
         footer={
           <>
-            <Button data-cancel variant="quiet" disabled={busy} onClick={onClose}>
+            <Button data-cancel disabled={busy} onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" form={formId} variant={danger ? 'danger' : 'primary'} busy={busy} busyLabel={busyLabel} disabled={disabled}>

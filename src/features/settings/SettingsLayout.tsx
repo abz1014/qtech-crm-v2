@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -6,11 +6,13 @@ import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { VersionLabel } from '@/app/shell/VersionLabel'
 import { InstallBanner } from '@/features/settings/InstallBanner'
 import { canOpenSettingsLink, SETTINGS_GROUPS } from '@/features/settings/settingsLinks'
+import { CARD } from '@/ui/card'
 import { Icon } from '@/ui/Icon'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { NoPrimary } from '@/ui/NoPrimary'
+import { useScrollFade } from '@/ui/useScrollFade'
 
 // The Settings home (its rates table, DataTable and the RFQ rate queries) is a lazy chunk: none of it is on the first screen (perf/trim).
 const SettingsHomePage = lazyWithReload(() => import('@/features/settings/SettingsHomePage').then(m => ({ default: m.SettingsHomePage })))
@@ -41,42 +43,47 @@ export function SettingsLayout() {
   const atHome = pathname.replace(/\/+$/, '') === '/settings'
   const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => canOpenSettingsLink(l, role)) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
+  const tablet = useMediaQuery('(min-width: 768px) and (max-width: 1279.98px)')
   return (
-    <div className="grid min-h-full grid-cols-[minmax(0,1fr)] max-md:grid-rows-[auto_minmax(0,1fr)] md:grid-cols-[304px_minmax(0,1fr)]">
+    <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-card-gap px-4 pb-12 pt-4 xl:grid-cols-[20rem_minmax(0,1fr)] md:px-8 md:pt-6">
       <NoPrimary />
       {/* Team sets its own phone bar; every other page under Settings gets the back arrow to the list. */}
       {!atHome && current && current.to !== '/settings/team' ? <BackToSettings title={current.label} /> : null}
-      <nav aria-label="Settings" className={cn('bg-surface px-4 py-3 md:border-r md:px-3 md:py-6', atHome ? 'max-md:border-b' : 'max-md:hidden')}>
-        <p className="mb-2 hidden px-3 text-base font-semibold text-fg-muted md:block">Settings</p>
+      {/*
+        * Mockup 75: the list is a Forest card on the canvas, beside the page from 1280. On a tablet or a small laptop (768 to 1279) the
+        * page needs the width (beside the list it had 288 px at 768), and the whole list above it pushed the page below the fold (audit 2):
+        * there the sections are one underlined strip, as the Money tabs are, the page right under it.
+        */}
+      {tablet ? <SettingsStrip links={groups.flatMap(g => g.links)} pathname={pathname} /> : null}
+      <nav aria-label="Settings" className={cn(CARD, 'min-w-0 self-start px-3 py-3 md:py-4', !atHome && 'max-md:hidden', tablet && 'hidden')}>
+        <p className="hidden px-3 pb-1 type-section md:block">Settings</p>
         {groups.map(g =>
           g.links.length ? (
-            <div key={g.title} className="mb-3 grid gap-[2px]">
-              <p className="px-3 pb-1 pt-2 text-base font-medium text-fg-muted">{g.title}</p>
-              <ul className="grid min-w-0 gap-[2px]">
+            <div key={g.title} className="grid gap-px pb-2">
+              <p className="px-3 pb-1 pt-2 text-sm font-medium text-fg-muted">{g.title}</p>
+              <ul className="grid min-w-0 gap-px md:max-xl:grid-cols-2 md:max-xl:gap-x-2">
                 {g.links.map(l => (
                   <li key={l.to} className="min-w-0">
                     <NavLink
                       to={l.to}
                       className={({ isActive }) =>
                         cn(
-                          'relative flex h-control min-w-0 items-center gap-2 whitespace-nowrap rounded px-3 text-base font-medium max-md:h-touch max-md:text-base',
-                          isActive ? 'bg-selected text-fg' : 'text-fg-2 hover:bg-sunken hover:text-fg',
+                          // a long name (Larger text, or a "View only" tag beside it at 320) wraps to a second line; it is never cut
+                          'flex min-h-control min-w-0 items-center gap-2 rounded-control px-3 py-1 text-base font-medium leading-tight transition-colors duration-fast max-md:min-h-touch max-md:py-2',
+                          isActive ? 'bg-brand-100 font-card text-primary' : 'text-fg hover:bg-sunken',
                         )
                       }
                     >
                       {({ isActive }) => (
                         <>
-                          {isActive ? (
-                            <span aria-hidden="true" className="absolute bottom-[6px] left-0 top-[6px] w-[3px] rounded-r-[2px] bg-brand-green" />
-                          ) : null}
-                          <Icon icon={l.icon} className="shrink-0 text-fg-muted" />
-                          <span className="min-w-0">{l.label}</span>
+                          <Icon icon={l.icon} className={cn('shrink-0', isActive ? 'text-primary' : 'text-fg-2')} />
+                          <span className="min-w-0 text-pretty [overflow-wrap:anywhere]">{l.label}</span>
                           {!isAdmin && l.tagForOthers ? (
-                            <span className="ml-auto inline-flex h-6 shrink-0 items-center rounded bg-canvas px-2 text-base font-medium text-fg-2">
+                            <span className="ml-auto inline-flex min-h-chip shrink-0 items-center rounded-pill bg-deep px-2 text-sm font-medium text-fg-2">
                               {l.tagForOthers}
                             </span>
                           ) : null}
-                          <Icon icon={ChevronRight} size="sm" className={cn('text-fg-muted md:hidden', (isAdmin || !l.tagForOthers) && 'ml-auto')} />
+                          <Icon icon={ChevronRight} size="sm" className={cn('shrink-0 text-fg-muted md:hidden', (isAdmin || !l.tagForOthers) && 'ml-auto')} />
                         </>
                       )}
                     </NavLink>
@@ -86,15 +93,42 @@ export function SettingsLayout() {
             </div>
           ) : null,
         )}
-        <VersionLabel />
-      </nav>
-      <div className="min-w-0 px-4 pb-12 pt-6 md:px-8 md:pb-12">
-        <div className="grid max-w-[940px] grid-cols-[minmax(0,1fr)] gap-6">
-          <InstallBanner />
-          <Outlet />
+        <div className="mx-3 border-t [&>div]:px-0">
+          <VersionLabel />
         </div>
+      </nav>
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-card-gap">
+        <InstallBanner />
+        <Outlet />
       </div>
     </div>
+  )
+}
+
+/** 768 to 1279: the Settings sections as one underlined strip (the Money tabs' look), the lit one brought into view, the cut edge faded. */
+function SettingsStrip({ links, pathname }: { links: ReadonlyArray<{ to: string; label: string }>; pathname: string }) {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [pathname])
+  const fade = useScrollFade(ref, pathname)
+  return (
+    <nav ref={ref} aria-label="Settings" className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden" style={fade} data-testid="settings-strip">
+      {links.map(l => (
+        <NavLink
+          key={l.to}
+          to={l.to}
+          className={({ isActive }) =>
+            cn(
+              'inline-flex min-h-control shrink-0 items-center whitespace-nowrap border-b-ring px-3 text-sm font-card transition-colors duration-fast ease-out',
+              isActive ? 'border-primary font-heavy text-primary' : 'border-transparent text-fg-2 hover:text-fg',
+            )
+          }
+        >
+          {l.label}
+        </NavLink>
+      ))}
+    </nav>
   )
 }
 

@@ -12,6 +12,7 @@ const ReviewImportedPage = lazy(() => import('@/features/money/review/ReviewImpo
 const MoneyHome = lazy(() => import('@/features/money/home/MoneyHome').then(m => ({ default: m.MoneyHome })))
 const GstToFbrPage = lazy(() => import('@/features/money/accounts/GstToFbrPage').then(m => ({ default: m.GstToFbrPage })))
 const ReceivablesPage = lazy(() => import('@/features/money/payments/ReceivablesPage').then(m => ({ default: m.ReceivablesPage })))
+const PaymentsPage = lazy(() => import('@/features/money/payments/PaymentsPage').then(m => ({ default: m.PaymentsPage })))
 const GstRegisterPage = lazy(() => import('@/features/money/invoices/GstRegisterPage').then(m => ({ default: m.GstRegisterPage })))
 const ExpensesPage = lazy(() => import('@/features/money/expenses/ExpensesPage').then(m => ({ default: m.ExpensesPage })))
 const ChecklistPage = lazy(() => import('@/features/money/monthEnd/ChecklistPage').then(m => ({ default: m.ChecklistPage })))
@@ -34,6 +35,7 @@ const EnquiriesReportPage = lazy(() => import('@/features/reports/ReportsPage').
  *   (index)          Money home, admin only (P6-A: four numbers); sales open on receivables
  *   receivables      To collect: admin and sales
  *   gst-register     Invoices: admin and sales (sales get the simpler list)
+ *   payments         Payments: the payments received, a month at a time (owner gate 2, 13 Nov 2026), admin only
  *   expenses         admin only
  *   month-end        the checklist, admin only; from it: month-end/bank (Bank check), margins, exceptions (Mistakes to fix)
  *   profit           Profitability (0137), admin only: average monthly income, the monthly chart and the profit table
@@ -53,6 +55,7 @@ export default function MoneyScreen() {
       <Route path="accounts/gst" element={adminOnly(<GstToFbrPage />, 'GST to FBR')} />
       <Route path="receivables" element={<ReceivablesPage />} />
       <Route path="gst-register" element={<GstRegisterPage />} />
+      <Route path="payments" element={adminOnly(<PaymentsPage />, 'Payments')} />
       <Route path="expenses" element={adminOnly(<ExpensesPage />, 'Expenses')} />
       <Route path="month-end" element={adminOnly(<ChecklistPage />, 'Lock a month')} />
       <Route path="month-end/bank" element={adminOnly(<BankTickPage />, 'Bank check')} />

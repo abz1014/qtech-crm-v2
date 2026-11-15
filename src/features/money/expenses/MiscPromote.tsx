@@ -4,6 +4,9 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
+import { cn } from '@/lib/utils'
+import { CARD } from '@/ui/card'
+import { FIELD } from '@/features/money/expenses/Panel'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useMiscSuggestions, usePromoteMiscTitle } from '@/features/money/expenses/hooks'
 import type { MiscSuggestion } from '@/features/money/expenses/api'
@@ -22,7 +25,7 @@ export function MiscPromoteBanners() {
   const shown = (q.data ?? []).filter(s => !hidden.includes(key(s)))
   if (shown.length === 0) return null
   return (
-    <section aria-label="One-off titles that keep coming back" className="grid gap-3" data-testid="misc-promote">
+    <section aria-label="One-off titles that keep coming back" className="grid gap-card-gap" data-testid="misc-promote">
       {shown.slice(0, phone ? 1 : 3).map(s => (
         <Suggestion key={key(s)} s={s} onHide={() => setHidden(h => [...h, key(s)])} />
       ))}
@@ -50,23 +53,25 @@ function Suggestion({ s, onHide }: { s: MiscSuggestion; onHide: () => void }) {
     )
   }
   return (
-    <div className="grid gap-2 border-b py-2 text-base" data-testid="misc-promote-item">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Icon icon={Lightbulb} className="text-fg-muted" />
-        <p className="min-w-0 flex-1">
-          <b className="font-semibold">&apos;{s.title}&apos;</b> used {s.uses} times ({pkr(s.spent)}): make it a category.
+    <div className={cn(CARD, 'grid gap-3 p-card text-base')} data-testid="misc-promote-item">
+      <div className="flex items-start gap-3">
+        <span aria-hidden="true" className="grid size-control-sm shrink-0 place-items-center rounded-control bg-tone-info-bg text-tone-info-fg">
+          <Icon icon={Lightbulb} />
+        </span>
+        <p className="min-w-0 flex-1 self-center [overflow-wrap:anywhere]">
+          <b className="font-bold">&apos;{s.title}&apos;</b> used {s.uses} times (<span className="num">{pkr(s.spent)}</span>): make it a category.
         </p>
-        {naming ? null : (
-          <span className="flex flex-wrap gap-2">
-            <Button size="touch" variant="quiet" onClick={onHide} className="text-base">
-              Not now
-            </Button>
-            <Button size="touch" onClick={() => setNaming(true)} className="text-base">
-              Make it a category
-            </Button>
-          </span>
-        )}
       </div>
+      {naming ? null : (
+        <span className="flex flex-wrap justify-end gap-2">
+          <Button variant="quiet" onClick={onHide} className="max-md:h-touch">
+            Not now
+          </Button>
+          <Button onClick={() => setNaming(true)} className="max-md:h-touch">
+            Make it a category
+          </Button>
+        </span>
+      )}
       {naming ? (
         <form
           className="flex flex-wrap items-end gap-3"
@@ -75,20 +80,20 @@ function Suggestion({ s, onHide }: { s: MiscSuggestion; onHide: () => void }) {
             submit()
           }}
         >
-          <label htmlFor={`${uid}-name`} className="grid min-w-0 flex-1 gap-2">
-            <span className="font-medium">Name of the category</span>
+          <label htmlFor={`${uid}-name`} className="grid min-w-0 flex-[1_1_12rem] gap-2">
+            <span className="text-sm font-bold">Name of the category</span>
             <input
               id={`${uid}-name`}
               value={name}
               maxLength={80}
               onChange={e => setName(e.target.value)}
-              className="min-h-touch w-full rounded border border-line-input bg-surface px-3 text-base"
+              className={FIELD}
             />
           </label>
-          <Button size="touch" variant="quiet" onClick={() => setNaming(false)} disabled={promote.isPending} className="text-base">
+          <Button variant="quiet" onClick={() => setNaming(false)} disabled={promote.isPending} className="max-md:h-touch">
             Back
           </Button>
-          <Button type="submit" size="touch" icon={Check} busy={promote.isPending} busyLabel="Saving" disabled={!name.trim()} className="text-base">
+          <Button type="submit" icon={Check} busy={promote.isPending} busyLabel="Saving" disabled={!name.trim()} className="max-md:h-touch">
             Save category
           </Button>
         </form>

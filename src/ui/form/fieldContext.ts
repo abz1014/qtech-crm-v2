@@ -13,15 +13,16 @@ export const FieldContext = createContext<FieldContextValue | null>(null)
 export const useFieldContext = () => useContext(FieldContext)
 
 /**
- * Shared control chrome: --control-h tall (40, 32 with smaller text, 44 on touch), hairline input edge, focus ring
- * from the global rule. On a phone the value is 16px whatever the text size, so iOS Safari never zooms the page.
+ * Shared control chrome (Forest .qb-input): --control-h tall (40, 32 with smaller text, 48 on touch), the input edge, 12 px
+ * corners, 500-weight values. Hover darkens the edge to ink; focus turns it green under the global ring; an error draws the
+ * late red edge on its tint. On a phone the value is 16px whatever the text size, so iOS Safari never zooms the page.
  */
 export const controlClass = cn(
-  'h-control w-full min-w-0 rounded border border-line-input bg-surface px-3 text-sm text-fg max-md:text-[16px]',
-  'transition-colors duration-fast ease-out placeholder:text-fg-muted hover:border-fg-muted',
-  'focus-visible:border-fg focus-visible:outline-offset-1',
-  'aria-[invalid=true]:border-tone-danger-fg',
-  'disabled:cursor-not-allowed disabled:border-line disabled:bg-sunken disabled:text-fg-disabled disabled:hover:border-line',
+  'h-control w-full min-w-0 rounded-control border border-line-input bg-surface px-3 text-sm font-medium text-fg max-md:text-[16px]',
+  'transition-colors duration-fast ease-out placeholder:font-regular placeholder:text-fg-muted hover:border-fg',
+  'focus-visible:border-primary focus-visible:outline-offset-0',
+  'aria-[invalid=true]:border-tone-danger-fg aria-[invalid=true]:bg-tone-danger-bg',
+  'disabled:cursor-not-allowed disabled:border-line disabled:bg-deep disabled:text-fg-disabled disabled:hover:border-line',
   'read-only:border-line-strong read-only:bg-sunken read-only:text-fg-2 read-only:hover:border-line-strong',
 )
 

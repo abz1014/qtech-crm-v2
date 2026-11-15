@@ -1,66 +1,20 @@
 import { forwardRef, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
+import type { VariantProps } from 'class-variance-authority'
 import { LoaderCircle, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
+import { button } from '@/ui/buttonStyles'
 
 /*
- * Button (docs/design/INVENTORY.md; D08 section 01). Variants primary,
- * secondary, quiet, danger. Sizes read the density tokens, so they follow the text size:
- * lg 52 (40 with smaller text), md 44 (32), sm 40 (28; 44 on touch), touch 44 (phone chrome).
- * States: default, hover, pressed, focus (global ring), disabled, busy.
- * Direction C: semibold labels, 10 px corners. On a navy surface (data-surface="navy": the next-step band, the top bar) the
- * green button gets a 2 px white ring, because green on navy alone is 2.71:1 (WCAG 1.4.11 wants 3:1 for its edge).
+ * Button (docs/design/INVENTORY.md; D08 section 01; Forest .qb-btn). Variants primary, secondary, quiet, danger, and lime (a forest
+ * hero's one action; the look is in buttonStyles.ts, shared with links drawn as buttons). Sizes read the density tokens, so they
+ * follow the text size and the pointer: lg 48 (56 on touch), md 40 (48 on touch), sm 36 (48 on touch), touch 44 (phone chrome).
+ * States: default, hover, pressed (scale .98), focus (global ring), disabled, busy.
+ * Forest: bold labels, 12 px corners (rounded-control). Primary is the forest green fill; secondary a white tile with a strong
+ * edge; quiet the ghost (green words, a brand-100 tint on hover); danger an outline in the late red, filled with its tint on
+ * hover. On a forest surface (data-surface="navy": the next-step band, the top bar) the green button gets a 2 px white ring,
+ * because green on the forest alone is under 3:1 (WCAG 1.4.11 wants 3:1 for its edge).
  */
-const button = cva(
-  [
-    'group inline-flex items-center justify-center gap-2 whitespace-nowrap rounded border',
-    'font-semibold leading-none transition-[background-color,border-color,transform] duration-fast ease-out',
-    'active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:active:translate-y-0',
-  ],
-  {
-    variants: {
-      variant: {
-        primary: [
-          'border-primary bg-primary text-primary-foreground [[data-surface=navy]_&]:shadow-on-navy',
-          'hover:border-primary-hover hover:bg-primary-hover active:border-primary-active active:bg-primary-active',
-          'disabled:border-line disabled:bg-selected disabled:text-fg-muted',
-        ],
-        secondary: [
-          'border-line-strong bg-surface text-fg',
-          'hover:border-line-input hover:bg-sunken active:bg-selected',
-          'disabled:border-line disabled:bg-sunken disabled:text-fg-disabled',
-        ],
-        quiet: [
-          // An underlined label is the affordance: a bare word read as plain text, not something to press (an icon-only quiet button has no text to underline).
-          'border-transparent bg-transparent text-fg underline decoration-fg/40 decoration-1 underline-offset-4',
-          'hover:bg-sunken hover:decoration-fg active:bg-selected',
-          'disabled:bg-sunken disabled:text-fg-disabled',
-        ],
-        danger: [
-          'border-tone-danger-fg bg-tone-danger-fg text-tone-ink-fg',
-          'hover:brightness-90 active:brightness-75',
-          'disabled:border-line disabled:bg-sunken disabled:text-fg-disabled disabled:brightness-100',
-        ],
-      },
-      size: {
-        lg: 'h-control-lg px-4 text-base',
-        md: 'h-control px-3 text-sm',
-        sm: 'h-control-sm px-[10px] text-xs',
-        /** Phone chrome: the 44px minimum tap target (--hit-touch). */
-        touch: 'h-touch px-3 text-sm',
-      },
-      iconOnly: { true: 'px-0', false: '' },
-    },
-    compoundVariants: [
-      { size: 'lg', iconOnly: true, className: 'w-control-lg' },
-      { size: 'md', iconOnly: true, className: 'w-control' },
-      { size: 'sm', iconOnly: true, className: 'w-control-sm' },
-      { size: 'touch', iconOnly: true, className: 'w-touch' },
-    ],
-    defaultVariants: { variant: 'secondary', size: 'md', iconOnly: false },
-  },
-)
 
 type Common = Omit<VariantProps<typeof button>, 'iconOnly'> & {
   /** Leading glyph. Muted on secondary and quiet; inherits the text colour on primary and danger. */
@@ -92,7 +46,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const action = busyProp !== undefined
   // Busy keeps focus (WCAG 2.4.3): aria-disabled instead of disabled, and clicks are ignored while in flight.
   const iconOnly = children === undefined || children === null
-  const glyph = variant === 'primary' || variant === 'danger' ? '' : 'text-fg-muted group-disabled:text-fg-disabled'
+  const glyph = variant === undefined || variant === null || variant === 'secondary' ? 'text-fg-muted group-disabled:text-fg-disabled' : ''
   return (
     <button
       ref={ref}
@@ -100,7 +54,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       disabled={disabled && !busy}
       aria-disabled={busy || undefined}
       aria-busy={busy || undefined}
-      className={cn(button({ variant, size, iconOnly }), busy && 'cursor-progress active:translate-y-0', className)}
+      className={cn(button({ variant, size, iconOnly }), busy && 'cursor-progress active:transform-none', className)}
       {...rest}
       onClick={e => {
         if (busy || (action && (inFlight.current || e.detail > 1))) {

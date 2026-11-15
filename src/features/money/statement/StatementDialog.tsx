@@ -10,6 +10,7 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { DateInput } from '@/ui/form/DateInput'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
+import { rupeesToPkr } from '@/lib/errors/rpcMessages'
 import { qk } from '@/features/queryKeys'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { saveBlob } from '@/features/money/expenseReport/pdf/generate'
@@ -36,7 +37,18 @@ export function StatementButton({ companyId, companyName }: { companyId: string;
   )
 }
 
-const ROW = 'grid grid-cols-[minmax(0,5.5rem)_minmax(0,1fr)_minmax(0,6.5rem)_minmax(0,6.5rem)_minmax(0,7.5rem)] gap-x-2 px-3 py-2 sm:gap-x-3'
+/*
+ * Forest (55-credit-statement #st-ok): the lines sit in one framed box, opening and closing balance on the sunken band. The box is a size
+ * container: from 34rem wide the lines are five columns under a header row; narrower (a phone, a narrow dialog) each line stacks, and
+ * each figure carries its own label ("Charged, PKR: 118,000.00"), with an empty figure left out instead of a blank cell.
+ */
+// Class names are written out whole: Tailwind reads them from the source, so a variant built from a template string is never generated.
+const ROW = 'grid grid-cols-[minmax(0,1fr)] gap-x-3 gap-y-1 px-4 py-3 [@container(min-width:34rem)]:grid-cols-[minmax(0,5rem)_minmax(0,1fr)_minmax(0,7.5rem)_minmax(0,7.5rem)_minmax(0,8rem)] [@container(min-width:34rem)]:py-2'
+const FIG = 'num [overflow-wrap:anywhere] [@container(min-width:34rem)]:text-right'
+/** The figure's label: shown on a stacked line, kept for a screen reader on a wide one (the header row is presentation only). */
+const LAB = 'font-sans text-fg-muted [@container(min-width:34rem)]:sr-only'
+/** An empty figure: nothing on a stacked line, a blank cell on a wide one so the columns stay put. */
+const NONE = 'hidden [@container(min-width:34rem)]:block'
 
 function StatementDialog({ companyId, companyName, onClose }: { companyId: string; companyName: string; onClose: () => void }) {
   const today = businessToday()
@@ -82,11 +94,11 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
         <div className="grid gap-4" data-testid="statement">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              <span className="font-medium">From</span>
+              <span className="font-semibold">From</span>
               <DateInput value={from} onChange={setFrom} aria-label="From" />
             </label>
             <label className="grid gap-1 text-sm">
-              <span className="font-medium">To</span>
+              <span className="font-semibold">To</span>
               <DateInput value={to} onChange={setTo} aria-label="To" />
             </label>
           </div>
@@ -100,44 +112,71 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
               Nothing was changed. Close this and try again.
             </Banner>
           ) : lines.isPending ? (
-            <Skeleton className="h-[8rem] w-full" />
+            <div role="status" aria-busy="true" aria-label="Loading the statement" className="grid gap-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-[5rem] w-full rounded-card" />
+            </div>
           ) : st ? (
-            <div className="rounded border">
-              <div className="min-w-0 text-sm" role="list" aria-label="Statement lines">
-                <div className={`${ROW} bg-sunken text-fg-muted`} role="presentation">
-                  <span className="font-medium">Date</span>
-                  <span className="font-medium">Document</span>
-                  <span className="text-right font-medium">Charged</span>
-                  <span className="text-right font-medium">Paid or credited</span>
-                  <span className="text-right font-medium">Balance</span>
+            <div className="min-w-0 [container-type:inline-size]">
+              <div className="min-w-0 overflow-hidden rounded-card border text-sm" role="list" aria-label="Statement lines">
+                <div className={`${ROW} hidden border-b text-fg-muted [@container(min-width:34rem)]:grid`} role="presentation">
+                  <span className="font-semibold">Date</span>
+                  <span className="font-semibold">Document</span>
+                  <span className="text-right font-semibold">Charged</span>
+                  <span className="text-right font-semibold">Paid or credited</span>
+                  <span className="text-right font-semibold">Balance</span>
                 </div>
-                <div className={`${ROW} bg-sunken font-medium`} role="listitem" data-testid="statement-opening">
-                  <span className="num [overflow-wrap:anywhere]">{formatShortDate(st.from, today)}</span>
+                <div className={`${ROW} bg-sunken font-semibold`} role="listitem" data-testid="statement-opening">
+                  <span className="num font-medium [overflow-wrap:anywhere]">{formatShortDate(st.from, today)}</span>
                   <span>Opening balance</span>
-                  <span />
-                  <span />
-                  <span className="num text-right [overflow-wrap:anywhere]">{grouped(st.opening)}</span>
+                  <span className={NONE} />
+                  <span className={NONE} />
+                  <span className={FIG}>
+                    <span className={LAB}>Balance, PKR: </span>
+                    {grouped(st.opening)}
+                  </span>
                 </div>
                 {st.rows.map((r, i) => (
                   <div key={i} className={`${ROW} border-t`} role="listitem" data-testid="statement-row">
                     <span className="num [overflow-wrap:anywhere]">{formatShortDate(r.on, today)}</span>
                     <span className="min-w-0 [overflow-wrap:anywhere]">
                       {KIND_LABEL[r.kind]}
-                      {r.ref ? <span className="num text-fg-2">{` ${r.ref}`}</span> : null}
-                      {r.note ? <span className="text-fg-muted">{` · ${r.note}`}</span> : null}
+                      {r.ref ? <span className="num font-medium">{` ${r.ref}`}</span> : null}
+                      {r.note ? <span className="text-xs text-fg-muted">{` · ${rupeesToPkr(r.note)}`}</span> : null}
                     </span>
-                    <span className="num text-right [overflow-wrap:anywhere]">{r.debit > 0n ? grouped(r.debit) : ''}</span>
-                    <span className="num text-right [overflow-wrap:anywhere]">{r.credit > 0n ? grouped(r.credit) : ''}</span>
-                    <span className="num text-right [overflow-wrap:anywhere]">{grouped(r.balance)}</span>
+                    {r.debit > 0n ? (
+                      <span className={FIG}>
+                        <span className={LAB}>Charged, PKR: </span>
+                        {grouped(r.debit)}
+                      </span>
+                    ) : (
+                      <span className={NONE} />
+                    )}
+                    {r.credit > 0n ? (
+                      <span className={FIG}>
+                        <span className={LAB}>Paid or credited, PKR: </span>
+                        {grouped(r.credit)}
+                      </span>
+                    ) : (
+                      <span className={NONE} />
+                    )}
+                    <span className={FIG}>
+                      <span className={LAB}>Balance, PKR: </span>
+                      {grouped(r.balance)}
+                    </span>
                   </div>
                 ))}
-                {st.rows.length === 0 ? <p className="border-t px-3 py-3 text-fg-muted">Nothing happened on this account between these dates.</p> : null}
-                <div className={`${ROW} border-t font-semibold`} role="listitem" data-testid="statement-closing">
-                  <span className="num [overflow-wrap:anywhere]">{formatShortDate(st.to, today)}</span>
+                {st.rows.length === 0 ? <p className="border-t px-4 py-3 text-fg-muted">Nothing happened on this account between these dates.</p> : null}
+                <div className={`${ROW} border-t bg-sunken font-semibold`} role="listitem" data-testid="statement-closing">
+                  <span className="num font-medium [overflow-wrap:anywhere]">{formatShortDate(st.to, today)}</span>
                   <span>Closing balance</span>
-                  <span />
-                  <span />
-                  <span className="num text-right [overflow-wrap:anywhere]">{grouped(st.closing)}</span>
+                  <span className={NONE} />
+                  <span className={NONE} />
+                  <span className={FIG}>
+                    <span className={LAB}>Balance, PKR: </span>
+                    {grouped(st.closing)}
+                  </span>
                 </div>
               </div>
             </div>

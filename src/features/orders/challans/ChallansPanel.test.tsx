@@ -110,4 +110,20 @@ describe('Delivery challans', () => {
     await screen.findByText('DC-0001')
     expect(screen.queryByRole('button', { name: 'New challan' })).toBeNull()
   })
+  it('draws the engineer job page version as its own card: heading, New challan, rows shaped while loading', async () => {
+    fake = db()
+    mount()
+    const region = screen.getByRole('region', { name: 'Delivery challans' })
+    expect(within(region).getByRole('heading', { level: 2, name: 'Delivery challans' })).toBeInTheDocument()
+    expect(within(region).getByRole('status', { name: 'Loading challans' })).toBeInTheDocument()
+    expect(await within(region).findByRole('button', { name: 'Download challan DC-0001' })).toBeInTheDocument()
+    expect(within(region).queryByRole('status', { name: 'Loading challans' })).toBeNull()
+    expect(within(region).getByRole('button', { name: 'New challan' })).toBeInTheDocument()
+  })
+
+  it('says so before the first challan', async () => {
+    fake = db(c => (c.target === 'delivery_challans' && c.verb === 'select' ? { data: [] } : undefined))
+    mount()
+    expect(await screen.findByText('None issued yet. A challan lists the goods and quantities delivered, with no prices.')).toBeInTheDocument()
+  })
 })

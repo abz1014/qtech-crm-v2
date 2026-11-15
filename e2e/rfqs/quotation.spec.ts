@@ -113,6 +113,24 @@ const shot = async (page: Page, name: string) => {
   await review(page, name)
 }
 const dialog = (page: Page) => page.getByRole('dialog')
+
+/**
+ * A Forest review picture of the whole page (forest/b3-quotation): the shell is one window tall and #main scrolls inside it, so the
+ * window grows to the content first, then goes back. Written to REVIEW_DIR as `forest-b3-<name>-<width>.png`; nothing when unset.
+ */
+async function forestShot(page: Page, name: string): Promise<void> {
+  const dir = process.env.REVIEW_DIR
+  if (!dir) return
+  await waitForAnimationsToFinish(page)
+  const size = page.viewportSize() ?? { width: 1440, height: 900 }
+  const tall = await page.evaluate(() =>
+    Math.max(...Array.from(document.querySelectorAll('#main, #main *')).filter(e => /auto|scroll/.test(getComputedStyle(e).overflowY)).map(e => e.scrollHeight + e.getBoundingClientRect().top), window.innerHeight),
+  )
+  if (tall > size.height) await page.setViewportSize({ width: size.width, height: Math.min(Math.ceil(tall) + 120, 6000) })
+  await page.waitForTimeout(300)
+  await page.screenshot({ path: `${dir}/forest-b3-${name}-${size.width}.png`, fullPage: true })
+  await page.setViewportSize(size)
+}
 const price = (page: Page, n: number) => dialog(page).getByLabel(`Unit price, net PKR, item ${n}`)
 const noShareApi = (page: Page) => page.addInitScript(() => Object.defineProperty(Navigator.prototype, 'share', { value: undefined, configurable: true }))
 
@@ -321,6 +339,7 @@ test.describe('re-issue', () => {
     await expect(page.getByTestId('quotation-0')).toContainText('Replaced by revision 1')
     await expect(page.getByTestId('quotation-1')).toContainText('Revision 1')
     await shot(page, 'rfq-quotation-05-list-two-revisions-1440')
+    await forestShot(page, 'two-revisions')
   })
 })
 
@@ -474,7 +493,7 @@ test.describe('partial quotations and Preview PDF', () => {
   })
 })
 
-for (const width of [1440, 375]) {
+for (const width of [1440, 768, 375]) {
   test(`axe (WCAG 2.2 AA) and review screenshots at ${width}`, async ({ page }) => {
     await noShareApi(page)
     const s = await seed()
@@ -488,6 +507,7 @@ for (const width of [1440, 375]) {
     await expect(dialog(page).getByTestId('chip-sold-1')).toBeVisible()
     expect(await violations(page)).toEqual([])
     await shot(page, `rfq-quotation-dialog-${width}`)
+    await forestShot(page, 'issue-dialog')
 
     await dialog(page).getByTestId('chip-sold-1').click()
     await price(page, 2).fill('300')
@@ -503,6 +523,7 @@ for (const width of [1440, 375]) {
     await page.locator('#main').evaluate(m => m.scrollTo(0, m.scrollHeight)) // at the end of the page the phone's sticky action bar covers nothing
     expect(await pageViolations(page)).toEqual([])
     await shot(page, `rfq-quotation-list-${width}`)
+    await forestShot(page, 'quotation-step')
   })
 }
 

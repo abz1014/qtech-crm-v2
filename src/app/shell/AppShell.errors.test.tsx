@@ -40,7 +40,7 @@ describe('ErrorBoundary inside the shell', () => {
       ),
     )
     expect(el.querySelector('[role="alert"]')?.textContent).toContain('The page stopped working')
-    expect(el.querySelectorAll('nav[aria-label="Main"] a').length).toBe(8) // four destinations, top bar and tab bar
+    expect(el.querySelectorAll('nav[aria-label="Main"] a').length).toBe(9) // the rail's five lanes and the phone bar's four
     act(() => root.unmount())
   })
 })

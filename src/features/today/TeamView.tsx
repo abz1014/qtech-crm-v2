@@ -15,7 +15,7 @@ export function TeamView({ data, today, selfId }: { data: TodayData; today: stri
   const people = useMemo(() => buildTeam(data, today, selfId), [data, today, selfId])
   if (people.length === 0) return <EmptyState mood="goal" title="No other team members yet">Add people in Settings, Team.</EmptyState>
   return (
-    <div className="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-3" data-team>
+    <div className="grid gap-card-gap md:grid-cols-2 xl:grid-cols-3" data-team>
       {people.map(p => (
         <Person key={p.id} person={p} />
       ))}
@@ -31,7 +31,7 @@ function Person({ person: p }: { person: TeamPerson }) {
     p.stale.length > 0 ? `${p.stale.length} older than 30 days` : null,
   ].filter(Boolean)
   return (
-    <section aria-label={p.name} data-person={p.id} className="grid content-start gap-3 rounded-panel border bg-surface p-4">
+    <section aria-label={p.name} data-person={p.id} className="grid content-start gap-3 rounded-card border bg-surface p-card shadow-e1">
       <div className="flex items-center gap-3">
         <Avatar name={p.name} size="2xl" />
         <div className="min-w-0">
@@ -71,7 +71,8 @@ function Line({ item, grey = false }: { item: TodayItem; grey?: boolean }) {
       <span className="min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">
         <span className="num">{item.ref}</span> · {item.party}
       </span>
-      <span className={cn('text-base font-semibold', tone, grey && 'font-regular')}>{item.badge.text}</span>
+      {/* a roll-up's bare count repeats its title (audit 2): left out */}
+      {/^\d+$/.test(item.badge.text) ? null : <span className={cn('text-base font-semibold', tone, grey && 'font-regular')}>{item.badge.text}</span>}
     </li>
   )
 }

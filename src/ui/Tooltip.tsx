@@ -5,7 +5,7 @@ import { Kbd } from '@/ui/Kbd'
 
 /*
  * Tooltip (INVENTORY: U03; D08 section 10). Short, optional, never the only place
- * something is said. Ink tone, shadow-pop, no arrow, 260px max. Opens after 400 ms
+ * something is said. Forest .qb-tip__body: brand-950, e3 shadow, 12 px corners, no arrow, 300px max. Opens after 400 ms
  * of hover or at once on keyboard focus; closes on Esc, blur or leaving.
  * Phones have no hover: put the text on screen instead.
  */
@@ -30,7 +30,7 @@ export function Tooltip({ content, title, shortcut, children, forDisabled = fals
       <RadixTooltip.Root>
         <RadixTooltip.Trigger asChild>
           {forDisabled ? (
-            <span tabIndex={0} className="inline-flex rounded">
+            <span tabIndex={0} className="inline-flex rounded-control">
               {children}
             </span>
           ) : (
@@ -42,11 +42,11 @@ export function Tooltip({ content, title, shortcut, children, forDisabled = fals
             side={side}
             sideOffset={6}
             collisionPadding={8}
-            className="z-50 max-w-[300px] animate-fade-in rounded bg-tone-ink-bg px-[10px] py-[6px] text-xs text-tone-ink-fg shadow-pop"
+            className="z-dialog max-w-[300px] animate-fade-in rounded-control bg-tone-ink-bg px-3 py-2 text-xs font-medium text-tone-ink-fg shadow-e3"
           >
             {title ? (
               <div className="grid gap-[2px]">
-                <b className="font-semibold">{title}</b>
+                <b className="font-bold">{title}</b>
                 <span className="text-pretty">{content}</span>
                 {keys.length ? <KeyRow keys={keys} /> : null}
               </div>
@@ -106,7 +106,7 @@ export function TruncateTip({ children, className, style }: { children: ReactNod
             side="bottom"
             sideOffset={6}
             collisionPadding={8}
-            className="z-50 max-w-[300px] animate-fade-in rounded bg-tone-ink-bg px-[10px] py-[6px] text-xs font-medium text-tone-ink-fg shadow-pop"
+            className="z-dialog max-w-[300px] animate-fade-in rounded-control bg-tone-ink-bg px-3 py-2 text-xs font-medium text-tone-ink-fg shadow-e3"
           >
             {text}
           </RadixTooltip.Content>

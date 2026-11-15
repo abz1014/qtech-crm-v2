@@ -133,7 +133,7 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
             onFocus={e => e.currentTarget.select()}
             onKeyDown={onKeyDown}
             onBlur={leave}
-            className={cn(controlClass, 'num', size === 'cell' && 'h-[36px]', size === 'phone' && 'h-[40px]', className)}
+            className={cn(controlClass, 'num', size === 'cell' && 'h-control-sm', size === 'phone' && 'h-touch text-base', className)}
           />
         </div>
       </RadixPopover.Anchor>
@@ -147,10 +147,10 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
           onInteractOutside={e => {
             if (inputRef.current?.parentElement?.contains(e.target as Node)) e.preventDefault()
           }}
-          className="z-[70] w-[max(var(--radix-popover-trigger-width),280px)] focus:outline-none"
+          className="z-dialog w-[max(var(--radix-popover-trigger-width),17.5rem)] max-w-[calc(100vw-1rem)] focus:outline-none"
         >
-          <div className="animate-rise-4 rounded bg-surface p-1 shadow-pop">
-            <ul id={listId} role="listbox" aria-label="Jobs" onMouseDown={e => e.preventDefault()} className="max-h-[272px] overflow-y-auto">
+          <div className="animate-rise-4 rounded-control border bg-surface p-1 shadow-e3">
+            <ul id={listId} role="listbox" aria-label="Jobs" onMouseDown={e => e.preventDefault()} className="max-h-[min(17rem,45dvh)] overflow-y-auto">
               {matches.map((o, i) => (
                 <li
                   key={o.id}
@@ -161,30 +161,33 @@ export const OrderTagPicker = forwardRef<HTMLInputElement, OrderTagPickerProps>(
                   onMouseMove={() => setActive(i)}
                   onClick={() => pick(o)}
                   className={cn(
-                    'grid h-[34px] cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded px-2 text-sm',
+                    'grid min-h-control-sm cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded px-2 py-1 text-sm',
                     i === activeIndex && 'bg-selected',
                   )}
                 >
                   <span className="num font-medium">{o.ref}</span>
-                  <span className="truncate text-sm text-fg-muted" title={[o.company, o.rfqRef, o.note].filter(Boolean).join(' · ')}>
+                  <span className="min-w-0 text-sm text-fg-muted [overflow-wrap:anywhere]" title={[o.company, o.rfqRef, o.note].filter(Boolean).join(' · ')}>
                     {[o.company, o.rfqRef, o.note].filter(Boolean).join(' · ')}
                   </span>
                 </li>
               ))}
               {matches.length === 0 ? (
-                <li role="presentation" className="flex h-[34px] items-center px-2 text-sm text-fg-muted">
+                <li role="presentation" className="flex min-h-control-sm items-center px-2 text-sm text-fg-muted">
                   No job matches “{typed}”
                 </li>
               ) : null}
             </ul>
-            <footer className="mt-[2px] flex items-center gap-4 border-t px-2 pb-[2px] pt-[6px] text-sm text-fg-muted">
-              <span className="inline-flex items-center gap-1">
-                <Kbd size="inline">Tab</Kbd>accept
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Kbd size="inline">Esc</Kbd>cancel
-              </span>
-            </footer>
+            {/* Key hints only where there is a keyboard (R-044): the phone list has none, as the Category list. */}
+            {size === 'phone' ? null : (
+              <footer className="mt-px flex items-center gap-4 border-t px-2 pb-px pt-2 text-sm text-fg-muted">
+                <span className="inline-flex items-center gap-1">
+                  <Kbd size="inline">Tab</Kbd>accept
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <Kbd size="inline">Esc</Kbd>cancel
+                </span>
+              </footer>
+            )}
           </div>
         </RadixPopover.Content>
       </RadixPopover.Portal>

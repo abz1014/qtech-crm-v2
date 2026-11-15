@@ -11,7 +11,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRe
  * pressed straight after `goto` can be lost: wait for the shell (heading and an enabled search button) first.
  */
 async function openPalette(page: Page) {
-  await expect(page.getByRole('heading', { name: 'To do', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Home', level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Search or jump to' }).first()).toBeEnabled()
   await page.keyboard.press('Control+k')
   await expect(page.getByRole('dialog', { name: 'Search or jump to' })).toBeVisible()
@@ -168,8 +168,10 @@ test.describe('company page', () => {
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     const siteRegion = page.getByRole('region', { name: 'Main plant' })
-    await expect(siteRegion.getByText('What', { exact: true })).toBeVisible() // the list's column words
-    await expect(siteRegion.getByText('Furnace zone thermocouples and transmitters')).toBeVisible()
+    // Forest (71-company-page .co-item): no column words over the list; each row carries its reference, then what it was.
+    await expect(siteRegion.getByText('What', { exact: true })).toHaveCount(0)
+    const openRow = siteRegion.getByRole('listitem').filter({ hasText: rfqRef(open.number) })
+    await expect(openRow.getByText('Furnace zone thermocouples and transmitters')).toBeVisible()
     await expect(siteRegion.getByText(/^Quotation due \d{1,2} \w{3}$/)).toBeVisible() // sentence case, like every state (round 3)
     await expect(siteRegion.getByText('Compressed air flow meters')).toBeVisible()
     await expect(siteRegion.getByText('+ 1 more')).toBeVisible()
@@ -259,6 +261,8 @@ test.describe('company page', () => {
     await openAs(salesPage, 'sales', `/companies/${supplier.id}`)
     await salesPage.getByRole('region', { name: 'Next step' }).getByRole('button', { name: 'New RFQ' }).click()
     await expect(salesPage).toHaveURL(url => url.pathname === '/rfqs/new' && url.searchParams.get('supplier') === supplier.id)
+    // New RFQ from a supplier is about asking it: Ask suppliers now starts ticked, so the supplier is asked after the items.
+    await expect(salesPage.getByRole('checkbox', { name: /Ask suppliers now/ })).toBeChecked()
     await sales.close()
   })
 

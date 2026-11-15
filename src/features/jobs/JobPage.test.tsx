@@ -74,12 +74,23 @@ describe('Job page', () => {
   it('Job 139: the header, the stage and the next step in one block, one green button, and every step closed', async () => {
     const { container } = mount(job({}), 'admin')
     expect(await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })).toHaveTextContent('Job 139')
-    // one block: the seven-part bar and "Stage 4 of 7 · <the next step>"; no second ruler, no second Next step band
+    // Forest: one hero (the Next step region: "Next step · Job 139", who acts next, the step in one sentence) and one track card
+    // ("Stage 4 of 7 · Supplier order" over the seven stops, the current one marked as the step)
     expect(container.querySelectorAll('[data-stage-block]')).toHaveLength(1)
-    expect(screen.queryByRole('list', { name: 'Stages of this job' })).toBeNull()
-    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · Follow up with the supplier')
+    const hero = screen.getByRole('region', { name: 'Next step' })
     expect(screen.getAllByRole('region', { name: 'Next step' })).toHaveLength(1)
-    expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
+    expect(hero).toHaveTextContent('Next step · Job 139')
+    expect(hero).toHaveTextContent('Late')
+    expect(within(hero).getByRole('heading', { level: 2 })).toHaveTextContent('The goods are late: follow up with the supplier')
+    expect(within(hero).getByRole('button', { name: 'Follow up with the supplier' })).toHaveClass('bg-lime-300')
+    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent(/^Stage 4 of 7 · Supplier order$/)
+    const track = screen.getByRole('list', { name: 'Stages of this job' })
+    expect(within(track).getAllByRole('listitem')).toHaveLength(7)
+    expect(within(track).getByRole('listitem', { current: 'step' })).toHaveTextContent(/^Supplier order, now/)
+    // the way back is the lane the job is in (Supplier order is Deliver), and the owner line sits under the title
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Deliver' })).toHaveAttribute('href', '/jobs?lane=deliver')
+    expect(container.querySelector('[data-job-owner]')).toHaveTextContent(/^Owner /)
+    expect([...container.querySelectorAll('button.bg-primary, button.bg-lime-300')]).toHaveLength(1)
     // the steps are one hairline list, in their natural order, all closed; the one the job is at is marked by its state word, not opened
     const rows = [...container.querySelectorAll('[data-stages] > [data-fold-row]')]
     expect(rows.map(e => e.id)).toEqual(['stage-0', 'stage-1', 'stage-2', 'stage-3', 'stage-4', 'stage-5', 'stage-6'])
@@ -112,6 +123,8 @@ describe('Job page', () => {
     const money = screen.getByRole('region', { name: 'Money for this job' })
     expect(money).toHaveTextContent('No money yet: no quotation has been sent.')
     expect(money).not.toHaveTextContent('Loading')
+    // an RFQ with no order is in Sell, as the Jobs list puts it (laneOfJob)
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Sell' })).toHaveAttribute('href', '/jobs?lane=sell')
   })
 
   it('sales and engineers see no Money card on an enquiry-stage job', async () => {
@@ -129,6 +142,12 @@ describe('Job page', () => {
     await screen.findByRole('heading', { level: 1 })
     expect(screen.queryByRole('region', { name: 'Money for this job' })).toBeNull()
     expect(container.textContent).not.toMatch(/PKR|1,392,400|974,680|advance received/)
+    // the hero says where it stands, not a next step; the track names the Invoice stop Billing and keeps Payment
+    const hero = screen.getByRole('region', { name: 'Next step' })
+    expect(hero).toHaveTextContent(/^Where it stands/)
+    expect(within(hero).queryByRole('button')).toBeNull()
+    expect(within(screen.getByRole('list', { name: 'Stages of this job' })).getAllByRole('listitem').map(li => li.textContent?.replace(/,.*$/, ''))).toEqual(['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Billing', 'Payment'])
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Jobs' })).toHaveAttribute('href', '/jobs')
     // Billing and Payment read "With the office", whatever the job's money
     expect(stagesOf(container).getByRole('button', { name: /Billing/ })).toHaveTextContent('With the office')
     expect(stagesOf(container).getByRole('button', { name: /^Payment/ })).toHaveTextContent('With the office')
@@ -204,7 +223,8 @@ describe('Job page', () => {
     const { container } = mount(job({ key: 'O-45', kind: 'direct', rfqId: null, orderId: 'o45', stage: 'ordered', stageDetail: 'to source', repeatOf: '139' }), 'sales')
     await screen.findByRole('heading', { level: 1 })
     expect(screen.getByRole('link', { name: 'Repeat of Job 139' })).toHaveAttribute('href', '/jobs/139')
-    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent('Stage 4 of 7 · Choose suppliers')
+    expect(container.querySelector('[data-stage-phone]')).toHaveTextContent(/^Stage 4 of 7 · Supplier order$/)
+    expect(within(screen.getByRole('region', { name: 'Next step' })).getByRole('heading', { level: 2 })).toHaveTextContent('Choose a supplier for the items')
   })
 
   it('a lost job ends with its reason and has no button', async () => {
@@ -229,6 +249,38 @@ describe('Job page', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
+  })
+
+  it('while it loads and when it cannot load, the page still has its one h1, and the skeleton never outgrows a phone', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'F', role: 'admin' } }}>
+          <ToastProvider><MemoryRouter initialEntries={['/jobs/139']}>
+            <Routes>
+              <Route path="/jobs/*" element={<JobsScreen />} />
+            </Routes>
+          </MemoryRouter></ToastProvider>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    const loading = await screen.findByRole('status', { name: 'Loading job' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Job 139' })).toBeInTheDocument()
+    // a bare grid sizes its track to the widest bar (24rem): every grid in the skeleton has a minmax(0,1fr) track
+    for (const g of [loading, ...loading.querySelectorAll('div.grid')]) expect(g.className).toContain('grid-cols-[minmax(0,1fr)]')
+    expect(await screen.findByText('Could not open this job')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 }).map(h => h.textContent)).toEqual(['Job 139'])
+  })
+
+  it('an imported job that still has a step says who acts next in its chips (the usual Needs action chip, never "Nothing to do" over a button)', async () => {
+    const { container } = mount(job({ key: 'O-2', kind: 'direct', rfqId: null, stage: 'ordered', stageDetail: 'supplier order to place', imported: true }), 'admin')
+    const hero = await waitFor(() => container.querySelector('[data-stage-block]') as HTMLElement)
+    expect(hero).toHaveTextContent('Next step · Job O-2 · Imported')
+    expect(hero.querySelector('[data-next-text]')).toHaveTextContent(/^Place the supplier order$/)
+    const chip = hero.querySelector('[data-tone]') as HTMLElement
+    expect(chip).toHaveTextContent('Needs action')
+    expect(chip).toHaveAttribute('data-tone', 'now')
+    expect(container.textContent).not.toContain('Nothing to do')
   })
 })
 
@@ -297,13 +349,15 @@ describe('Job page: the stage list', () => {
     }
   })
 
-  it('a closed step says one short thing, with no tag chips: the state is a word for a screen reader', async () => {
+  it('a closed step says one short thing under its title, and its state as a chip (Forest 30-job-page: Done, Not yet), read once', async () => {
     const { container } = mount(job({ stage: 'paid', stageDetail: null }), 'admin', c => c.setQueryData([...qk.jobs.part('139', 'invoices'), 'o1'], [{ id: 'v1', number: 'INV-1', invoiceDate: '2026-10-01', gross: 1392400 }]))
     await screen.findByRole('heading', { level: 1 })
     const stages = stagesOf(container)
     expect(stages.getByRole('button', { name: /^RFQ Done 12 Aug · 1 item$/ })).toBeInTheDocument()
     expect(stages.getByRole('button', { name: /^Order Done Ordered 2 Sep$/ })).toBeInTheDocument()
-    expect(stages.queryByText('Done', { selector: ':not(.sr-only)' })).toBeNull()
+    // every step of a paid job is done: seven drawn Done chips, and no hidden second "Done" (the chip is the word a screen reader hears)
+    expect(stages.getAllByText('Done', { selector: ':not(.sr-only)' })).toHaveLength(7)
+    expect(stages.queryAllByText('Done', { selector: '.sr-only' })).toHaveLength(0)
     expect(container.textContent).not.toMatch(/their ref|Goods to the customer/)
   })
 })

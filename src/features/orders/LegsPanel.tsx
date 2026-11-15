@@ -11,6 +11,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { EmptyState } from '@/ui/EmptyState'
 import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { Tag } from '@/ui/Tag'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib/comparePrices'
 import { LastChanged } from '@/features/history/LastChanged'
@@ -256,6 +257,11 @@ function Leg({
   const late = state === 'late'
 
   const lines = items.map(it => `${it.description} ×${it.qty}`).join(', ')
+  const stateChip = (
+    <span data-testid={`leg-${letter}-state`} className="inline-flex">
+      <StatusBadge dimension="goods" value={STATE_DIM[state]} />
+    </span>
+  )
   const date = (label: string, field: keyof LegDates, hint?: string) => (
     <span className="inline-flex flex-wrap items-baseline gap-x-1">
       <span className="text-fg-muted">{label}</span>
@@ -294,12 +300,12 @@ function Leg({
 
   if (folded) {
     return (
-      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={flat ? 'border-b' : 'px-4 py-1 md:px-5'}>
+      <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={flat ? 'border-b last:border-b-0' : 'px-4 py-1 md:px-5'}>
         <button
           type="button"
           aria-expanded={false}
           onClick={() => setFolded(false)}
-          className="flex min-h-[2.75rem] w-full flex-wrap items-center gap-x-2 gap-y-1 rounded text-left hover:bg-sunken"
+          className="flex min-h-touch w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-row text-left transition-colors duration-fast hover:bg-sunken"
         >
           <span className="min-w-0 break-words font-medium">{name}</span>
           {/* One item: the dot sits only between "Delivered" and the amount, so a wrapped line never starts with it. */}
@@ -319,34 +325,39 @@ function Leg({
   }
 
   return (
-    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={cn('grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6', flat ? 'border-b py-3' : 'px-4 py-4 md:px-5')}>
+    <li aria-label={`Supplier order, ${name}`} data-testid={`leg-${letter}`} className={cn('grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-x-6', flat ? 'border-b py-4 last:border-b-0 last:pb-1' : 'px-4 py-4 md:px-5')}>
       <div className="grid min-w-0 content-start gap-2">
+        {/* Who, in which currency; then where it stands (mockup 42): the state, the PO, and any note about the order. An engineer, with no
+            currency or PO to see, reads the name and the state on one line (their own markup, mockup 42 engineer). */}
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="min-w-0 break-words font-medium">{name}</span>
-          {money && ccy ? <span className="num inline-flex h-chip items-center rounded-round border border-line-strong px-[6px] text-xs text-fg-2">{ccy}</span> : null}
-          <span data-testid={`leg-${letter}-state`}>
-            <StatusBadge dimension="goods" value={STATE_DIM[state]} />
-          </span>
-          {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
-          {money && (po || !pastPo) ? (
-          <span data-testid={`leg-${letter}-po`} className={cn('num inline-flex h-chip items-center rounded border px-[6px] text-xs', po ? 'border-line-strong text-fg-2' : 'border-dashed border-line-strong text-fg-muted')}>
-            {po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}` : 'No PO yet'}
-          </span>
-          ) : null}
-          {cancelledWithSupplier ? (
-            <span data-testid={`leg-${letter}-cancelled`} className="inline-flex h-chip items-center rounded border border-tone-warning-fg/25 bg-tone-warning-bg px-[6px] text-xs text-tone-warning-fg">
-              {`Cancelled with supplier ${formatShortDate(cancelledWithSupplier, today)}`}
-            </span>
-          ) : null}
-          {fromSplit ? (
-            <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
-              <Split size={12} aria-hidden="true" />
-              New, from the split
-            </span>
-          ) : null}
+          <span className="min-w-0 break-words text-base font-semibold">{name}</span>
+          {money && ccy ? <Tag className="border-line-strong bg-transparent px-2 text-fg-2">{ccy}</Tag> : null}
+          {money ? null : stateChip}
         </div>
+        {money || cancelledWithSupplier || fromSplit ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {money ? stateChip : null}
+            {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
+            {money && (po || !pastPo) ? (
+              <span data-testid={`leg-${letter}-po`} className="inline-flex">
+                {po ? <Tag className="border-line-strong bg-transparent text-fg-2">{`${poRef(po.number, po.firstIssuedOn)} · R${po.revision}`}</Tag> : <Tag dashed>No PO yet</Tag>}
+              </span>
+            ) : null}
+            {cancelledWithSupplier ? (
+              <span data-testid={`leg-${letter}-cancelled`} className="inline-flex min-h-chip items-center rounded-pill border border-tone-warning-fg/25 bg-tone-warning-bg px-3 py-px text-xs font-card leading-none text-tone-warning-fg">
+                {`Cancelled with supplier ${formatShortDate(cancelledWithSupplier, today)}`}
+              </span>
+            ) : null}
+            {fromSplit ? (
+              <span data-testid={`leg-${letter}-from-split`} className="inline-flex items-center gap-1 text-xs text-fg-muted">
+                <Split size={12} aria-hidden="true" />
+                New, from the split
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         {money && po?.id ? <LastChanged table="purchase_orders" id={po.id} className="text-base text-fg-2" /> : null}
-        <div className="grid grid-cols-2 items-baseline gap-x-4 gap-y-2 text-sm sm:flex sm:flex-wrap sm:gap-y-1" role="group" aria-label={`Dates, ${name}`}>
+        <div className="grid max-w-[32rem] grid-cols-2 items-baseline gap-x-6 gap-y-2 text-sm" role="group" aria-label={`Dates, ${name}`}>
           {date('Placed', 'placedOn')}
           {date('Expected', 'expectedOn', expectedHint)}
           {date('Delivered', 'deliveredOn')}
@@ -385,8 +396,8 @@ function Leg({
       <div className="flex min-w-0 flex-wrap content-start items-start justify-between gap-x-3 gap-y-2 lg:grid lg:justify-items-end">
         {money ? (
           <div className="grid gap-px lg:justify-items-end">
-            <span className="num text-base font-medium" data-testid={`leg-${letter}-total`}>
-              <span className="mr-1 text-xs font-regular text-fg-muted">{ccy ?? ''}</span>
+            <span className="num text-base font-semibold" data-testid={`leg-${letter}-total`}>
+              <span className="mr-1 text-sm font-regular text-fg-muted">{ccy ?? ''}</span>
               {total.priced > 0 ? formatAmount(total.total) : 'Not set'}
             </span>
             {total.of > 0 && total.priced < total.of ? <span className="text-xs text-fg-muted">{`${total.priced} of ${total.of} lines priced`}</span> : null}
@@ -396,7 +407,7 @@ function Leg({
         {canEdit ? (
           <div className="ml-auto flex flex-wrap items-center gap-2 lg:justify-end">
             {stamp && !placeInMenu && (part === 'all' || (part === 'order' ? stamp.step === 'place' : stamp.step !== 'place')) ? (
-              <Button size="sm" onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
+              <Button size="sm" icon={stamp.step === 'place' ? Truck : undefined} onClick={actions.doStamp} busy={actions.pending} busyLabel="Saving" aria-label={`${stampLabel}, ${name}`}>
                 {stampLabel}
               </Button>
             ) : null}

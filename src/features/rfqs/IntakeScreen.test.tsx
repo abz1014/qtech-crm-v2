@@ -109,7 +109,7 @@ function SendCapture() {
 
 type InitialEntry = string | { pathname: string; search?: string; state?: unknown }
 
-function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState = SIGNED_IN) {
+function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState = SIGNED_IN, mode?: 'enquiry') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
@@ -120,7 +120,7 @@ function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState =
             <Link to="/today">Today</Link>
             <SendCapture />
             <Routes>
-              <Route path="/rfqs/new" element={<IntakeScreen />} />
+              <Route path="/rfqs/new" element={<IntakeScreen mode={mode} />} />
               <Route path="/today" element={<h1>Today page</h1>} />
             </Routes>
           </ToastProvider>
@@ -175,6 +175,27 @@ async function reachEnquiry(user: ReturnType<typeof setup>) {
 }
 
 describe('intake screen', () => {
+  it('New RFQ says at once when Q-Tech cannot be reached (the next job number does not load), and Try again asks again', async () => {
+    let down = true
+    let asked = 0
+    installFakeDb(call => {
+      if (call.target === 'rfqs' && call.ops.some(([n]) => n === 'order')) {
+        asked++
+        return down ? { error: { message: 'Failed to fetch' } } : { data: [{ number: 184 }] }
+      }
+      return respond(call)
+    })
+    const user = setup()
+    renderScreen('/rfqs/new', SIGNED_IN, 'enquiry') // New RFQ on /enquiries/new: the form that reads the next job number
+    const banner = await screen.findByText('Q-Tech CRM could not be reached')
+    expect(screen.getByText('You can fill this in now. Creating the job needs a connection.')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Company' })).toBeEnabled()
+    down = false
+    await user.click(within(banner.closest('[role]') as HTMLElement).getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(screen.queryByText('Q-Tech CRM could not be reached')).toBeNull())
+    expect(asked).toBe(2)
+  })
+
   it('pastes into rows, ticks only the supplier that supplied it before, and flags the item nobody is asked about', async () => {
     installFakeDb(respond)
     const user = setup()
@@ -230,23 +251,21 @@ describe('intake screen', () => {
     expect(screen.queryByText(/tick Zeta Instruments\?/)).toBeNull()
   })
 
-  it('shows the Family column only when a row named neither a brand nor a family; the family can always be set', async () => {
+  it('every row sets its brand and its family with its own select, the brand picked from the description (Forest .qb-itemrow)', async () => {
     installFakeDb(respond)
     setup()
     renderScreen()
     fireEvent.paste(document.body, { clipboardData: { getData: () => '1) Hach HQ1110 portable meter - 1 no' } })
     expect(await screen.findByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
     await waitFor(() => expect(within(screen.getByRole('combobox', { name: 'Brand of item 1' })).getByRole('option', { selected: true })).toHaveTextContent('Hach'))
-    // The brand was found: no Family column, but the row still sets its family after the brand.
-    expect(screen.getByText('Brand and family')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Family of item 1' })).toBeInTheDocument()
-    expect(screen.getByText('+ family', { selector: 'span' })).toBeInTheDocument()
-    // A row with nothing to go on: the Family column appears.
+    // The brand was found; the family is still its own select, empty until it is chosen.
+    expect(within(screen.getByRole('combobox', { name: 'Family of item 1' })).getByRole('option', { selected: true })).toHaveTextContent('No family')
+    // A row with nothing to go on gets the same two selects, both empty.
     fireEvent.paste(document.body, { clipboardData: { getData: () => '1) 24V actuator for ball valve x 2' } })
     expect(await screen.findByRole('textbox', { name: 'Description of item 2' })).toHaveValue('24V actuator for ball valve')
-    expect(screen.queryByText('Brand and family')).toBeNull()
-    expect(screen.getByText('Family')).toBeInTheDocument()
-    expect(screen.getAllByText('no family', { selector: 'span' })).toHaveLength(2)
+    expect(within(screen.getByRole('combobox', { name: 'Brand of item 2' })).getByRole('option', { selected: true })).toHaveTextContent('No brand')
+    expect(within(screen.getByRole('combobox', { name: 'Family of item 2' })).getByRole('option', { selected: true })).toHaveTextContent('No family')
+    expect(screen.getAllByRole('combobox', { name: /^Family of item \d$/ })).toHaveLength(2)
   })
 
   it('opens a Memory card per supplier: tier label, last quote at the time, brands, replies; one memory call per item, none per row', async () => {

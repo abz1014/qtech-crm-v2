@@ -45,7 +45,7 @@ export function Field({ label, requirement, help, error, source, edited = false,
     <FieldContext.Provider value={{ id, invalid: Boolean(error), describedBy, required: requirement === 'required' }}>
       <div className={cn('grid min-w-0 content-start gap-[6px]', className)}>
         <div className="flex items-baseline gap-2">
-          <label htmlFor={id} className="text-sm font-medium text-fg">
+          <label htmlFor={id} className="text-sm font-card text-fg">
             {label}
           </label>
           {requirement ? (
@@ -54,7 +54,7 @@ export function Field({ label, requirement, help, error, source, edited = false,
         </div>
         {children}
         {error ? (
-          <p id={errId} className="flex items-start gap-[6px] text-xs font-medium text-tone-danger-fg">
+          <p id={errId} className="flex items-start gap-1 text-xs font-card text-tone-danger-fg">
             <Icon icon={CircleAlert} size="sm" className="mt-[calc((var(--lh-xs)-14px)/2)]" />
             <span className="min-w-0 text-pretty">{error}</span>
           </p>

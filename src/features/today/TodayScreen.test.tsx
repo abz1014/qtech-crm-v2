@@ -95,7 +95,8 @@ describe('Today screen', () => {
   it('says so and offers a retry when it cannot load', async () => {
     fake = install({ fail: true })
     renderAs('sales')
-    expect(await screen.findByText('To do could not load')).toBeInTheDocument()
+    expect(await screen.findByText('Home could not load')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
   })
 
@@ -112,6 +113,63 @@ describe('Today screen', () => {
     expect(targets).not.toContain('rpc:receivables_list')
     expect(targets).not.toContain('rpc:month_end_status')
     expect(targets).not.toContain('invoices')
+    // Forest Home: no money pulse and no Companies row in the engineer's branch, and no request for them
+    expect(targets).not.toContain('rpc:receivables_summary')
+    expect(document.querySelector('[data-home-money]')).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Companies' })).toBeNull()
+  })
+
+  it('Home: the heading says Home and the forest hero carries the one number with the role words', async () => {
+    fake = install()
+    renderAs('admin')
+    await screen.findByText('Needs suppliers')
+    expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument()
+    const hero = screen.getByRole('region', { name: 'Needs you now' })
+    expect(hero).toHaveAttribute('data-surface', 'navy')
+    expect(hero).toHaveTextContent(/^Admin, Ayesha.*1 thing needs you$/)
+    expect(document.querySelectorAll('[data-needs-you-count]')).toHaveLength(1) // the hero repeats it; the count stays one element
+  })
+
+  it('Home: sales get the quotes hero; engineers get My day', async () => {
+    fake = install()
+    const s = renderAs('sales')
+    await screen.findByText('Needs suppliers')
+    expect(screen.getByRole('region', { name: 'Quotes to send or follow up' })).toHaveTextContent(/^Sales, Ayesha/)
+    s.unmount()
+    fake.uninstall()
+    fake = install({ rfqs: [] })
+    renderAs('engineer')
+    await screen.findByText('No tasks for today')
+    // nothing in the list: no hero, the goal state speaks
+    expect(document.querySelector('[data-home-hero]')).toBeNull()
+  })
+
+  it('Home money pulse: admin sees To collect and Received this month, read where the Money pages read them', async () => {
+    const month = businessToday().slice(0, 7)
+    fake = installFakeDb((c: FakeCall): FakeResult => {
+      if (c.target === 'v_rfq_state') return { data: [rfqState] }
+      if (c.target === 'rpc:receivables_summary') return { data: [{ open_count: 5, outstanding: 8065300, overdue_count: 1, overdue: 1793600 }] }
+      if (c.target === 'v_month_cash_flow') return { data: [{ month: `${month}-01`, money_in: '755200.00', payments_count: 1, money_out: '0', expenses_count: 0, frozen: false }] }
+      return { data: [] }
+    })
+    renderAs('admin')
+    const collect = await screen.findByRole('region', { name: 'To collect' })
+    expect(await within(collect).findByText('PKR 8,065,300')).toBeInTheDocument()
+    expect(within(collect).getByText('PKR 1,793,600 late')).toBeInTheDocument()
+    expect(within(collect).getByText('5 open orders, 1 late.')).toBeInTheDocument()
+    expect(within(collect).getByRole('link', { name: 'Open To collect' })).toHaveAttribute('href', '/money/receivables')
+    const received = screen.getByRole('region', { name: 'Received this month' })
+    expect(await within(received).findByText('PKR 755,200')).toBeInTheDocument()
+    expect(within(received).getByText('1 payment')).toBeInTheDocument()
+  })
+
+  it('Home money pulse: sales see To collect only; the Companies row ends Home for admin and sales', async () => {
+    fake = install()
+    renderAs('sales')
+    await screen.findByRole('region', { name: 'To collect' })
+    expect(screen.queryByRole('region', { name: 'Received this month' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Companies' })).toHaveAttribute('href', '/companies')
+    expect(fake?.calls.some(c => /cash_flow/.test(c.target))).toBe(false)
   })
 
   it('admin and sales do request the receivables', async () => {

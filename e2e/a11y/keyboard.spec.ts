@@ -135,12 +135,12 @@ test.describe('a new page starts at the top (2.4.3)', () => {
     await open(page, '/money/gst-register')
     await page.locator('#main').evaluate(m => (m.scrollTop = m.scrollHeight))
     expect(await page.locator('#main').evaluate(m => m.scrollTop), 'the page must be tall enough to scroll at 330px').toBeGreaterThan(0)
-    await page.getByRole('navigation', { name: 'Main' }).filter({ visible: true }).locator('a[href="/companies"]').click()
-    await page.waitForURL(/\/companies$/)
+    await page.getByRole('navigation', { name: 'Main' }).filter({ visible: true }).locator('a[href="/jobs?lane=deliver"]').click()
+    await page.waitForURL(/\/jobs\?lane=deliver$/)
     await page.waitForLoadState('networkidle')
     // React Router 7 commits the new screen inside a transition: the address changes first, the list a moment later.
     await expect
-      .poll(() => page.locator('#main').evaluate(m => m.scrollHeight - m.clientHeight), { message: 'Companies must be tall enough to scroll at 330px' })
+      .poll(() => page.locator('#main').evaluate(m => m.scrollHeight - m.clientHeight), { message: 'Deliver must be tall enough to scroll at 330px' })
       .toBeGreaterThan(0)
     expect(await page.locator('#main').evaluate(m => m.scrollTop)).toBe(0)
   })

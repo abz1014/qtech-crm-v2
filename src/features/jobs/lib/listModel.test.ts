@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JobRow } from '@/features/jobs/api'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isStageFilter, itemsSummary, mergeMore, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isLane, isStageFilter, itemsSummary, laneOfJob, mergeMore, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
 
 const job = (over: Partial<JobRow>): JobRow => ({
   key: '1', kind: 'enquiry', rfqId: 'r', orderId: null, companyId: 'c', companyName: 'Customer', siteName: null, ownerId: 'u1', ownerName: 'A', items: 'x',
@@ -73,11 +73,15 @@ describe('Jobs list stage filters', () => {
     for (const w of words) expect(filtersOf(at(w)).length).toBeLessThanOrEqual(2)
   })
 
-  it('leaves lost, cancelled and enquiry-only jobs in no filter', () => {
+  it('leaves lost and cancelled jobs in no filter', () => {
     expect(filtersOf(at('cancelled', 'order cancelled'))).toEqual([])
     expect(filtersOf(at('lost', 'price too high', { orderId: null }))).toEqual([])
     expect(filtersOf(at('lost', 'price too high'))).toEqual([])
-    for (const w of ['enquiry', 'asking_suppliers', 'prices_in', 'quoted']) expect(filtersOf(job({ stage: w, orderId: null }))).toEqual([])
+  })
+
+  it("puts an enquiry-only job under RFQs or Quotations only (Sell's two filters), never an order filter", () => {
+    expect(filtersOf(job({ stage: 'enquiry', orderId: null }))).toEqual(['rfq'])
+    for (const w of ['asking_suppliers', 'prices_in', 'quoted']) expect(filtersOf(job({ stage: w, orderId: null }))).toEqual(['quotation'])
   })
 
   it('does not put an order-less job in Orders, whatever its stage word', () => {
@@ -89,7 +93,7 @@ describe('Jobs list stage filters', () => {
     expect(stagesFor('admin', 'open')).toEqual(['orders', 'supplier', 'deliver', 'invoice', 'payment'])
     expect(stagesFor('sales', 'mine')).toEqual(['orders', 'supplier', 'deliver', 'invoice', 'payment'])
     expect(stagesFor('engineer', 'mine')).toEqual(['orders', 'supplier', 'deliver'])
-    expect(STAGE_FILTERS.map(s => STAGE_LABEL[s])).toEqual(['Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
+    expect(STAGE_FILTERS.map(s => STAGE_LABEL[s])).toEqual(['RFQs', 'Quotations', 'Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
   })
 
   it('offers only Orders under History, for every role', () => {
@@ -107,6 +111,39 @@ describe('Jobs list stage filters', () => {
     expect(normalizeStage('orders', 'engineer', 'history')).toBe('orders')
     expect(isStageFilter('supplier')).toBe(true)
     expect(isStageFilter('all')).toBe(false)
+  })
+
+  it("offers RFQs and Quotations in Sell only, and nothing under Sell's History", () => {
+    for (const r of ['admin', 'sales'] as const) {
+      expect(stagesFor(r, 'open', 'sell')).toEqual(['rfq', 'quotation'])
+      expect(stagesFor(r, 'mine', 'sell')).toEqual(['rfq', 'quotation'])
+      expect(stagesFor(r, 'history', 'sell')).toEqual([])
+      expect(stagesFor(r, 'open', 'deliver')).toEqual(stagesFor(r, 'open'))
+      expect(stagesFor(r, 'history', 'deliver')).toEqual(['orders'])
+      expect(stagesFor(r, 'open')).not.toContain('rfq')
+    }
+    expect(normalizeStage('quotation', 'admin', 'open', 'sell')).toBe('quotation')
+    expect(normalizeStage('quotation', 'admin', 'open')).toBeNull()
+    expect(normalizeStage('quotation', 'admin', 'open', 'deliver')).toBeNull()
+    expect(normalizeStage('invoice', 'admin', 'open', 'sell')).toBeNull()
+    expect(normalizeStage('rfq', 'admin', 'history', 'sell')).toBeNull()
+  })
+})
+
+describe('Jobs list lanes', () => {
+  it("keeps a job in Sell until the customer's order arrives, then in Deliver", () => {
+    for (const w of ['enquiry', 'asking_suppliers', 'prices_in', 'quoted', 'lost']) expect(laneOfJob(job({ stage: w, orderId: null }))).toBe('sell')
+    for (const w of ['ordered', 'supplier_ordered', 'delivered', 'invoiced', 'paid', 'cancelled']) expect(laneOfJob(job({ stage: w, orderId: 'o1' }))).toBe('deliver')
+  })
+  it('puts an order without enquiry in Deliver, and a cancelled order in Deliver even when its order is gone', () => {
+    expect(laneOfJob(job({ kind: 'direct', stage: null, orderId: null }))).toBe('deliver')
+    expect(laneOfJob(job({ stage: 'cancelled', orderId: null }))).toBe('deliver')
+    expect(laneOfJob(job({ stage: null, orderId: null }))).toBe('sell')
+  })
+  it('reads only sell and deliver as a lane', () => {
+    expect(isLane('sell')).toBe(true)
+    expect(isLane('deliver')).toBe(true)
+    for (const v of ['jobs', 'Sell', '', null]) expect(isLane(v)).toBe(false)
   })
 })
 

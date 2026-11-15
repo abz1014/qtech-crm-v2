@@ -100,7 +100,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
       >
         {chosen ? (
           <div className="grid gap-4">
-            <div className="grid gap-1 rounded-panel border bg-sunken p-4" data-testid="chosen-order">
+            <div className="grid gap-1 rounded-control border bg-canvas p-4" data-testid="chosen-order">
               <span className="flex flex-wrap items-baseline justify-between gap-2">
                 <span className="font-medium">{chosen.companyName}</span>
                 <span className="num text-sm text-fg-2">{orderRef(chosen.number)}</span>
@@ -149,15 +149,15 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
             </div>
             {found.isPending ? (
               <div role="status" className="grid gap-2" aria-busy="true" aria-label="Searching">
-                <Skeleton className="h-[3.5rem] w-full" />
-                <Skeleton className="h-[3.5rem] w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
               </div>
             ) : found.isError ? (
               <Banner tone="danger" title="The orders could not be searched" action={<Button onClick={() => void found.refetch()}>Try again</Button>}>
                 Nothing was changed.
               </Banner>
             ) : found.data.length === 0 ? (
-              <p className="rounded border border-dashed p-4 text-sm text-fg-muted" data-testid="no-past-orders">
+              <p className="rounded-row border border-dashed p-4 text-sm text-fg-muted" data-testid="no-past-orders">
                 {debounced.trim() ? 'No past order matches that. Try a company name, a site or an item.' : 'There are no past orders to copy yet. Mark an RFQ won to start the first one.'}
               </p>
             ) : (
@@ -167,7 +167,7 @@ export function NewOrderDialog({ onClose, sourceId }: { onClose: () => void; sou
                     <button
                       type="button"
                       onClick={() => setChosen(o)}
-                      className={cn('grid w-full gap-px rounded border bg-surface px-4 py-3 text-left transition-colors duration-fast hover:border-line-input hover:bg-sunken')}
+                      className={cn('grid w-full gap-px rounded-row border bg-surface px-4 py-3 text-left transition-colors duration-fast hover:border-line-input hover:bg-sunken')}
                     >
                       <span className="flex flex-wrap items-baseline justify-between gap-2">
                         <span className="font-medium">{o.companyName}</span>

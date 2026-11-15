@@ -37,10 +37,11 @@ describe('ConfirmDelete', () => {
     expect(screen.queryByText(/Also deletes/)).toBeNull()
   })
 
-  it('Delete is a red (danger) button, never the green primary one; Cancel closes without deleting', async () => {
+  it('Delete is the red (danger) outline button, never the green primary one; Cancel closes without deleting', async () => {
     const { onConfirm, onOpenChange } = open()
     const del = screen.getByRole('button', { name: 'Delete' })
-    expect(del.className).toContain('bg-tone-danger-fg')
+    expect(del.className).toContain('border-tone-danger-fg')
+    expect(del.className).toContain('text-tone-danger-fg')
     expect(del.className).not.toContain('bg-primary')
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onConfirm).not.toHaveBeenCalled()

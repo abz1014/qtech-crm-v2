@@ -25,6 +25,7 @@ import { useChannelPreference } from '@/lib/useChannelPreference'
 import { awaitingReply, canChaseInquiry, jumpToReplyRow, outstandingItems, replyItems } from '@/features/rfqs/replyFocus'
 import { ReplyChip, SupplierReplyDialog } from '@/features/rfqs/SupplierReplies'
 import { useReplyDialog } from '@/features/rfqs/useReplyDialog'
+import { QuietChip, SECTION_BOX } from '@/features/rfqs/supplierLook'
 import { SentConfirm } from '@/features/rfqs/SentConfirm'
 import {
   daysSince,
@@ -127,8 +128,21 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
     jumpToReplyRow(firstAwaiting)
   }, [phone, jump, firstAwaiting, rfq.id])
 
+  // The header's count and how many of those asked have answered (a price, or "cannot quote"), as drawn (proposal 23).
+  const askedN = inquiries.filter(i => i.sentOn || i.noOfferOn).length
+  const answeredN = inquiries.filter(i => (i.sentOn || i.noOfferOn) && (i.lines.length > 0 || Boolean(i.noOfferOn))).length
   return (
-    <DetailPanel title="Suppliers asked" dataSlot="suppliers-asked">
+    <DetailPanel
+      title="Suppliers asked"
+      dataSlot="suppliers-asked"
+      tip={
+        <QuietChip className="num ml-2 shrink-0 px-2">
+          {inquiries.length}
+          <span className="sr-only">{inquiries.length === 1 ? ' supplier' : ' suppliers'}</span>
+        </QuietChip>
+      }
+      meta={askedN > 0 ? <span className="num text-sm" data-answered>{`${answeredN} of ${askedN} answered`}</span> : undefined}
+    >
       <ul>
         {inquiries.map(i => {
           const awaiting = Boolean(i.sentOn) && !i.noOfferOn && i.lines.length === 0
@@ -143,7 +157,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           return (
             <li
               key={i.id}
-              className="grid scroll-mt-[5rem] gap-1 border-t px-0 py-3 first:border-t-0"
+              className="grid scroll-mt-[5rem] grid-cols-[minmax(0,1fr)] gap-1 border-t px-0 py-4 first:border-t-0"
               data-supplier-asked={i.supplierId}
               data-reply-row={i.supplierId}
               data-folded={folded ? '' : undefined}
@@ -154,15 +168,18 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                   aria-expanded={!folded}
                   aria-controls={folded ? undefined : detailId}
                   onClick={() => toggle(i.id)}
-                  className="-my-2 flex min-h-touch w-full flex-wrap items-center gap-x-3 gap-y-1 rounded text-left"
+                  className="-my-2 grid min-h-touch w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-control py-1 text-left"
                 >
-                  <b className="min-w-0 flex-1 basis-[10rem] break-words font-semibold">{i.supplierName}</b>
-                  <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
-                  <Icon icon={ChevronDown} className={cn('shrink-0 text-fg-muted transition-transform', !folded && 'rotate-180')} />
+                  {/* A long name keeps its width: the chip drops under it, the chevron stays at the right edge. */}
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                    <b className="type-row min-w-0 flex-1 basis-[10rem] break-words">{i.supplierName}</b>
+                    <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
+                  </span>
+                  <Icon icon={ChevronDown} className={cn('shrink-0 text-fg-muted transition-transform duration-base ease-out', !folded && 'rotate-180')} />
                 </button>
               ) : (
-                <div className="flex flex-wrap items-start gap-x-3 gap-y-1">
-                  <b className="min-w-0 flex-1 basis-[10rem] break-words font-semibold">{i.supplierName}</b>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <b className="type-row min-w-0 flex-1 basis-[10rem] break-words">{i.supplierName}</b>
                   <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
                 </div>
               )}
@@ -172,7 +189,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                     <AskedAboutLine inquiry={i} items={items} />
                     {mem ? <p className={mem.late ? 'text-sm text-tone-warning-fg' : 'text-sm text-fg-muted'}>{mem.text}</p> : null}
                     <ChasedByNote byId={i.lastChasedBy} at={i.lastChasedOn} />
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
                       {declinedAll ? (
                         <TakeBack rfq={rfq} inquiry={i} />
                       ) : !prices ? null : (
@@ -208,7 +225,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
           )
         })}
       </ul>
-      <div className="flex flex-wrap items-center gap-2 border-t px-0 py-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-0 pt-4">
         <Button icon={Plus} onClick={onFloat}>
           Ask more suppliers
         </Button>
@@ -440,7 +457,7 @@ function ChaseCard({
           onChaseAgain={() => setDismissed(true)}
         />
       ) : null}
-      <div role="group" aria-label={`Follow up with ${inquiry.supplierName}`} className="grid grid-cols-[minmax(0,1fr)] border-y">
+      <div role="group" aria-label={`Follow up with ${inquiry.supplierName}`} className={SECTION_BOX}>
         <RecipientRow channel={channel} lead={channel === 'email' ? 'Email to' : 'WhatsApp to'} contact={recipient} />
         {whole ? (
           <div id={wholeId} className="grid">
@@ -490,7 +507,7 @@ function ChaseCard({
             items this supplier has not priced, and never names the customer or the Q-Tech price.
           </ChaseNote>
         ) : null}
-        <div className="grid grid-cols-[minmax(0,1fr)] gap-2 border-t bg-sunken px-4 py-3">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-3 border-t bg-deep px-4 py-3">
           <div ref={actionsRef} className="flex flex-wrap items-start gap-2">
             {both.whatsapp && both.email ? (
               <MessageActions
@@ -530,10 +547,10 @@ function ChaseCard({
             <span className="text-sm text-fg-muted">{inquiry.chaseCount === 0 ? 'Not followed up yet' : `Followed up ${inquiry.chaseCount === 1 ? 'once' : `${inquiry.chaseCount} times`} already`}</span>
           </div>
           {others.length > 1 && onPick ? (
-            <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">
+            <label className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-medium text-fg-2">
               <span>Message for</span>
               <Select
-                className="w-auto min-w-[12rem]"
+                className="w-auto min-w-[12rem] max-w-full"
                 value={inquiry.id}
                 onChange={e => onPick(e.target.value)}
                 options={others.map(o => ({ value: o.id, label: o.supplierName }))}

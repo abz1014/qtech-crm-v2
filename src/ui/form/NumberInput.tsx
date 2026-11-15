@@ -97,7 +97,6 @@ export const NumberInput = forwardRef<HTMLInputElement, NumberInputProps>(functi
           'num text-right',
           prefix && 'rounded-l-none',
           suffix && 'rounded-r-none',
-          (prefix || suffix) && 'w-auto',
           className,
         )}
       />

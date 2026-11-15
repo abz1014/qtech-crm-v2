@@ -45,18 +45,23 @@ export const jobLabel = (key: string) => `Job ${key}`
 /*
  * The stage filter (2026-11-03): where a job stands on the StageBar ruler, so a filter and the bar always agree. The stop comes from
  * currentStopIndex (0 to 6, 7 = paid, null = lost or cancelled).
+ *   rfq       RFQs (Sell only): stop 0, suppliers not asked yet
+ *   quotation Quotations (Sell only): being priced, priced, or the quotation sent and the customer's order not in yet
  *   orders    the customer has ordered: a live order exists and the job is at or past "ordered" (an order job is also in one more filter)
  *   supplier  Waiting for supplier: stop 3 (an item to source, a supplier order to place, or placed and not here yet)
  *   deliver   To deliver: stop 4 (goods arrived or part delivered, not all delivered)
  *   invoice   To invoice: stop 5
  *   payment   To be paid: stop 6, which is the stage "invoiced" only (what customers owe stays in Money, Who owes us)
- * Lost, cancelled and enquiry-only jobs are in no filter. Nothing here is money, so an engineer may filter too, on the first four.
+ * Lost, cancelled and (outside Sell) enquiry-only jobs are in no filter. Nothing here is money, so an engineer may filter too, on
+ * Orders, Waiting for supplier and To deliver.
  */
-export const STAGE_FILTERS = ['orders', 'supplier', 'deliver', 'invoice', 'payment'] as const
+export const STAGE_FILTERS = ['rfq', 'quotation', 'orders', 'supplier', 'deliver', 'invoice', 'payment'] as const
 export type StageFilter = (typeof STAGE_FILTERS)[number]
 export const isStageFilter = (v: string | null): v is StageFilter => v !== null && (STAGE_FILTERS as readonly string[]).includes(v)
 
 export const STAGE_LABEL: Record<StageFilter, string> = {
+  rfq: 'RFQs',
+  quotation: 'Quotations',
   orders: 'Orders',
   supplier: 'Waiting for supplier',
   deliver: 'To deliver',
@@ -65,20 +70,39 @@ export const STAGE_LABEL: Record<StageFilter, string> = {
 }
 
 const ORDER_STAGES = ['ordered', 'supplier_ordered', 'delivered', 'invoiced', 'paid']
-const STOP_OF: Record<Exclude<StageFilter, 'orders'>, number> = { supplier: 3, deliver: 4, invoice: 5, payment: 6 }
+const QUOTE_STAGES = ['asking_suppliers', 'prices_in', 'quoted']
+const STOP_OF: Record<'supplier' | 'deliver' | 'invoice' | 'payment', number> = { supplier: 3, deliver: 4, invoice: 5, payment: 6 }
 
-/** The options this person is offered after "All": an engineer has no invoice or payment words; History holds finished work, so only Orders. */
-export function stagesFor(role: Who['role'], chip: Chip): StageFilter[] {
-  if (chip === 'history') return ['orders']
-  return role === 'admin' || role === 'sales' ? [...STAGE_FILTERS] : ['orders', 'supplier', 'deliver']
+/*
+ * The two lanes (Forest, gate 2): Sell and Deliver are two views of this one list, in the address as ?lane=sell or ?lane=deliver
+ * (the shell's links, src/app/navConfig.ts). Sell holds a job until the customer's order arrives (RFQ and Quotation on the ruler);
+ * Deliver holds it from the order to the payment (an order without enquiry starts there). A lost enquiry stays in Sell's history, a
+ * cancelled order in Deliver's. The bare /jobs list is every job, as before.
+ */
+export const LANES = ['sell', 'deliver'] as const
+export type JobLane = (typeof LANES)[number]
+export const isLane = (v: string | null): v is JobLane => v !== null && (LANES as readonly string[]).includes(v)
+
+export function laneOfJob(j: Pick<JobRow, 'kind' | 'orderId' | 'stage'>): JobLane {
+  if (j.kind === 'direct' || j.orderId !== null) return 'deliver'
+  return j.stage !== null && (ORDER_STAGES.includes(j.stage) || j.stage === 'cancelled') ? 'deliver' : 'sell'
 }
 
-/** The stage a ?stage= value stands for: anything unknown, or not offered to this person or chip, is All (null). */
-export function normalizeStage(param: string | null, role: Who['role'], chip: Chip): StageFilter | null {
-  return isStageFilter(param) && stagesFor(role, chip).includes(param) ? param : null
+/** The options this person is offered after "All": an engineer has no invoice or payment words; History holds finished work, so only Orders (Sell's history: none). */
+export function stagesFor(role: Who['role'], chip: Chip, lane: JobLane | null = null): StageFilter[] {
+  if (lane === 'sell') return chip === 'history' ? [] : ['rfq', 'quotation']
+  if (chip === 'history') return ['orders']
+  return role === 'admin' || role === 'sales' ? ['orders', 'supplier', 'deliver', 'invoice', 'payment'] : ['orders', 'supplier', 'deliver']
+}
+
+/** The stage a ?stage= value stands for: anything unknown, or not offered to this person, chip or lane, is All (null). */
+export function normalizeStage(param: string | null, role: Who['role'], chip: Chip, lane: JobLane | null = null): StageFilter | null {
+  return isStageFilter(param) && stagesFor(role, chip, lane).includes(param) ? param : null
 }
 
 export function inStage(j: JobRow, s: StageFilter): boolean {
+  if (s === 'rfq') return currentStopIndex(j.stage, j.stageDetail) === 0
+  if (s === 'quotation') return j.stage !== null && QUOTE_STAGES.includes(j.stage)
   if (s === 'orders') return j.orderId !== null && j.stage !== null && ORDER_STAGES.includes(j.stage)
   return currentStopIndex(j.stage, j.stageDetail) === STOP_OF[s]
 }

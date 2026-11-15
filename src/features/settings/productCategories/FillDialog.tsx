@@ -100,7 +100,7 @@ export function FillDialog({ families, onClose }: { families: readonly CategoryO
               <p className="text-base font-medium" data-testid="fill-summary">
                 {plan.total === 0 ? 'Nothing to fill.' : phase.kind === 'done' ? `Filled ${phase.done} of ${total}.` : phase.kind === 'filling' ? `Filling… ${phase.done} of ${total}` : `${planSummary(plan)} would be filled.`}
               </p>
-              {phase.kind === 'filling' ? <progress className="h-3 w-full" max={total} value={phase.done} aria-label="Items filled" /> : null}
+              {phase.kind === 'filling' ? <progress className="h-2 w-full overflow-hidden rounded-pill accent-brand-500" max={total} value={phase.done} aria-label="Items filled" /> : null}
               {plan.groups.length > 0 ? (
                 <ul className="grid gap-1" aria-label="Items per category">
                   {plan.groups.map(g => (

@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { ArrowRightLeft, Building2, CircleDashed, Truck, type LucideIcon } from 'lucide-react'
 import type { CompanyRole } from '@/features/companies/api'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
+import { Icon } from '@/ui/Icon'
 import { STATUS } from '@/lib/status'
 import { Tag } from '@/ui/Tag'
 
@@ -21,6 +23,7 @@ export function Panel({
   footer,
   className,
   flat,
+  card,
 }: {
   title: ReactNode
   /** An InfoTip (src/ui/InfoTip): the rule behind the panel, kept off the page. */
@@ -32,6 +35,8 @@ export function Panel({
   className?: string
   /** Clarity look: a hairline above the section instead of a box, and no rule under the heading. */
   flat?: boolean
+  /** Forest card (71-company-page .qb-copanel): a white card with the e1 lift, the title and its actions on one head row, no rule under it. */
+  card?: boolean
 }) {
   const headingId = useId()
   const heading = (
@@ -40,8 +45,11 @@ export function Panel({
     </h2>
   )
   return (
-    <section aria-labelledby={headingId} className={cn('min-w-0', flat ? 'border-t [&_.px-5]:px-0' : 'rounded-panel border bg-surface', className)}>
-      <header className={cn('flex min-h-[52px] flex-wrap items-center gap-x-3 gap-y-1 py-2', flat ? 'pl-0 pr-0' : 'border-b pl-5 pr-4')}>
+    <section
+      aria-labelledby={headingId}
+      className={cn('min-w-0', card ? 'rounded-card border border-line bg-surface pb-2 shadow-e1' : flat ? 'border-t [&_.px-5]:px-0' : 'rounded-panel border bg-surface', className)}
+    >
+      <header className={cn('flex min-h-row flex-wrap items-center gap-x-3 gap-y-1 py-2', card ? 'pl-5 pr-4 pt-3' : flat ? 'pl-0 pr-0' : 'border-b pl-5 pr-4')}>
         {info ? (
           <div className="-my-1 flex items-center gap-1">
             {heading}
@@ -73,13 +81,18 @@ export function KeyValue({ rows }: { rows: { key: string; value: ReactNode }[] }
   )
 }
 
+const ROLE_ICON: Record<CompanyRole, LucideIcon> = { customer: Building2, supplier: Truck, both: ArrowRightLeft, prospect: CircleDashed }
+
 /**
  * The derived role as a neutral Tag: identity, not state (DESIGN_SYSTEM section 6), so no tone. The words come from
- * the registry ("Customer", "Supplier", "Customer & supplier", "Prospect"); a prospect is dashed (not firm).
+ * the registry ("Customer", "Supplier", "Customer & supplier", "Prospect"); a prospect is dashed (not firm). Forest (70-companies,
+ * "The four role tags"): an icon before the word, a building for a customer, a truck for a supplier, two arrows for both and a
+ * dashed circle for a prospect; the word still carries the meaning.
  */
 export function RoleChip({ role, className }: { role: CompanyRole; className?: string }) {
   return (
-    <Tag dashed={role === 'prospect'} className={className}>
+    <Tag dashed={role === 'prospect'} className={cn('gap-1 pl-2', className)}>
+      <Icon icon={ROLE_ICON[role]} size="chip" />
       {STATUS['company-role'][role].label}
     </Tag>
   )

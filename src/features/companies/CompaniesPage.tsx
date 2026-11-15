@@ -99,15 +99,15 @@ export function CompaniesPage() {
         // Table cells do not wrap (DataTable), but a long company name must: unwrapped, it ran under the Role badge on a
         // 768 px tablet (HE-16). It wraps inside its own column instead.
         cell: r => (
-          <div className="grid min-w-0 gap-px whitespace-normal">
+          <div className="grid min-w-[11rem] gap-px whitespace-normal">
             <NameLink row={r} clamp />
             <PlaceLine row={r} clamp />
           </div>
         ),
       },
-      { id: 'role', header: 'Role', value: r => r.role, sortable: true, width: 216, cell: r => <Role row={r} /> },
-      { id: 'rfqs', header: 'RFQs', kind: 'num', value: r => r.rfqCount, sortable: true, width: 96, hideBelowMd: true },
-      { id: 'orders', header: 'Orders', kind: 'num', value: r => r.orderCount, sortable: true, width: 96, hideBelowMd: true },
+      { id: 'role', header: 'Role', value: r => r.role, sortable: true, width: 152, cell: r => <Role row={r} /> },
+      { id: 'rfqs', header: 'RFQs', kind: 'num', value: r => r.rfqCount, sortable: true, width: 80, hideBelowLg: true },
+      { id: 'orders', header: 'Orders', kind: 'num', value: r => r.orderCount, sortable: true, width: 80, hideBelowLg: true },
       {
         id: 'activity',
         header: 'Last activity',
@@ -152,19 +152,30 @@ export function CompaniesPage() {
       <DataTable
         label="Companies"
         noun="companies"
+        toolbarCard
         total={counts.all}
         columns={columns}
         rows={shown}
         getRowId={r => r.id}
         twoLine
         mobileRow={r => (
+          // Forest card (70-companies .qb-cocard, C-011): the name, the place, then the role tag with the facts the table's count
+          // columns carry (RFQs, Orders, Last), so a phone loses none of the table's columns.
           <div className="grid min-w-0 gap-1">
             <NameLink row={r} />
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <PlaceLine row={r} />
+            <PlaceLine row={r} />
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
               <Role row={r} />
+              <span className="flex flex-wrap gap-x-3 text-sm text-fg-muted">
+                <span>
+                  RFQs <span className="num text-fg">{r.rfqCount}</span>
+                </span>
+                <span>
+                  Orders <span className="num text-fg">{r.orderCount}</span>
+                </span>
+                <span className="num">{r.lastActivity ? `Last: ${formatShortDate(r.lastActivity, today)}` : 'No activity yet'}</span>
+              </span>
             </div>
-            <span className="num text-sm text-fg-muted">{r.lastActivity ? `Last: ${formatShortDate(r.lastActivity, today)}` : 'No activity yet'}</span>
           </div>
         )}
         defaultSort={{ id: 'name', dir: 'asc' }}
@@ -181,8 +192,8 @@ export function CompaniesPage() {
             <TableFilter label="Search companies or contacts" placeholder="Search companies" hint="Finds a company by name, city, or a contact's name or phone." value={text} onChange={v => setText(v)} />
             <SegmentedControl
               aria-label="Show"
-              // a 2 by 2 grid on a phone (all four in view, none cut off), one row from sm up
-              className="max-sm:grid max-sm:w-full max-sm:grid-cols-2"
+              // one row of equal columns on a phone (the shared SegmentedControl, audit 1 blocker 3), full width
+              className="max-sm:w-full"
               value={filter}
               onValueChange={v => setFilter(v as Filter)}
               options={[
@@ -267,7 +278,7 @@ function NameLink({ row, clamp = false }: { row: Shown; clamp?: boolean }) {
     <Link
       to={`/companies/${row.id}`}
       title={clamp ? row.name : undefined}
-      className={`min-w-0 [overflow-wrap:anywhere] font-medium text-fg hover:underline ${clamp ? 'line-clamp-2' : ''}`}
+      className={`min-w-0 [overflow-wrap:anywhere] font-semibold text-fg hover:underline ${clamp ? 'line-clamp-2' : ''}`}
     >
       {row.name}
     </Link>

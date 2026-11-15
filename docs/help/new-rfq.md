@@ -6,7 +6,7 @@ keywords: enquiry, inquiry, customer, request, price, paste, pdf, excel, spreads
 screens: /rfqs, /todo
 related: ask-suppliers
 ---
-1. Select [New], then [New RFQ].
+1. Select [Create], then [New RFQ].
 2. Paste what the customer sent, or select [Choose PDF or photo] for their PDF, a screenshot, a photo or an Excel sheet (.xlsx, .xls, .csv). It splits into items.
 3. Under [Customer], select [Use <Company>] if it is suggested, or pick the company.
 4. Check the items, then select [Looks right: find suppliers].

@@ -16,11 +16,11 @@ export const RadioGroup = forwardRef<ElementRef<typeof RadixRadio.Root>, Compone
 )
 
 const dot = (
-  <RadixRadio.Indicator className="block size-[8px] rounded-round bg-primary" />
+  <RadixRadio.Indicator className="block size-3 rounded-pill bg-primary" />
 )
 
 const circle =
-  'grid size-[18px] shrink-0 place-items-center rounded-round border border-line-input bg-surface transition-colors duration-fast ease-out hover:border-fg-muted data-[state=checked]:border-primary disabled:cursor-not-allowed disabled:border-line disabled:bg-sunken'
+  'grid size-6 shrink-0 place-items-center rounded-pill border-2 border-line-input bg-surface transition-colors duration-fast ease-out hover:border-fg-muted data-[state=checked]:border-primary disabled:cursor-not-allowed disabled:border-line disabled:bg-sunken'
 
 interface RadioProps extends Omit<ComponentPropsWithoutRef<typeof RadixRadio.Item>, 'children'> {
   label: ReactNode
@@ -35,7 +35,7 @@ export const Radio = forwardRef<ElementRef<typeof RadixRadio.Item>, RadioProps>(
   const id = idProp ?? auto
   return (
     <div className="flex items-start gap-3 text-sm">
-      <RadixRadio.Item ref={ref} id={id} aria-describedby={help ? `${id}-help` : undefined} className={cn(circle, 'mt-[calc((var(--lh-sm)-18px)/2)] [@media(pointer:coarse)]:mt-[calc((var(--hit-touch)-18px)/2)]', className)} {...rest}>
+      <RadixRadio.Item ref={ref} id={id} aria-describedby={help ? `${id}-help` : undefined} className={cn(circle, 'mt-[calc((var(--lh-sm)-var(--sp-6))/2)] [@media(pointer:coarse)]:mt-[calc((var(--hit-touch)-var(--sp-6))/2)]', className)} {...rest}>
         {dot}
       </RadixRadio.Item>
       <div className="grid">
@@ -62,8 +62,8 @@ export const RadioCard = forwardRef<ElementRef<typeof RadixRadio.Item>, RadioPro
     <label
       htmlFor={id}
       className={cn(
-        'flex cursor-pointer items-start gap-3 rounded border border-line-strong bg-surface px-4 py-3 text-sm transition-colors duration-fast ease-out hover:border-line-input',
-        'has-[[data-state=checked]]:border-fg has-[[data-state=checked]]:bg-sunken',
+        'flex cursor-pointer items-start gap-3 rounded-control border border-line-strong bg-surface px-4 py-3 text-sm transition-colors duration-fast ease-out hover:border-line-input',
+        'has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-selected',
         'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green',
         disabled && 'cursor-not-allowed bg-sunken hover:border-line-strong',
         className,
@@ -74,13 +74,13 @@ export const RadioCard = forwardRef<ElementRef<typeof RadixRadio.Item>, RadioPro
         id={id}
         disabled={disabled}
         aria-describedby={help ? `${id}-help` : undefined}
-        className={cn(circle, 'mt-[calc((var(--lh-sm)-18px)/2)] focus-visible:outline-none')}
+        className={cn(circle, 'mt-[calc((var(--lh-sm)-var(--sp-6))/2)] focus-visible:outline-none')}
         {...rest}
       >
         {dot}
       </RadixRadio.Item>
       <span className="grid">
-        <b className={cn('font-medium', disabled && 'text-fg-muted')}>{label}</b>
+        <b className={cn('font-card', disabled && 'text-fg-muted')}>{label}</b>
         {help ? (
           <span id={`${id}-help`} className="text-xs text-fg-muted">
             {help}

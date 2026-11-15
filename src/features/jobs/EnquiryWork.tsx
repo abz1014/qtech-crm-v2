@@ -1,5 +1,5 @@
-import { Suspense, useMemo, useState, type ReactNode } from 'react'
-import { ChevronRight, Plus, X } from 'lucide-react'
+import { Suspense, useId, useMemo, useState, type ReactNode } from 'react'
+import { MessageCircleQuestion, Paperclip, Plus, X, type LucideIcon } from 'lucide-react'
 import { useSeesPrices, useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { useChannelPreference } from '@/lib/useChannelPreference'
@@ -7,6 +7,8 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { lazyDialog } from '@/lib/lazyDialog'
 import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
+import { FoldRow } from '@/ui/FoldRow'
+import { FOLD_CARD } from '@/ui/card'
 import { MessageActions } from '@/ui/MessageActions'
 import { Skeleton } from '@/ui/Skeleton'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
@@ -40,25 +42,27 @@ const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/Attachment
 const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/ExpenseDialog').then(m => m.AddExpenseDialog))
 const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
 
-/** A compact section: one line (the title and how many) that opens its panel, open from the start only when there is something in it. */
-function Fold({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+/**
+ * A compact section (F-161, 23-job-suppliers .qb-fold--compact): a card row (the title, how many, a chevron) that opens its panel, open
+ * from the start only when there is something in it. The same compact fold card as Commissioning and Challans on the Delivery stop.
+ */
+function Fold({ title, count, noun, icon, children }: { title: string; count: number; noun: [string, string]; icon: LucideIcon; children: ReactNode }) {
   const [chosen, setChosen] = useState<boolean | null>(null)
   const open = chosen ?? count > 0
+  const id = useId()
   return (
     <div data-fold={title}>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setChosen(!open)}
-        className="flex min-h-touch w-full items-center gap-2 rounded px-2 text-left text-base font-medium hover:bg-sunken"
+      <FoldRow
+        state={{ icon, word: count > 0 ? 'Has some' : 'None yet' }}
+        title={title}
+        summary={<span className="num whitespace-nowrap text-fg-muted">{count > 0 ? `${count} ${count === 1 ? noun[0] : noun[1]}` : 'none yet'}</span>}
+        open={open}
+        onToggle={() => setChosen(!open)}
+        controlsId={id}
+        className={FOLD_CARD}
       >
-        <ChevronRight aria-hidden="true" className={open ? 'size-4 shrink-0 rotate-90' : 'size-4 shrink-0'} />
-        {/* One run of text: on a narrow phone "none yet" follows the title to the next line whole, not two wrapped columns. */}
-        <span className="min-w-0">
-          {title} <span className="num whitespace-nowrap text-fg-muted">{count > 0 ? `(${count})` : 'none yet'}</span>
-        </span>
-      </button>
-      {open ? <Suspense fallback={<Skeleton className="h-8 w-full" />}>{children}</Suspense> : null}
+        <Suspense fallback={<Skeleton className="h-8 w-full" />}>{children}</Suspense>
+      </FoldRow>
     </div>
   )
 }
@@ -69,10 +73,10 @@ function EnquiryExtras({ rfq, inquiries }: { rfq: RfqHeader; inquiries: InquiryR
   const files = useRfqAttachments(rfq.id)
   return (
     <div className="grid gap-2">
-      <Fold title="Questions for the customer" count={clars.data?.length ?? 0}>
+      <Fold title="Questions for the customer" count={clars.data?.length ?? 0} noun={['question', 'questions']} icon={MessageCircleQuestion}>
         <ClarificationsPanel rfq={rfq} inquiries={inquiries} underHeading />
       </Fold>
-      <Fold title="Files" count={files.data?.length ?? 0}>
+      <Fold title="Files" count={files.data?.length ?? 0} noun={['file', 'files']} icon={Paperclip}>
         <AttachmentsPanel rfqId={rfq.id} compact slimWhenEmpty />
       </Fold>
     </div>

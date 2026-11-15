@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
-import type { PaidVia } from '@/features/money/expenses/model'
-import type { PaymentState, PriorPayment, ReceivableRow, ReceivableTotals } from '@/features/money/payments/model'
+import { monthEnd, monthStart, type PaidVia } from '@/features/money/expenses/model'
+import { lookupLabels } from '@/features/money/lookupLabels'
+import type { PaymentState, PriorPayment, ReceivableRow, ReceivableTotals, ReceivedPayment } from '@/features/money/payments/model'
 
 /*
  * Payments in and receivables (M02): every database call for this area. Receivables come from receivables_list() and
@@ -204,4 +205,39 @@ export async function recordPayment(v: PaymentInsert): Promise<void> {
     p_invoice_id: v.invoiceId ?? undefined,
   })
   if (error) throw error
+}
+
+/**
+ * Money > Payments (owner gate 2, 13 Nov 2026: the one new read): the payments received in one month ("2026-11"), every way they
+ * were paid (bank, cash, ...), voided ones left out, newest first. A plain select on payments_in under its Row Level Security, so
+ * only an admin gets rows; the customer and the order number come from lookup_labels() in one call. No figure is worked out here.
+ */
+export async function listPaymentsReceived(month: string): Promise<ReceivedPayment[]> {
+  const db = requireSupabase()
+  const rows = await fetchAll<{ id: string; received_on: string; amount: number | string; paid_via: string; reference: string | null; order_id: string | null }>((from, to) =>
+    db
+      .from('payments_in')
+      .select('id, received_on, amount, paid_via, reference, order_id')
+      .is('voided_at', null)
+      .gte('received_on', monthStart(month))
+      .lte('received_on', monthEnd(month))
+      .order('received_on', { ascending: false })
+      .order('id')
+      .range(from, to),
+  )
+  const orderIds = [...new Set(rows.map(r => r.order_id).filter((x): x is string => !!x))]
+  const { orders } = await lookupLabels({ orders: orderIds })
+  return rows.map(r => {
+    const o = r.order_id ? orders[r.order_id] : undefined
+    return {
+      id: r.id,
+      receivedOn: r.received_on,
+      amount: num(r.amount),
+      paidVia: r.paid_via as PaidVia,
+      reference: r.reference,
+      orderId: r.order_id,
+      orderNumber: o ? Number(o.number) : null,
+      company: o?.company_name ?? null,
+    }
+  })
 }

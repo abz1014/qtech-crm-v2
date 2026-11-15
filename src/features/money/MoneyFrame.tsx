@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react'
+import { memo, useEffect, useRef, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
+import { useScrollFade } from '@/ui/useScrollFade'
 import { MONEY_TABS, MORE_MONEY_PAGES, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PageHeader } from '@/ui/PageHeader'
@@ -20,20 +21,34 @@ import { MoneyPagesSwitcher } from '@/features/money/MoneyPagesSheet'
  * phone bar says "Money" and the switcher names the page. No date line: the month views carry their own month. No tab carries a
  * number (redesign phase 0, plan section (c)): the one "needs you" count is Today's, and a late payment is a row on Today
  * (features/today/needsYou.ts).
+ * Forest (50-money-hub.html#money-strip): the desktop tabs are one underlined strip on a hairline, the lit tab green with a 3 px
+ * bar under it and scrolled into view when the window is narrow (R-023); Payments carries a small "New" word (gate 2).
  */
 export function MoneyFrame({
   active,
   actions,
+  secondary,
   title,
   barTitle,
   lede,
+  back,
+  titleMeta,
   morePages = true,
   children,
 }: {
   active: string | null
   actions?: ReactNode
-  /** The h1; the active tab's name when absent. */
+  /** One secondary button beside the green one (Export CSV on Mistakes to fix). */
+  secondary?: ReactNode
+  /** The h1: the page's own name. The active tab's name when absent. */
   title?: string
+  /**
+   * A page reached from a tab rather than being one (Bank check, Margins, Mistakes to fix...): where it was opened from. A small back
+   * link above the h1 on a desktop ("< Lock a month"); on a phone the bar's own back arrow (one bar, UX audit 2026-10-19).
+   */
+  back?: { to: string; label: string }
+  /** What explains the title (an (i), a state chip): beside the h1 (PageHeader `meta`). On a phone, where the h1 is the bar's, the title is drawn beside it so the (i) never points at nothing. */
+  titleMeta?: ReactNode
   /** The phone bar's title. Default "Money": on a phone the switcher row names the page, not the bar. */
   barTitle?: string
   /** The line under the h1 when it is not "All amounts in PKR". A view with no line made the tabs sit higher than on its sister tabs. */
@@ -59,14 +74,26 @@ export function MoneyFrame({
     // One column no wider than the screen (minmax(0, 1fr)): a wide child (a register's table) scrolls inside its own card
     // instead of stretching the column, and every card with it, past the right edge of a phone.
     <div className="mx-auto grid w-full min-w-0 max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
-      {/* The phone bar's title. Rendered before the page, so a sub-page's own bar (MoneySubHeader) wins. */}
-      <FrameBar title={barTitle ?? 'Money'} />
+      {/* The phone bar: "Money" on a tab (the switcher names the page); a page reached from a tab has its name and a back arrow. */}
+      <FrameBar title={back ? heading : (barTitle ?? 'Money')} back={back?.to} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4">
-        {/* The list-page head (spec 5.2): the view's name and the page's one green action (`actions`). */}
+        {back ? (
+          <Link
+            to={back.to}
+            className="-mb-2 inline-flex items-center gap-1 justify-self-start text-sm font-medium text-fg-2 hover:text-fg hover:underline max-md:hidden md:-mb-3"
+          >
+            <Icon icon={ChevronLeft} size="sm" />
+            <span className="sr-only">Back to </span>
+            {back.label}
+          </Link>
+        ) : null}
+        {/* The list-page head (spec 5.2): the page's own name as the one h1 on every Money page (audit 1, item 22), and its one green action. */}
         <PageHeader
           title={heading}
           lede={lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
+          meta={titleMeta}
           primary={actions}
+          secondary={secondary}
         />
         {phone && isAdmin ? (
           <MoneyPagesSwitcher current={current} tabs={tabs} activeKey={active} more={MORE_MONEY_PAGES} toOf={toOf} isHere={isHere} />
@@ -77,11 +104,7 @@ export function MoneyFrame({
             ))}
           </nav>
         ) : (
-          <nav aria-label="Money views" className="inline-flex max-w-full gap-[2px] justify-self-start rounded bg-selected p-[2px]" data-testid="money-tabs">
-            {tabs.map(t => (
-              <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
-            ))}
-          </nav>
+          <DesktopTabs tabs={tabs} active={active} toOf={toOf} />
         )}
         {isAdmin && morePages && !phone ? (
           <div role="group" aria-label="More money pages" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
@@ -112,11 +135,35 @@ export function MoneyFrame({
 }
 
 // Memo: a re-render of the frame must not replace the bar a sub-page set (Lock a month's hideTabs) with the plain title. It re-runs
-// only when the title changes.
-const FrameBar = memo(function FrameBar({ title }: { title: string }) {
-  useMobileBar({ title })
+// only when the title or the back address changes. Back goes where the person came from (Today's "Margin not final" item, Reports,
+// the checklist), else to `back`.
+const FrameBar = memo(function FrameBar({ title, back }: { title: string; back?: string }) {
+  useMobileBar(back ? { title, back: 'history', fallback: back } : { title })
   return null
 })
+
+/** The desktop strip: it scrolls sideways only when the tabs are wider than the page, and the lit tab is brought into view. */
+function DesktopTabs({ tabs, active, toOf }: { tabs: readonly MoneyTab[]; active: string | null; toOf: (t: MoneyTab) => string }) {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [active])
+  // where the strip is cut (768, 1024 beside the open rail), the cut edge fades
+  const fade = useScrollFade(ref, active)
+  return (
+    <nav
+      ref={ref}
+      aria-label="Money views"
+      className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden"
+      style={fade}
+      data-testid="money-tabs"
+    >
+      {tabs.map(t => (
+        <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
+      ))}
+    </nav>
+  )
+}
 
 /** One Money tab. A plain Link: the lit tab follows `active`, not the address (a page that is not a tab passes null). */
 function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolean; phone?: boolean }) {
@@ -125,52 +172,20 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
       to={to}
       aria-current={on ? 'page' : undefined}
       className={cn(
-        'inline-flex items-center rounded border font-medium transition-colors duration-fast ease-out',
-        phone ? 'min-h-touch min-w-0 justify-center gap-1 px-1 text-center text-sm leading-tight' : 'min-h-control gap-2 px-4 text-sm',
-        on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg',
+        'inline-flex items-center transition-colors duration-fast ease-out',
+        phone
+          ? 'min-h-touch min-w-0 justify-center gap-1 rounded border px-1 text-center text-sm font-medium leading-tight'
+          : 'min-h-control shrink-0 gap-2 border-b-ring px-3 text-sm font-card xl:px-4',
+        phone ? (on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg') : on ? 'border-primary font-heavy text-primary' : 'border-transparent text-fg-2 hover:text-fg',
       )}
     >
       {/* One label on every screen: the full name. */}
       <span className="whitespace-nowrap">{tab.label}</span>
+      {tab.isNew && !phone ? (
+        <span aria-hidden="true" className="rounded-pill bg-brand-100 px-2 text-xs font-heavy text-primary">
+          New
+        </span>
+      ) : null}
     </Link>
-  )
-}
-
-/**
- * The heading of a view reached from a Money tab rather than being one (Bank check, Margins, Mistakes to fix): a
- * back link to where it was opened from, the title and its actions. It replaces the old third strip of tabs.
- * On a phone the back link is the phone bar's own back arrow (one bar, UX audit 2026-10-19), so it is not drawn twice, and
- * the title is the phone bar's (not repeated as a heading).
- */
-export function MoneySubHeader({
-  back,
-  title,
-  meta,
-  actions,
-}: {
-  back: { to: string; label: string }
-  title: string
-  meta?: ReactNode
-  actions?: ReactNode
-}) {
-  // Back goes where the person came from (Today's "Margin not final" item, Reports, the checklist), else to `back.to`.
-  useMobileBar({ title, back: 'history', fallback: back.to })
-  return (
-    <div className="grid gap-2">
-      <Link to={back.to} className="inline-flex items-center gap-1 justify-self-start text-sm font-medium text-fg-2 hover:text-fg hover:underline max-md:hidden">
-        <Icon icon={ChevronLeft} size="sm" />
-        <span className="sr-only">Back to </span>
-        {back.label}
-      </Link>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {/* The title and what explains it (the (i), a tag) stay together: a lone (i) under the phone bar pointed at nothing. So a view with `meta` draws its title on a phone too. */}
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-          <h2 className={cn('text-xl font-semibold tracking-snug', !meta && 'max-md:sr-only')}>{title}</h2>
-          {meta}
-        </div>
-        <span className="flex-1 max-md:hidden" />
-        {actions}
-      </div>
-    </div>
   )
 }

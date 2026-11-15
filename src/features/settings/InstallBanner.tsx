@@ -20,7 +20,6 @@ export function InstallBanner() {
       <Banner
         tone="info"
         title="Install the app"
-        className="mb-6"
         action={
           <span className="flex gap-2">
             <Button size="sm" variant="primary" onClick={() => void promptInstall()}>
@@ -50,7 +49,6 @@ export function InstallBanner() {
       <Banner
         tone="info"
         title="Add Q-Tech CRM to the home screen"
-        className="mb-6"
         action={
           <Button
             size="sm"
@@ -64,7 +62,7 @@ export function InstallBanner() {
           </Button>
         }
       >
-        Select <Icon icon={Share} size="sm" className="inline align-[-2px]" /> <span className="font-medium">Share</span> in Safari, then{' '}
+        Select <Icon icon={Share} size="sm" className="inline align-text-bottom" /> <span className="font-medium">Share</span> in Safari, then{' '}
         <span className="font-medium">Add to Home Screen</span>.
       </Banner>
     )

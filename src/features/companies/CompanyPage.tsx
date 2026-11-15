@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Building2, ChevronLeft, ChevronRight, FilePlus2, GitMerge, Link2, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
+import { Building2, ChevronLeft, ChevronRight, FilePlus2, GitMerge, Link2, Mail, MessageCircle, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import {
   useCompany,
   useCompanyContacts,
@@ -29,7 +29,7 @@ import { BuyerTaxFields } from '@/features/money/invoices/pdf/BuyerTaxFields'
 import { CreditPanel } from '@/features/money/credit/CreditPanel'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
-import { useSession } from '@/app/session'
+import { useSeesPrices, useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -91,8 +91,9 @@ export function CompanyPage() {
   if (company.isError) {
     return (
       <Shell>
+        <PageName />
         <EmptyState
-          mood="error"
+          mood="error" bordered
           title="Could not load this company"
           actions={
             <Button onClick={() => void company.refetch()} variant="primary">
@@ -108,6 +109,7 @@ export function CompanyPage() {
   if (!company.data) {
     return (
       <Shell>
+        <PageName />
         <EmptyState
           icon={Building2}
           title="This company was not found"
@@ -133,19 +135,28 @@ function AllCompaniesButton() {
   )
 }
 
+/** Two columns from 1024 (71-company-page c-guide): the side column is a clamp up to the panel width, never a fixed 340. */
+const SPLIT = 'lg:grid-cols-[minmax(0,1fr)_clamp(16rem,26vw,var(--panel-w))]'
+
 /** `sticky`: the phone shows New RFQ in the StickyActionBar fixed to the bottom, so the page leaves room for it. */
 function Shell({ children, sticky = false }: { children: ReactNode; sticky?: boolean }) {
   return <div className={cn('mx-auto w-full max-w-detail px-4 pb-16 pt-6 md:px-8', sticky && 'max-md:pb-[calc(var(--control-lg-h)+2rem)]')}>{children}</div>
 }
 
+/** While the company loads, or when it cannot be shown, the page still has its one level-one heading (the card's title is not a heading). */
+function PageName() {
+  return <h1 className="sr-only">Company</h1>
+}
+
 function PageSkeleton() {
   return (
     <Shell>
+      <PageName />
       <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading company">
         <Skeleton className="h-4 w-[10rem]" />
         <Skeleton className="h-8 w-[20rem]" />
         <Skeleton className="h-4 w-[14rem]" />
-        <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className={cn('mt-4 grid gap-card-gap', SPLIT)}>
           <Skeleton className="h-[16rem] w-full" />
           <Skeleton className="h-[16rem] w-full" />
         </div>
@@ -161,6 +172,8 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   // Owner decision 2026-11-06: an engineer starts no RFQ and removes no contact from this page. Screen only; the database still allows both.
   const isEngineer = session.status === 'signed-in' && session.user.role === 'engineer'
+  // Gate 2 answer 28: the supplier's currency code ("Supplier prices in PKR") is a price word, so it is left out for anyone who sees no prices.
+  const seesPrices = useSeesPrices()
 
   const sites = useCompanySites(company.id)
   const contacts = useCompanyContacts(company.id)
@@ -198,7 +211,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
     legacyImported: company.legacyImported,
     createdAt: company.createdAt,
     lowData,
-    currency: record.view?.open.currency ?? null,
+    currency: seesPrices ? (record.view?.open.currency ?? null) : null,
     sinceYear,
     counts: history.data ? { sites: sites.data?.length ?? 0, rfqs: rfqCount, orders: orderCount } : null,
   })
@@ -301,16 +314,16 @@ function Loaded({ company }: { company: CompanyDetail }) {
   ) : null
   const detailsPanel = <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} />
   const notesPanel = company.notes ? (
-    <Panel flat title="Notes">
-      <p className="whitespace-pre-line px-5 py-4 text-base text-fg-2">{company.notes}</p>
+    <Panel card title="Notes">
+      <p className="whitespace-pre-line px-5 pb-3 pt-1 text-base text-fg-2 [overflow-wrap:anywhere]">{company.notes}</p>
     </Panel>
   ) : null
   // The money panel is rendered for an admin only (and the view refuses anyone else), so it needs no "Admin only" tag.
   const sidePanels = (
     <>
       {isAdmin && money.data && money.data.orders > 0 ? (
-        <Panel flat title="Money with them">
-          <div className="px-5 py-3">
+        <Panel card title="Money with them">
+          <div className="px-5 pb-3">
             <KeyValue
               rows={[
                 { key: 'Total (with GST)', value: <Money value={money.data.receivable} /> },
@@ -341,51 +354,55 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   return (
     <Shell sticky>
-      <div className="grid gap-6 max-md:gap-4">
+      <div className="grid gap-card-gap">
         <DetailHeader
           name={company.name}
           phoneSrOnly
-          breadcrumb={[{ label: 'Companies', to: '/companies' }, { label: company.name }]}
+          back={{ label: 'Companies', to: '/companies' }}
           more={moreMenu(false)}
           // the role is identity, not state: a Tag on its own row above the meta line (so no "·" follows it), never a chip in the h1
           chips={company.role ? <RoleChip role={company.role} /> : undefined}
           meta={meta.map((m, i) => (i === 0 ? m : <span key={m} className="text-fg-muted">{m}</span>))}
-        >
-          {supplierRecordLine && facts ? (
-            // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
-            // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
-            // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
-            <p className="mt-1 overflow-x-clip text-base text-fg-2 md:mt-2" data-testid="supplier-record-line">
-              <span className="-ml-5 flex flex-wrap items-center">
-                {recordUnits(supplierRecordLine).map((unit, i) => (
-                  <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
-                    {i > 0 ? (
-                      <>
-                        {' '}
-                        <span aria-hidden="true" className="w-5 shrink-0 text-center text-fg-muted">
-                          ·
-                        </span>{' '}
-                      </>
-                    ) : null}
-                    {unit.map((part, j) => (
-                      <span key={part}>
-                        {j > 0 ? <span className="mx-2 text-fg-muted">{' · '}</span> : null}
-                        <CountText text={part} />
+          line={
+            <>
+              {supplierRecordLine && facts ? (
+                // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
+                // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
+                // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
+                <p className="mt-1 overflow-x-clip text-base text-fg-2 md:mt-2" data-testid="supplier-record-line">
+                  <span className="-ml-5 flex flex-wrap items-center">
+                    {recordUnits(supplierRecordLine).map((unit, i) => (
+                      <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
+                        {i > 0 ? (
+                          <>
+                            {' '}
+                            <span aria-hidden="true" className="w-5 shrink-0 text-center text-fg-muted">
+                              ·
+                            </span>{' '}
+                          </>
+                        ) : null}
+                        {unit.map((part, j) => (
+                          <span key={part}>
+                            {j > 0 ? <span className="mx-2 text-fg-muted">{' · '}</span> : null}
+                            <CountText text={part} />
+                          </span>
+                        ))}
                       </span>
                     ))}
+                    <InfoTip label="About these numbers" className="ml-1">
+                      <span className="grid gap-2">
+                        {factNotes(facts, record.view?.span ?? null).map(n => (
+                          <span key={n}>{n}</span>
+                        ))}
+                      </span>
+                    </InfoTip>
                   </span>
-                ))}
-                <InfoTip label="About these numbers" className="ml-1">
-                  <span className="grid gap-2">
-                    {factNotes(facts, record.view?.span ?? null).map(n => (
-                      <span key={n}>{n}</span>
-                    ))}
-                  </span>
-                </InfoTip>
-              </span>
-            </p>
-          ) : null}
-          <LastChanged table="companies" id={company.id} className="mt-2 text-base text-fg-2" />
+                </p>
+              ) : null}
+              <LastChanged table="companies" id={company.id} className="mt-2 text-base text-fg-2" />
+            </>
+          }
+        >
           {isEngineer ? (
             <NoPrimary />
           ) : (
@@ -403,12 +420,12 @@ function Loaded({ company }: { company: CompanyDetail }) {
         {recordHistory.node}
 
         {wide ? (
-          <div data-work className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <div className="grid min-w-0 gap-6">
+          <div data-work className={cn('grid items-start gap-card-gap', SPLIT)}>
+            <div className="grid min-w-0 gap-card-gap">
               {supplierPanel}
               {supplierOnly ? moreAbout : sitesPanel}
             </div>
-            <aside className="grid content-start gap-6" aria-label="Company details">
+            <aside className="grid min-w-0 content-start gap-card-gap" aria-label="Company details">
               {contactsPanel}
               {openPanel}
               {supplierOnly ? null : sidePanels}
@@ -416,7 +433,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
           </div>
         ) : (
           // Below 1024 one column, in the order a phone needs it: who to call, what is open, the history, then the rest.
-          <div data-work className="grid min-w-0 gap-6">
+          <div data-work className="grid min-w-0 gap-card-gap">
             {contactsPanel}
             {openPanel}
             {supplierPanel}
@@ -494,15 +511,15 @@ function ContactsPanel({
   }
   return (
     <Panel
-      flat
+      card
       title="Contacts"
       actions={
-        <Button variant="quiet" size="sm" icon={Plus} onClick={onAdd}>
+        <Button size="sm" icon={Plus} onClick={onAdd}>
           Add
         </Button>
       }
     >
-      <div className="px-5 py-4">
+      <div className="px-5 pb-3">
         {loading ? (
           <div role="status" className="grid gap-2" aria-busy="true" aria-label="Loading contacts">
             <Skeleton className="h-4 w-1/2" />
@@ -517,7 +534,7 @@ function ContactsPanel({
         ) : (
           <ul className="grid">
             {contacts.map(c => (
-              <li key={c.id} data-row-actions="" className="grid gap-[2px] border-t py-3 text-sm first:border-t-0 first:pt-0 last:pb-0">
+              <li key={c.id} data-row-actions="" className="grid gap-1 border-t py-3 text-sm first:border-t-0 first:pt-0 last:pb-0">
                 {removing?.id === c.id ? (
                   <ConfirmRemove
                     title={`Remove ${c.name}?`}
@@ -529,7 +546,7 @@ function ContactsPanel({
                   />
                 ) : null}
                 <div className="flex items-start justify-between gap-2">
-                  <span className="min-w-0 break-words font-medium">{c.name}</span>
+                  <span className="min-w-0 break-words pt-1 text-base font-bold">{c.name}</span>
                   <span className="-my-1 flex shrink-0 items-center">
                     <Button variant="quiet" size="sm" icon={Pencil} aria-label={`Edit ${c.name}`} onClick={() => onEdit(c)} />
                     {canRemove ? (
@@ -552,7 +569,8 @@ function ContactsPanel({
                 {c.site_id && siteName.get(c.site_id) ? <span className="text-sm text-fg-muted">{siteName.get(c.site_id)}</span> : null}
                 {c.phone ? <PhoneLinks name={c.name} phone={c.phone} /> : null}
                 {c.email ? (
-                  <a href={`mailto:${c.email}`} className="inline-flex min-h-8 w-fit items-center text-sm text-fg-2 [overflow-wrap:anywhere] hover:text-fg max-md:min-h-touch">
+                  <a href={`mailto:${c.email}`} className="inline-flex min-h-control w-fit min-w-0 items-center gap-2 rounded-control text-sm font-semibold text-primary [overflow-wrap:anywhere] hover:underline max-md:min-h-touch">
+                    <Icon icon={Mail} size="sm" />
                     {c.email}
                   </a>
                 ) : null}
@@ -567,19 +585,20 @@ function ContactsPanel({
 
 /**
  * A contact's number, tap to call, and WhatsApp beside it when the number is one WhatsApp can open (waLink: a Pakistani 03xx
- * number gets its country code). 44 px tall on a phone.
+ * number gets its country code). Forest (71-company-page .co-contact__links): both are outlined buttons, 48 px tall on a phone.
  */
 function PhoneLinks({ name, phone }: { name: string; phone: string }) {
   const wa = waLink(phone, '')
-  const link = 'inline-flex min-h-8 items-center gap-1 rounded text-sm hover:underline max-md:min-h-touch'
+  const link =
+    'inline-flex h-control min-w-0 items-center gap-2 rounded-control border border-line-strong bg-surface px-3 text-sm font-bold text-fg transition-colors duration-fast hover:bg-selected max-md:h-touch'
   return (
-    <span className="flex flex-wrap items-center gap-x-4">
-      <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className={cn(link, 'num text-fg-2')} aria-label={`Call ${name}, ${phone}`}>
+    <span className="mt-1 flex flex-wrap items-center gap-2">
+      <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} className={cn(link, 'num')} aria-label={`Call ${name}, ${phone}`}>
         <Icon icon={Phone} size="sm" className="text-fg-muted" />
         {phone}
       </a>
       {wa ? (
-        <a href={wa.url} target="_blank" rel="noopener noreferrer" className={cn(link, 'font-medium text-primary')} aria-label={`WhatsApp ${name}`}>
+        <a href={wa.url} target="_blank" rel="noopener noreferrer" className={link} aria-label={`WhatsApp ${name}`}>
           <Icon icon={MessageCircle} size="sm" />
           WhatsApp
         </a>
@@ -595,12 +614,15 @@ function PhoneLinks({ name, phone }: { name: string; phone: string }) {
 function MoreAbout({ children, defaultOpen = false }: { children: ReactNode; defaultOpen?: boolean }) {
   return (
     <details className="group border-t" open={defaultOpen || undefined}>
-      <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
-        <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90" />
-        More about this supplier
-        <span className="text-sm font-regular text-fg-muted">Sites, brands, details</span>
+      {/* the title and its note wrap as two phrases beside the chevron, never word by word (audit 2, supplier at 375) */}
+      <summary className="-mx-2 flex min-h-touch cursor-pointer list-none items-center gap-2 rounded-control px-2 py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
+        <Icon icon={ChevronRight} size="sm" className="shrink-0 text-fg-muted transition-transform duration-fast group-open:rotate-90" />
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+          <span>More about this supplier</span>
+          <span className="text-sm font-regular text-fg-muted">Sites, brands, details</span>
+        </span>
       </summary>
-      <div className="grid gap-6 border-t py-4">{children}</div>
+      <div className="grid gap-card-gap pb-2 pt-4">{children}</div>
     </details>
   )
 }
@@ -646,8 +668,8 @@ function DetailsPanel({ company, customerSince, brands }: { company: CompanyDeta
   const tax = company.isCustomer
   if (rows.length === 0 && !brands && !tax) return null
   return (
-    <Panel flat title="Details">
-      <div className="grid gap-3 px-5 py-3">
+    <Panel card title="Details">
+      <div className="grid gap-3 px-5 pb-3">
         {rows.length > 0 ? <KeyValue rows={rows} /> : null}
         {tax ? <TaxDetails companyId={company.id} divided={rows.length > 0} /> : null}
         {brands ? (

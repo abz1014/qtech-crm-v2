@@ -1,6 +1,6 @@
 import { htmlTableText, pastedText } from '@/lib/docread/htmlTable'
 import { useEffect, useState, type RefObject } from 'react'
-import { ClipboardPaste, Plus, Scissors, X, Check } from 'lucide-react'
+import { CircleAlert, CircleCheck, ClipboardPaste, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { pastedPictures } from '@/features/rfqs/lib/readPdf'
@@ -8,29 +8,34 @@ import { textAfterMarker, type BrandRef, type ParseResult } from '@/features/rfq
 import { parseQtyCell, qtyProblem, type DraftItem } from '@/features/rfqs/lib/intakeModel'
 import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
 import { Button } from '@/ui/Button'
+import { controlClass } from '@/ui/form/fieldContext'
+import { Select } from '@/ui/form/Select'
 import { Icon } from '@/ui/Icon'
+import { Kbd } from '@/ui/Kbd'
 
 /*
- * Items (g2-intake-float frames 1 and 3): one paste becomes rows. The paste zone is a real text area (so a phone can
- * paste into it) and the whole page listens for a paste, so on a desktop the person presses Ctrl+V with nothing
- * focused. A phone has no Ctrl+V: it gets a Paste button instead (the clipboard read where the browser allows it, else
- * "tap and hold in the box, then Paste"). A pasted screenshot is read like a chosen one. Each row is editable; quantity
- * starts at 1 when the paste gave none.
+ * Items (g2-intake-float frames 1 and 3; Forest 21-new-enquiry .qb-itemrow): one paste becomes rows. The paste zone is a real text
+ * area (so a phone can paste into it) and the whole page listens for a paste, so on a desktop the person presses Ctrl+V with nothing
+ * focused. A phone has no Ctrl+V: it gets a Paste button instead (the clipboard read where the browser allows it, else "press and
+ * hold in the box, then Paste"). A pasted screenshot is read like a chosen one. Each row is its own bordered tile (quantity,
+ * description, brand, family, remove); where the list is wide enough (a container of 38rem, so the same rule holds beside the
+ * customer's document) the tile becomes one line under a column head. Quantity starts at 1 when the paste gave none.
  */
-
 
 export interface PastedBlock {
   result: ParseResult
 }
 
-// g2-a.css .sp-r: # 28, Qty 76, Description 1fr, Brand 148, Family 120; the remove control gets its own narrow column.
-const GRID = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_148px_120px_28px] md:items-center md:gap-3'
-// Without the Family column (R2-10): the family sits after the brand chip, in one wider cell.
-const GRID_NO_FAMILY = 'md:grid md:grid-cols-[28px_76px_minmax(0,1fr)_220px_28px] md:items-center md:gap-3'
-
-const cell =
-  'h-control -mx-2 w-[calc(100%+1rem)] max-w-none min-w-0 rounded border border-line-input bg-surface px-2 text-base text-fg md:border-transparent md:bg-transparent ' +
-  'placeholder:text-fg-muted hover:border-line-input focus-visible:border-fg focus-visible:bg-surface'
+/*
+ * The row (proposal.css .qb-itemrow): narrow, "n qty x / description / brand family"; from a 38rem container, one line
+ * "n qty description brand family x". The class strings are written out in full so Tailwind finds them.
+ */
+const ROW_WIDE = '[@container(min-width:38rem)]:grid-cols-[2rem_minmax(0,1.2fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_auto]'
+const HEAD_WIDE = '[@container(min-width:38rem)]:grid [@container(min-width:38rem)]:grid-cols-[2rem_minmax(0,1.2fr)_minmax(0,4fr)_minmax(0,2fr)_minmax(0,2fr)_auto]'
+const ROW_WIDE_NO_FAMILY = '[@container(min-width:38rem)]:grid-cols-[2rem_minmax(0,1.2fr)_minmax(0,5fr)_minmax(0,2.5fr)_auto]'
+const HEAD_WIDE_NO_FAMILY = '[@container(min-width:38rem)]:grid [@container(min-width:38rem)]:grid-cols-[2rem_minmax(0,1.2fr)_minmax(0,5fr)_minmax(0,2.5fr)_auto]'
+/** A cell's own label: shown on the narrow tile, read only by a screen reader once the column head names the column. */
+const CELL_LABEL = 'text-sm font-card text-fg [@container(min-width:38rem)]:sr-only'
 
 function QtyCell({ item, n, onChange }: { item: DraftItem; n: number; onChange: (patch: Partial<DraftItem>) => void }) {
   // While the cell has focus it shows exactly what is typed; the tidy "2 nos" returns when it loses it.
@@ -38,74 +43,51 @@ function QtyCell({ item, n, onChange }: { item: DraftItem; n: number; onChange: 
   const shown = item.qty == null ? '' : (qtyText(item.qty, item.unit) ?? `${item.qty} ${item.unit}`.trim())
   // HW-7: a 0 stays on screen as 0 and is marked, never shown (or saved) as 1.
   const problem = qtyProblem(item)
+  const id = `item-qty-${item.key}`
   return (
-    <input
-      aria-label={`Quantity of item ${n}`}
-      aria-invalid={problem ? true : undefined}
-      title={problem ?? undefined}
-      value={typing ?? shown}
-      placeholder="1 no"
-      autoComplete="off"
-      onFocus={e => {
-        setTyping(shown)
-        e.currentTarget.select()
-      }}
-      onChange={e => {
-        setTyping(e.target.value)
-        onChange(parseQtyCell(e.target.value))
-      }}
-      onBlur={() => setTyping(null)}
-      className={cn(cell, 'num', problem && 'border-tone-danger-fg md:border-tone-danger-fg')}
-    />
+    <div className="grid min-w-0 content-start gap-1">
+      <label htmlFor={id} className={CELL_LABEL}>
+        Quantity<span className="sr-only"> of item {n}</span>
+      </label>
+      <input
+        id={id}
+        aria-invalid={problem ? true : undefined}
+        aria-describedby={problem ? `${id}-err` : undefined}
+        title={problem ?? undefined}
+        value={typing ?? shown}
+        placeholder="1 no"
+        autoComplete="off"
+        onFocus={e => {
+          setTyping(shown)
+          e.currentTarget.select()
+        }}
+        onChange={e => {
+          setTyping(e.target.value)
+          onChange(parseQtyCell(e.target.value))
+        }}
+        onBlur={() => setTyping(null)}
+        className={cn(controlClass, 'num')}
+      />
+      {problem ? (
+        <p id={`${id}-err`} className="flex items-start gap-1 text-xs font-card text-tone-danger-fg">
+          <Icon icon={CircleAlert} size="sm" className="mt-[calc((var(--lh-xs)-14px)/2)] shrink-0" />
+          <span className="min-w-0 text-pretty">{problem}</span>
+        </p>
+      ) : null}
+    </div>
   )
 }
 
-/** A native select drawn as the mockup's chip or plain text: the visible label sits under an invisible, full-size select. */
-function PickCell({
-  label,
-  value,
-  onChange,
-  options,
-  empty,
-  chip,
-}: {
-  label: string
-  value: string | null
-  onChange: (v: string | null) => void
-  options: { value: string; label: string }[]
-  empty: string
-  chip?: boolean
-}) {
-  const chosen = options.find(o => o.value === value)
+/** Brand or family of one row: the Forest select, labelled for the row ("Brand of item 2"). */
+function PickCell({ id, label, n, value, onChange, options, empty }: { id: string; label: string; n: number; value: string | null; onChange: (v: string | null) => void; options: { value: string; label: string }[]; empty: string }) {
   return (
-    <span className="relative inline-flex min-w-0 max-w-full rounded has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand-green">
-      <span
-        className={cn(
-          chip
-            ? cn(
-                'inline-flex h-[22px] w-fit max-w-full items-center gap-[5px] rounded border px-2 text-xs',
-                chosen ? 'border-line-strong bg-surface text-fg-2' : 'border-dashed border-line-strong text-fg-muted',
-              )
-            : cn('truncate text-xs', chosen ? 'text-fg-2' : 'text-fg-muted'),
-        )}
-      >
-        {chip && chosen ? <Icon icon={Check} size="chip" /> : null}
-        <span className="truncate">{chosen ? chosen.label : empty}</span>
-      </span>
-      <select
-        aria-label={label}
-        value={value ?? ''}
-        onChange={e => onChange(e.target.value || null)}
-        className="absolute inset-0 h-full w-full cursor-pointer appearance-none rounded opacity-0"
-      >
-        <option value="">{empty}</option>
-        {options.map(o => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </span>
+    <div className="grid min-w-0 content-start gap-1">
+      <label htmlFor={id} className={CELL_LABEL}>
+        {label}
+        <span className="sr-only"> of item {n}</span>
+      </label>
+      <Select id={id} value={value ?? ''} onChange={e => onChange(e.target.value || null)} options={options} placeholder={empty} />
+    </div>
   )
 }
 
@@ -168,21 +150,16 @@ export function PasteZone({
     }
   }
   return (
-    <div
-      className={cn(
-        'relative grid gap-2 border-y border-dashed border-line-input py-4 text-center transition-colors duration-fast ease-out',
-        'focus-within:border-fg-muted',
-        filled ? 'justify-items-start text-left' : 'justify-items-center',
-      )}
-    >
-      {filled ? null : <Icon icon={ClipboardPaste} size="lg" className="text-fg-muted" />}
-      <label htmlFor="intake-paste" className={cn('text-base', filled ? 'font-medium' : 'text-fg-2')}>
+    // Forest .ne-paste: a dashed tile, the green clipboard glyph, the box, and the one line that says what a paste does.
+    <div className="grid min-w-0 justify-items-start gap-2 rounded-card border-2 border-dashed border-line-input p-4 transition-colors duration-fast ease-out focus-within:border-brand-700 focus-within:bg-brand-100">
+      {filled ? null : <Icon icon={ClipboardPaste} size="lg" className="text-brand-700" />}
+      <label htmlFor="intake-paste" className="text-sm font-card text-fg">
         {filled ? 'Paste another email or list' : "Paste the customer's email or item list"}
       </label>
       <textarea
         id="intake-paste"
         ref={zoneRef}
-        rows={filled ? 1 : 3}
+        rows={filled ? 2 : 3}
         value={draft}
         onChange={e => setDraft(e.target.value)}
         onPaste={e => {
@@ -207,10 +184,10 @@ export function PasteZone({
           }
         }}
         placeholder={touch ? 'Select here to paste, or type one item per line' : 'Click here and paste, or type one item per line'}
-        className="w-full resize-y rounded border border-line-input bg-surface px-3 py-2 font-mono text-sm leading-5 text-fg placeholder:text-fg-muted hover:border-fg-muted focus-visible:border-fg max-md:text-base max-md:leading-6"
+        className={cn(controlClass, 'h-auto resize-y py-2 font-mono leading-6')}
       />
       {touch ? (
-        <Button size="sm" icon={ClipboardPaste} onClick={() => void pasteFromClipboard()}>
+        <Button size="touch" icon={ClipboardPaste} onClick={() => void pasteFromClipboard()}>
           Paste
         </Button>
       ) : null}
@@ -219,11 +196,10 @@ export function PasteZone({
           {hint}
         </p>
       ) : null}
-      <p className="text-base text-fg-muted">
+      <p className="text-sm text-fg-muted">
         {touch ? null : (
           <>
-            Press <kbd className="num rounded border border-line-strong bg-sunken px-1">Ctrl</kbd>{' '}
-            <kbd className="num rounded border border-line-strong bg-sunken px-1">V</kbd> anywhere on this page.{' '}
+            Press <Kbd size="inline">Ctrl</Kbd> <Kbd size="inline">V</Kbd> anywhere on this page.{' '}
           </>
         )}
         Paste the whole email, a PDF or a screenshot. The items are picked out and can be checked before saving.
@@ -236,21 +212,27 @@ export function PastedPanel({ block }: { block: PastedBlock }) {
   const { result } = block
   const found = result.items.length
   return (
-    <div className="border-t">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 py-2 text-base text-fg-muted">
+    // Forest .ne-pasted: what was read stays in view above the rows, greetings and sign-offs marked as skipped.
+    <div className="grid min-w-0 gap-2 border-t pt-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-muted">
         <Icon icon={ClipboardPaste} size="sm" />
         <span>
           Pasted just now · <span className="num">{result.lineCount}</span> {result.lineCount === 1 ? 'line' : 'lines'}
         </span>
-        <span className="ml-auto inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap text-base font-medium text-tone-success-fg">
-          <Icon icon={Check} size="chip" />
+        <span
+          className={cn(
+            'ml-auto inline-flex min-h-chip shrink-0 items-center gap-1 whitespace-nowrap rounded-pill px-3 text-xs font-bold',
+            found === 0 ? 'bg-tone-warning-bg text-tone-warning-fg' : 'bg-tone-success-bg text-tone-success-fg',
+          )}
+        >
+          <Icon icon={found === 0 ? CircleAlert : CircleCheck} size="chip" />
           {found === 0 ? 'No items found' : `${found} ${found === 1 ? 'item' : 'items'} found`}
         </span>
       </div>
-      <pre tabIndex={0} role="region" aria-label="What was pasted" className="m-0 max-h-[168px] overflow-auto whitespace-pre-wrap break-words py-2 font-mono text-base leading-6 text-fg-2">
+      <pre tabIndex={0} role="region" aria-label="What was pasted" className="m-0 max-h-[10.5rem] overflow-auto whitespace-pre-wrap break-words rounded-control bg-sunken px-3 py-2 font-mono text-sm leading-6 text-fg-2 max-md:text-base">
         {result.lines.map((l, i) => (
-          <span key={i} className={cn('block', l.kind === 'skipped' && 'bg-tone-warning-bg')}>
-            {l.marker ? <mark className="rounded bg-selected px-[2px] text-fg">{l.marker}</mark> : null}
+          <span key={i} className={cn('block', l.kind === 'skipped' && 'bg-tone-warning-bg text-tone-warning-fg')}>
+            {l.marker ? <mark className="rounded bg-brand-100 px-1 text-fg">{l.marker}</mark> : null}
             {l.marker ? ' ' : ''}
             {textAfterMarker(l)}
           </span>
@@ -283,84 +265,67 @@ export function ItemRows({
 }) {
   const brandOptions = brands.filter(b => b.kind === 'brand').map(b => ({ value: b.id, label: b.name }))
   const familyOptions = brands.filter(b => b.kind === 'family').map(b => ({ value: b.id, label: b.name }))
-  // The Family column only when a guess is unsure (R2-10): a row whose description named neither a brand nor a family, so the family
-  // is the one way left to match suppliers to it. Once the person picks a family in the column it stays, so it does not vanish under
-  // their hand. Without the column every row still sets its family, after the brand chip.
-  const unsure = familyOptions.length > 0 && items.some(i => i.description.trim() && !i.brandId && !i.familyId)
-  const [keepFamily, setKeepFamily] = useState(false)
-  const familyColumn = unsure || keepFamily
-  const grid = familyColumn ? GRID : GRID_NO_FAMILY
+  // Every row sets its brand and its family (Forest .qb-itemrow); the family select is left out only when no family is on file.
+  const family = familyOptions.length > 0
   useEffect(() => {
     if (focusKey) document.getElementById(`item-desc-${focusKey}`)?.focus()
   }, [focusKey])
 
   return (
-    <div className="border-t">
+    <div className="grid min-w-0 gap-3 [container-type:inline-size]">
       {items.length > 0 ? (
         <>
-          <div className={cn('hidden min-h-8 border-b text-base font-medium text-fg-muted', grid)} aria-hidden="true">
-            <span>#</span>
+          <div aria-hidden="true" className={cn('hidden gap-3 px-3 text-sm font-card text-fg-muted', family ? HEAD_WIDE : HEAD_WIDE_NO_FAMILY)}>
+            <span />
             <span>Qty</span>
             <span>Description</span>
-            <span>{familyColumn ? 'Brand' : 'Brand and family'}</span>
-            {familyColumn ? <span>Family</span> : null}
+            <span>Brand</span>
+            {family ? <span>Family</span> : null}
             <span />
           </div>
-          <ol className="m-0 grid list-none p-0">
+          <ol aria-label="Items" className="m-0 grid list-none gap-3 p-0">
             {items.map((it, idx) => {
               const n = idx + 1
               return (
                 <li
                   key={it.key}
+                  data-flag={flagged.includes(it.key) || undefined}
                   className={cn(
-                    'group grid grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b py-3 last:border-b-0 md:min-h-12 md:py-0',
-                    grid,
+                    'grid grid-cols-[2rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-control border bg-surface p-3 transition-colors duration-fast ease-out focus-within:border-line-strong',
+                    family ? ROW_WIDE : ROW_WIDE_NO_FAMILY,
                     flagged.includes(it.key) && 'bg-tone-warning-bg',
                   )}
                 >
-                  <span className="num text-base text-fg-muted">{n}</span>
-                  <div className="min-w-0 pl-2 md:pl-0">
-                    <QtyCell item={it} n={n} onChange={patch => onChange(it.key, patch)} />
-                  </div>
-                  <input
-                    id={`item-desc-${it.key}`}
-                    aria-label={`Description of item ${n}`}
-                    value={it.description}
-                    onChange={e => onChange(it.key, { description: e.target.value })}
-                    placeholder="What the customer asked for"
-                    autoComplete="off"
-                    title={it.description}
-                    className={cn(cell, 'order-2 col-span-3 truncate md:order-none md:col-span-1')}
-                  />
-                  <div className={cn('order-3 col-span-3 flex flex-wrap items-center gap-3 md:order-none', familyColumn ? 'md:contents' : 'md:col-span-1 md:min-w-0 md:flex-col md:items-start md:gap-[2px] md:py-1')}>
-                    <PickCell
-                      chip
-                      label={`Brand of item ${n}`}
-                      value={it.brandId}
-                      onChange={v => onChange(it.key, { brandId: v })}
-                      options={brandOptions}
-                      empty="no brand"
+                  <span className="num grid min-h-control place-items-center text-base font-card text-fg-muted mt-[calc(var(--lh-sm)+var(--sp-1))] [@container(min-width:38rem)]:mt-0">{n}</span>
+                  <QtyCell item={it} n={n} onChange={patch => onChange(it.key, patch)} />
+                  <div className="col-span-3 grid min-w-0 content-start gap-1 [@container(min-width:38rem)]:col-span-1">
+                    <label htmlFor={`item-desc-${it.key}`} className={CELL_LABEL}>
+                      Description<span className="sr-only"> of item {n}</span>
+                    </label>
+                    <textarea
+                      id={`item-desc-${it.key}`}
+                      value={it.description}
+                      onChange={e => onChange(it.key, { description: e.target.value })}
+                      placeholder="What the customer asked for"
+                      autoComplete="off"
+                      // Grows with the text (2 to 4 lines) so a long part number is read whole, never cut at the box edge.
+                      rows={Math.min(4, Math.max(2, Math.ceil(it.description.length / 56)))}
+                      title={it.description}
+                      className={cn(controlClass, 'h-auto min-h-control resize-y py-2 leading-6 [@container(min-width:38rem)]:resize-none')}
                     />
-                    {familyColumn || familyOptions.length > 0 ? (
-                      <PickCell
-                        label={`Family of item ${n}`}
-                        value={it.familyId}
-                        onChange={v => {
-                          if (familyColumn) setKeepFamily(true)
-                          onChange(it.key, { familyId: v })
-                        }}
-                        options={familyOptions}
-                        empty={familyColumn ? 'no family' : '+ family'}
-                      />
+                  </div>
+                  <div className={cn('col-span-3 grid min-w-0 gap-3 [@container(min-width:38rem)]:contents', family && '[@container(min-width:22rem)]:grid-cols-2')}>
+                    <PickCell id={`item-brand-${it.key}`} label="Brand" n={n} value={it.brandId} onChange={v => onChange(it.key, { brandId: v })} options={brandOptions} empty="No brand" />
+                    {family ? (
+                      <PickCell id={`item-family-${it.key}`} label="Family" n={n} value={it.familyId} onChange={v => onChange(it.key, { familyId: v })} options={familyOptions} empty="No family" />
                     ) : null}
                   </div>
                   <Button
                     variant="quiet"
-                    size="sm"
                     icon={X}
                     aria-label={`Remove item ${n}`}
                     onClick={() => onRemove(it.key)}
-                    className="order-1 justify-self-end md:order-none md:opacity-0 md:transition-opacity md:focus-visible:opacity-100 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+                    className="col-start-3 row-start-1 mt-[calc(var(--lh-sm)+var(--sp-1))] justify-self-end max-md:size-touch [@container(min-width:38rem)]:mt-0 [@container(min-width:38rem)]:col-start-auto [@container(min-width:38rem)]:row-start-auto"
                   />
                 </li>
               )
@@ -368,10 +333,9 @@ export function ItemRows({
           </ol>
         </>
       ) : null}
-      <div className="flex flex-wrap items-center gap-3 border-t py-3 text-base text-fg-muted">
-        <Icon icon={Scissors} size="sm" />
+      <div className="flex flex-wrap items-center gap-3 border-t pt-3 text-sm text-fg-muted">
         <span className="min-w-[10rem] flex-1 text-pretty">{note}</span>
-        <Button variant="quiet" size="sm" icon={Plus} className="ml-auto shrink-0" onClick={onAdd}>
+        <Button variant="quiet" icon={Plus} className="ml-auto shrink-0" onClick={onAdd}>
           Add item
         </Button>
       </div>

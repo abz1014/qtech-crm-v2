@@ -93,7 +93,7 @@ export const companyProfileQuery = (financial = true) => ({
   queryFn: () => api.getCompanyProfile(financial),
 })
 
-/** An engineer reads the profile without the bank and tax columns (migration 0108). */
+/** An engineer reads the business details only: no bank and tax columns (migration 0108), no terms (gate 2, answer 10). */
 export function useCompanyProfile() {
   return useQuery(companyProfileQuery(useSeesPrices()))
 }

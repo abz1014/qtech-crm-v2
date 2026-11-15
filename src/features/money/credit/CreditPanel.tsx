@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRightLeft, Undo2 } from 'lucide-react'
 import { formatDay } from '@/lib/formatDay'
+import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { InfoTip } from '@/ui/InfoTip'
@@ -13,10 +14,12 @@ import { useCompanyCredit, useRemoveCreditEntry } from '@/features/money/credit/
 import { creditEvents, showCredit, type CreditEvent } from '@/features/money/credit/model'
 
 /*
- * "Credit balance Rs X" on the company page (0126, 0127). Admin only: it is not rendered for anyone else, and the database refuses
+ * "Credit balance PKR X" on the company page (0126, 0127). Admin only: it is not rendered for anyone else, and the database refuses
  * every read and write of it. The balance is what the customer's orders hold above what they are worth (an overpayment, or a credit
  * note on a paid invoice) less what was refunded and what was put against another order. Two actions: Refund (cash out) and Apply to
  * an order (an allocation: no cash moves). Shown only when there is credit to give or a refund or applied credit to read.
+ * Forest (55-credit-statement #cr-ok): the company page's card look (Panel card), the balance as the card's one big figure, the three
+ * sums under it, and the refunds and applied credit as hairline lines inside the card's padding, newest first.
  */
 export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: string; companyName: string; isAdmin: boolean }) {
   const q = useCompanyCredit(companyId, isAdmin)
@@ -25,8 +28,8 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
   if (!isAdmin) return null
   if (q.isError)
     return (
-      <Panel title="Credit balance">
-        <div className="px-5 py-3" data-testid="credit-error">
+      <Panel card title="Credit balance">
+        <div className="px-5 pb-3" data-testid="credit-error">
           <p role="alert" className="mb-2 text-sm text-fg-2">
             The credit balance could not be loaded. Nothing was changed. Check the connection and try again.
           </p>
@@ -44,6 +47,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
   return (
     <>
       <Panel
+        card
         title="Credit balance"
         info={
           <InfoTip label="About the credit balance">
@@ -51,23 +55,23 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
             and credit applied to other orders. Refund it, or apply it to an order of theirs that still has a balance due.
           </InfoTip>
         }
-        actions={
-          give ? (
-            <>
-              <Button size="sm" onClick={() => setRefund(true)}>
-                Refund
-              </Button>
-              <Button size="sm" icon={ArrowRightLeft} onClick={() => setApply(true)}>
-                Apply to an order
-              </Button>
-            </>
-          ) : null
-        }
       >
-        <div className="px-5 py-3" data-testid="credit-balance">
-          <p className="mb-2 text-sm text-fg-muted">
+        {/* The two actions on their own row under the head (55 #cr-ok): in the side column a head row with both would crowd the title. */}
+        {give ? (
+          <div className="flex flex-wrap justify-end gap-2 px-5 pb-2">
+            <Button size="sm" onClick={() => setRefund(true)}>
+              Refund
+            </Button>
+            <Button size="sm" icon={ArrowRightLeft} onClick={() => setApply(true)}>
+              Apply to an order
+            </Button>
+          </div>
+        ) : null}
+        <div className="grid gap-2 px-5 pb-3" data-testid="credit-balance">
+          <p className="num min-w-0 text-kpi font-heavy tracking-snug text-fg [overflow-wrap:anywhere]">
             <span className="sr-only">Credit balance </span>
-            <Money value={summary.balance} size="xl" strong />
+            <span className="mr-2 font-heavy">PKR</span>
+            {formatAmount(summary.balance)}
           </p>
           <KeyValue
             rows={[
@@ -78,7 +82,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
           />
         </div>
         {events.length > 0 ? (
-          <ul className="border-t" aria-label="Refunds and applied credit">
+          <ul className="mx-5 mb-1 border-t" aria-label="Refunds and applied credit">
             {events.map(e => (
               <CreditLine key={e.key} companyId={companyId} event={e} orderRef={e.orderId ? (orderRefs[e.orderId] ?? null) : null} jobKey={e.orderId ? (jobKeys[e.orderId] ?? null) : null} />
             ))}
@@ -97,14 +101,14 @@ function CreditLine({ companyId, event, orderRef, jobKey }: { companyId: string;
   const [error, setError] = useState<string | null>(null)
   const label = event.kind === 'refund' ? 'Refunded' : 'Applied to'
   return (
-    <li className="grid gap-2 border-t px-5 py-3 text-sm first:border-t-0">
-      <div className="flex items-baseline gap-3">
+    <li className="grid gap-2 border-t py-3 text-sm first:border-t-0">
+      <div className="flex items-center gap-3">
         <span className="min-w-0 flex-1">
-          <span className="font-medium">{label}</span>
+          <span className="font-semibold">{label}</span>
           {orderRef && event.orderId ? (
             <>
               {' '}
-              <Link to={jobKey ? `/jobs/${encodeURIComponent(jobKey)}` : `/orders/${event.orderId}`} className="num underline decoration-1 underline-offset-2 hover:text-fg">
+              <Link to={jobKey ? `/jobs/${encodeURIComponent(jobKey)}` : `/orders/${event.orderId}`} className="num rounded font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg">
                 {orderRef}
               </Link>
             </>
@@ -114,7 +118,7 @@ function CreditLine({ companyId, event, orderRef, jobKey }: { companyId: string;
             {event.detail ? ` · ${event.detail}` : ''}
           </Fine>
         </span>
-        <Money value={event.amount} />
+        <Money value={event.amount} className="shrink-0" />
         {!asking ? (
           <Button size="sm" variant="quiet" icon={Undo2} aria-label={`Remove this ${event.kind === 'refund' ? 'refund' : 'applied credit'}`} onClick={() => setAsking(true)} />
         ) : null}

@@ -47,7 +47,8 @@ export interface JobStanding {
   office?: boolean
 }
 
-export type StopState = 'done' | 'current' | 'future' | 'none' | 'stopped'
+/** 'office': an engineer's Billing and Payment stops, always neutral (owner, audit 2: an engineer never infers the payment state). */
+export type StopState = 'done' | 'current' | 'future' | 'none' | 'stopped' | 'office'
 
 export interface StopView {
   name: StopName
@@ -125,9 +126,13 @@ export function stageModel(job: JobStanding): StageModel {
   const lostOrCancelled = job.stage === 'lost' || job.stage === 'cancelled'
   const advance = parts(detail).some(p => p === 'advance received' || p === 'part paid')
   const ending = job.stage === 'lost' ? `Lost: ${detail ?? 'closed'}` : job.stage === 'cancelled' ? cap(detail ?? 'order cancelled') : null
+  // An engineer's ruler stops at Delivery: once the goods are delivered, delivered, invoiced and paid look the same to them.
+  const officeDone = Boolean(job.office) && cur !== null && cur >= 5
   const stops: StopView[] = STOPS.map((name, index) => {
     let state: StopState
     if (job.kind === 'direct' && index < 2) state = 'none'
+    else if (job.office && index >= 5 && !lostOrCancelled) state = 'office'
+    else if (officeDone) state = 'done'
     else if (lostOrCancelled) state = job.stage === 'cancelled' && index < 3 ? 'done' : index === 0 ? 'done' : 'stopped'
     else if (cur === null) state = 'future'
     else state = index < cur ? 'done' : index === cur ? 'current' : 'future'
@@ -143,10 +148,14 @@ export function stageModel(job: JobStanding): StageModel {
       if (index === 5 && cur !== 5 && ps.includes('invoiced')) note = 'invoiced'
       if (index === 7) note = null
     }
-    return { name, shown: shownName(name), index, state, note, half: index === 6 && advance && cur !== 7 }
+    if (job.office && index >= 5) note = null
+    return { name, shown: shownName(name), index, state, note, half: !job.office && index === 6 && advance && cur !== 7 }
   })
+  // A job that began as an order skips RFQ and Quotation (their stops are drawn as "none"): it finishes with 5 stages done, not 7 (audit 2).
+  const allDone = `All ${job.kind === 'direct' ? 5 : 7} stages done`
+  const officeLabel = ['Delivered', detail ? parts(detail).join(', ') : null, 'With the office'].filter(Boolean).join(' · ')
   const label =
-    ending ?? (cur === 7 ? (job.office ? 'All 7 stages done' : 'Paid') : cur === null ? 'Not started' : [shownName(STOPS[cur]), detail ? parts(detail).join(', ') : null].filter(Boolean).join(' · '))
-  const phoneLabel = ending ?? (cur === 7 ? 'All 7 stages done' : cur === null ? 'Not started' : `Stage ${cur + 1} of 7 · ${shownName(STOPS[cur])}`)
-  return { stops, detail, current: cur === null ? null : cur === 7 ? 7 : cur + 1, phoneLabel, label, ending, finished: cur === 7 || lostOrCancelled }
+    ending ?? (officeDone ? officeLabel : cur === 7 ? 'Paid' : cur === null ? 'Not started' : [shownName(STOPS[cur]), detail ? parts(detail).join(', ') : null].filter(Boolean).join(' · '))
+  const phoneLabel = ending ?? (officeDone ? 'Delivered · With the office' : cur === 7 ? allDone : cur === null ? 'Not started' : `Stage ${cur + 1} of 7 · ${shownName(STOPS[cur])}`)
+  return { stops, detail, current: cur === null ? null : officeDone ? 5 : cur === 7 ? 7 : cur + 1, phoneLabel, label, ending, finished: (cur === 7 && !job.office) || lostOrCancelled }
 }

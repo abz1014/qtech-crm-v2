@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -19,9 +19,9 @@ function DiscardBar({ onKeep, onDiscard }: { onKeep: () => void; onDiscard: () =
       role="group"
       aria-label="Discard unsaved changes?"
       data-discard-bar
-      className="flex flex-wrap items-center justify-end gap-2 border-t bg-tone-warning-bg px-5 py-3 text-sm text-tone-warning-fg max-md:[&>button]:h-touch"
+      className="flex flex-wrap items-center justify-end gap-2 border-t bg-tone-warning-bg px-card py-3 text-sm text-tone-warning-fg max-md:[&>button]:h-touch"
     >
-      <span className="mr-auto font-medium">Discard unsaved changes?</span>
+      <span className="mr-auto font-card">Discard unsaved changes?</span>
       <Button ref={keepRef} onClick={onKeep}>
         Keep editing
       </Button>
@@ -40,8 +40,16 @@ const TILE: Record<Tone, string> = {
   warning: 'bg-tone-warning-bg text-tone-warning-fg',
   danger: 'bg-tone-danger-bg text-tone-danger-fg',
 }
-// Wider than the 400 / 480 / 640 of the mockups since the text grew (DECISIONS 2026-10-19), so lines keep their length.
-const WIDTH = { sm: 'md:w-[440px]', md: 'md:w-[520px]', lg: 'md:w-[720px]' } as const
+// Forest .qb-dialog: 560 (--dialog-w) and the wide 760 (--dialog-w-wide); the confirm stays 440 so its two lines keep their length.
+// Every width is a cap: the dialog is never wider than the window less its 16 px margins (R-006, the max-w-full below).
+// A width (not a max-width), so a caller's own md:w-[...] (the convert dialog's 1080, the 820 ones) replaces it through cn.
+const WIDTH = { sm: 'md:w-[440px]', md: 'md:w-[var(--dialog-w)]', lg: 'md:w-[var(--dialog-w-wide)]' } as const
+
+// placement 'side' from 1360: the panel stands at the right edge, the window's full height, square-cornered against the edge, and
+// slides in from the right (the motion tokens go to ~0 under reduced motion).
+const SIDE_OVERLAY = 'min-[1360px]:place-items-stretch min-[1360px]:justify-items-end min-[1360px]:p-0'
+const SIDE_PANEL =
+  'min-[1360px]:h-dvh min-[1360px]:max-h-none min-[1360px]:rounded-none min-[1360px]:border-l min-[1360px]:shadow-e3 min-[1360px]:animate-panel-in'
 
 export interface DialogContentProps {
   title: string
@@ -52,8 +60,13 @@ export interface DialogContentProps {
   /** The 36px tile glyph. A destructive confirm uses tone="danger". */
   icon?: LucideIcon
   tone?: Tone
-  /** sm 400 (confirm), md 480 (default), lg 640. */
+  /** sm 440 (confirm), md 560 (default), lg 760. */
   size?: keyof typeof WIDTH
+  /**
+   * 'side': from 1360 px wide the dialog is a full-height panel at the right edge, beside the record it is about (History, 85-history:
+   * the record stays in view on a wide screen); from 768 to 1359 the usual centred dialog, under 768 the bottom sheet.
+   */
+  placement?: 'center' | 'side'
   /** Buttons for the footer band, Cancel first and the primary last (right-aligned). */
   footer?: ReactNode
   /** A mono tag at the right of the header, beside the close button (the PO number in the Issue purchase order dialog). */
@@ -65,6 +78,20 @@ export interface DialogContentProps {
   className?: string
 }
 
+/** The header grid's columns: [icon] title [meta] Close (the meta column only from 768; on a phone the meta is under the title). */
+const HEADER_COLS: Record<string, string> = {
+  'icon-meta': 'grid-cols-[auto_minmax(0,1fr)_auto] md:grid-cols-[auto_minmax(0,1fr)_minmax(0,max-content)_auto]',
+  'icon-none': 'grid-cols-[auto_minmax(0,1fr)_auto]',
+  'plain-meta': 'grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_minmax(0,max-content)_auto]',
+  'plain-none': 'grid-cols-[minmax(0,1fr)_auto]',
+}
+const CLOSE_COL: Record<string, string> = {
+  'icon-meta': 'col-start-3 md:col-start-4',
+  'icon-none': 'col-start-3',
+  'plain-meta': 'col-start-2 md:col-start-3',
+  'plain-none': 'col-start-2',
+}
+
 export function DialogContentImpl({
   title,
   titleChip,
@@ -72,6 +99,7 @@ export function DialogContentImpl({
   icon,
   tone = 'neutral',
   size = 'md',
+  placement = 'center',
   footer,
   lead,
   meta,
@@ -83,6 +111,28 @@ export function DialogContentImpl({
   const dirty = guard?.dirty ?? false
   const contentRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
+  // a callback ref: the body is drawn only once the dialog opens, after this component's first effects ran
+  const [bodyEl, setBodyEl] = useState<HTMLDivElement | null>(null)
+  const [scrollStop, setScrollStop] = useState(false)
+  useEffect(() => {
+    const el = bodyEl
+    if (!el) return
+    const read = () => {
+      const scrolls = el.scrollHeight > el.clientHeight + 1
+      const tabbable = el.querySelector('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      setScrollStop(scrolls && !tabbable)
+    }
+    read()
+    if (typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') return
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    const mo = new MutationObserver(read)
+    mo.observe(el, { childList: true, subtree: true })
+    return () => {
+      ro.disconnect()
+      mo.disconnect()
+    }
+  }, [bodyEl])
   const hold = (e: Event) => {
     if (busy || dirty) e.preventDefault()
   }
@@ -95,7 +145,12 @@ export function DialogContentImpl({
   }
   return (
     <RadixDialog.Portal>
-      <RadixDialog.Overlay className="fixed inset-0 z-40 grid animate-fade-in place-items-center bg-scrim p-4 max-md:place-items-end max-md:p-0">
+      <RadixDialog.Overlay
+        className={cn(
+          'fixed inset-0 z-dialog grid animate-fade-in place-items-center bg-scrim p-4 max-md:place-items-end max-md:p-0',
+          placement === 'side' && SIDE_OVERLAY,
+        )}
+      >
         <RadixDialog.Content
           ref={contentRef}
           {...(context ? {} : { 'aria-describedby': undefined })}
@@ -123,41 +178,66 @@ export function DialogContentImpl({
             openerRef.current.focus()
           }}
           className={cn(
-            'relative grid max-h-[calc(100dvh-64px)] w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-panel bg-surface shadow-modal',
+            'relative grid max-h-[calc(100dvh-64px)] w-full max-w-full grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-card bg-surface shadow-e3',
             // A short window (a laptop at 400% zoom): the whole sheet scrolls, so the title and Close are never pushed off the top.
             '[@media(max-height:480px)]:grid-rows-[auto_auto_auto] [@media(max-height:480px)]:overflow-y-auto',
-            'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none',
+            'animate-rise-6 focus:outline-none max-md:max-h-[calc(100dvh-16px)] max-md:animate-sheet-in max-md:rounded-b-none max-md:rounded-t-sheet',
             WIDTH[size],
+            placement === 'side' && SIDE_PANEL,
             className,
           )}
+          data-placement={placement === 'side' ? 'side' : undefined}
         >
-          {/* Bottom sheet below 768: the 36 by 4 grab handle (g2-components "Bottom sheet on a phone"). */}
-          <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-[2.25rem] -translate-x-1/2 rounded-round bg-line-strong md:hidden" />
-          <header className="flex items-start gap-3 px-5 pb-1 pt-5 max-md:border-b max-md:pb-3 max-md:pt-6 [@media(max-height:480px)]:sticky [@media(max-height:480px)]:top-0 [@media(max-height:480px)]:z-10 [@media(max-height:480px)]:bg-surface [@media(max-height:480px)]:pb-2">
+          {/* Bottom sheet below 768: the 40 by 4 grab handle (Forest .qb-sheet__grab). */}
+          <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-pill bg-line-input md:hidden" />
+          {/*
+            * The header is a grid: [icon] title [meta] Close. On a phone the meta (a PO number and its revision) goes under the title, so a
+            * long meta never squeezes the title into a narrow column or pushes Close off a 320 px screen; Close always keeps its own column.
+            */}
+          <header
+            className={cn(
+              'grid items-start gap-x-3 gap-y-2 px-card pb-1 pt-5 max-md:border-b max-md:pb-3 max-md:pt-6 [@media(max-height:480px)]:sticky [@media(max-height:480px)]:top-0 [@media(max-height:480px)]:z-sticky [@media(max-height:480px)]:bg-surface [@media(max-height:480px)]:pb-2',
+              HEADER_COLS[`${icon ? 'icon' : 'plain'}-${meta ? 'meta' : 'none'}`],
+            )}
+          >
             {icon ? (
-              <span aria-hidden="true" className={cn('grid size-[36px] shrink-0 place-items-center rounded', TILE[tone])}>
+              <span aria-hidden="true" className={cn('col-start-1 row-start-1 grid size-[36px] shrink-0 place-items-center rounded-control', TILE[tone])}>
                 <Icon icon={icon} size="lg" />
               </span>
             ) : null}
-            <div className="grid min-w-0 flex-1 gap-[2px]">
+            <div className={cn('row-start-1 grid min-w-0 gap-[2px]', icon ? 'col-start-2' : 'col-start-1')}>
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <RadixDialog.Title className="text-xl font-heavy max-[359px]:text-lg">{title}</RadixDialog.Title>
+                <RadixDialog.Title className="min-w-0 text-xl font-bold tracking-snug [overflow-wrap:anywhere] max-[359px]:text-lg">{title}</RadixDialog.Title>
                 {titleChip}
               </div>
               {context ? (
                 <RadixDialog.Description className="text-base text-fg-2">{context}</RadixDialog.Description>
               ) : null}
             </div>
-            {meta ? <div className="mr-2 shrink-0 self-start">{meta}</div> : null}
+            {meta ? (
+              <div
+                data-dialog-meta
+                className={cn(
+                  'min-w-0 [overflow-wrap:anywhere] max-md:row-start-2 max-md:justify-self-start md:row-start-1 md:mr-2 md:justify-self-end md:text-right',
+                  icon ? 'max-md:col-start-2 md:col-start-3' : 'max-md:col-start-1 md:col-start-2',
+                )}
+              >
+                {meta}
+              </div>
+            ) : null}
             <RadixDialog.Close asChild>
-              <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={busy} className="-mr-2 -mt-1 text-fg-muted" />
+              <Button variant="quiet" size="sm" icon={X} aria-label="Close" disabled={busy} className={cn('row-start-1 -mr-2 -mt-1 shrink-0 text-fg-muted', CLOSE_COL[`${icon ? 'icon' : 'plain'}-${meta ? 'meta' : 'none'}`])} />
             </RadixDialog.Close>
           </header>
           <div
+            ref={setBodyEl}
             data-dialog-body
+            // a body that scrolls but holds nothing to tab to (a long History) takes focus itself, so the keyboard can scroll it (axe
+            // scrollable-region-focusable, audit 2)
+            tabIndex={scrollStop ? 0 : undefined}
             className={cn(
               // Reading text is 16 px (text-base, owner decision 2026-10-19); controls inside set their own size.
-              'grid min-h-0 grid-cols-[minmax(0,1fr)] content-start gap-4 overflow-y-auto px-5 pb-5 pt-4 text-base text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch]',
+              'grid min-h-0 grid-cols-[minmax(0,1fr)] content-start gap-4 overflow-y-auto overscroll-contain px-card pb-5 pt-4 text-base text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
               busy && 'opacity-80',
             )}
           >
@@ -175,11 +255,11 @@ export function DialogContentImpl({
                 guard?.ask()
               }}
               className={cn(
-                'flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 pb-[max(var(--sp-3),env(safe-area-inset-bottom,0px))]',
+                'flex flex-wrap items-center justify-end gap-x-3 gap-y-2 border-t bg-surface px-card py-4 pb-[max(var(--sp-4),env(safe-area-inset-bottom,0px))]',
                 'max-md:flex-col-reverse max-md:items-stretch max-md:[&>button]:h-touch',
               )}
             >
-              {lead ? <span className="mr-auto inline-flex items-center gap-2 text-xs text-fg-muted max-md:mr-0">{lead}</span> : null}
+              {lead ? <span className="mr-auto inline-flex min-w-0 items-center gap-2 text-xs text-fg-muted max-md:mr-0 md:flex-1 md:basis-[12rem]">{lead}</span> : null}
               {footer}
             </footer>
           ) : null}

@@ -25,8 +25,8 @@ export interface Shortcut {
 
 export type ShortcutRole = 'admin' | 'sales' | 'engineer'
 
-/** Where a keyboard is likely: a fine pointer from md up. Phones never see a shortcuts entry or hint. */
-export const KEYBOARD_MEDIA = '(pointer: fine) and (min-width: 768px)'
+/** Where a keyboard is likely (kept in src/ui so the primitives can ask too). */
+export { KEYBOARD_MEDIA } from '@/ui/keyboardMedia'
 
 /** Joining words drawn as text between key caps. */
 export const KEY_WORDS: ReadonlySet<string> = new Set(['or', 'then'])
@@ -51,8 +51,8 @@ export function shortcutList(mod: string = modKeyLabel()): Shortcut[] {
     { group: 'Anywhere', keys: ['N'], what: 'New RFQ', where: 'Admin and sales', handles: ['n'], roles: ['admin', 'sales'] },
     { group: 'Anywhere', keys: ['E'], what: 'Add an expense', where: 'Admin', handles: ['e'], roles: ['admin'] },
     { group: 'Anywhere', keys: ['O'], what: 'Order without RFQ', where: 'Admin and sales', handles: ['o'], roles: ['admin', 'sales'] },
-    { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to To do', handles: ['g', 't'] },
-    { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture on To do (starts a New RFQ) or on a job (adds it to the job)', handles: ['v'], roles: ['admin', 'sales'] },
+    { group: 'Anywhere', keys: ['G', 'then', 'T'], what: 'Go to Home', handles: ['g', 't'] },
+    { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture on Home (starts a New RFQ) or on a job (adds it to the job)', handles: ['v'], roles: ['admin', 'sales'] },
     { group: 'Anywhere', keys: [mod, 'V'], what: 'Paste a message or picture on a job (adds it to the job)', handles: ['v'], roles: ['engineer'] },
     { group: 'Anywhere', keys: [mod, 'Z'], what: 'Undo the last action while its Undo button shows', handles: ['z'] },
     { group: 'Anywhere', keys: ['Esc'], what: 'Close a dialog, sheet or menu', handles: ['escape'] },

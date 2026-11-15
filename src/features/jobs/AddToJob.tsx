@@ -11,6 +11,7 @@ import { Button } from '@/ui/Button'
 import { FoldRow } from '@/ui/FoldRow'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
+import { controlClass } from '@/ui/form/fieldContext'
 import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import { deleteAttachment, type AttachmentRow, type InquiryRow, type RfqItemRow } from '@/features/rfqs/api'
@@ -36,6 +37,10 @@ import { allowedKinds, guessKind, guessLine, hasContent, KIND_LABEL, matchSuppli
  * `state.addToJob = { text, files }`, and a paste or a drop anywhere on the job page lands here.
  */
 const PHOTO_TYPES = 'image/*'
+
+// Forest 44-capture-add-to-job (#cp-o-add): the tinted inner box (what was shared, the guess) and the plain row of a file.
+const TINT_BOX = 'grid gap-3 rounded-control bg-sunken p-3'
+const FILE_ROW = 'flex min-h-row items-center justify-between gap-2 rounded-control border bg-surface pl-3 pr-1 text-base'
 
 /** Engineers do not see this card at all (owner decision): the wrapper mounts nothing, so none of its paste, drop or share handlers run either. */
 export default function AddToJob(props: JobSlotProps) {
@@ -252,10 +257,10 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         controlsId="add-to-job-body"
         bodyLabel="Add to this job"
       >
-        <p className="type-body pb-3 text-fg-2">Paste a message, or add a photo or a file. The app suggests where it goes.</p>
-      <div className="grid gap-3">
+        <div className="grid gap-3">
+        <p className="m-0 text-sm text-fg-2">Paste a message, or add a photo or a file. The app suggests where it goes.</p>
         {sharedState.status === 'gone' ? (
-          <p role="status" className="flex flex-wrap items-center gap-2 rounded-row border bg-sunken px-3 py-2 text-base" data-testid="shared-gone">
+          <p role="status" className={cn(TINT_BOX, 'm-0 justify-items-start gap-1 text-base text-fg')} data-testid="shared-gone">
             {SHARED_GONE}
             <Button size="touch" variant="quiet" onClick={clearShared}>
               Dismiss
@@ -263,14 +268,14 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
           </p>
         ) : null}
         {hasKept ? (
-          <p className="flex flex-wrap items-center gap-2 text-base text-fg-2" data-testid="shared-kept">
+          <p className={cn(TINT_BOX, 'm-0 justify-items-start gap-1 text-base text-fg')} data-testid="shared-kept">
             The shared item is kept on this device until it is added or discarded.
             <Button size="touch" variant="quiet" onClick={reset}>
               Discard what was shared
             </Button>
           </p>
         ) : null}
-        <label className="grid gap-1 text-base font-medium">
+        <label className="grid gap-1 text-sm font-bold text-fg">
           Paste here
           <textarea
             value={text}
@@ -287,7 +292,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
               }
             }}
             placeholder={money ? "A supplier's reply, the customer's answer, a note" : 'A note'}
-            className="w-full resize-y rounded border border-line-input bg-surface px-3 py-2 text-base font-regular"
+            className={cn(controlClass, 'h-auto resize-y py-2 text-base font-regular')}
           />
         </label>
         <div className="flex flex-wrap gap-2">
@@ -295,9 +300,9 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
           <PickButton icon={Paperclip} label="Choose a file" accept={RFQ_FILE_ACCEPT.join(",")} onFiles={f => take({ files: f })} />
         </div>
         {files.length > 0 ? (
-          <ul className="grid gap-1" aria-label="Files to add">
+          <ul className="grid gap-2" aria-label="Files to add">
             {files.map(f => (
-              <li key={f.id} className="flex items-center justify-between gap-2 rounded-row border px-3 py-2 text-base md:rounded-none md:border-x-0 md:border-t-0 md:px-0">
+              <li key={f.id} className={FILE_ROW}>
                 <span className={cn('min-w-0 [overflow-wrap:anywhere]', f.error && 'text-tone-danger-fg')}>{f.error ? `${f.file.name}: ${f.error}` : f.file.name}</span>
                 <Button size="touch" variant="quiet" icon={X} aria-label={`Remove ${f.file.name}`} onClick={() => setFiles(prev => prev.filter(x => x.id !== f.id))} />
               </li>
@@ -306,10 +311,10 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
         ) : null}
 
         {present ? (
-          <div className="grid gap-3 rounded-row border bg-canvas p-3 md:rounded-none md:border-x-0 md:border-b-0 md:bg-transparent md:px-0 md:pb-0" data-testid="add-guess">
-            <p className="text-base">
-              <span className="text-fg-2">This looks like: </span>
-              <b className="font-semibold" data-testid="guess-line">
+          <div className={TINT_BOX} data-testid="add-guess">
+            <p className="m-0 text-base">
+              <span className="text-sm text-fg-2">This looks like: </span>
+              <b className="font-bold" data-testid="guess-line">
                 {guessLine(kind, kind === 'price' ? supplier : null)}
               </b>
             </p>
@@ -323,7 +328,11 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
                     setKindChoice(k)
                     setTicked(null)
                   }}
-                  className={cn('min-h-touch rounded border px-3 text-base font-medium', kind === k ? 'border-fg bg-selected' : 'border-line-strong bg-surface hover:bg-sunken')}
+                  // A choice, not an action: the chosen one is the pale green with a forest edge (never the green button).
+                  className={cn(
+                    'inline-flex h-control items-center rounded-control border px-4 text-sm font-bold text-fg transition-[background-color,border-color,transform] duration-fast ease-out active:scale-press max-md:h-touch max-md:text-base',
+                    kind === k ? 'border-brand-700 bg-brand-100' : 'border-line-strong bg-surface hover:bg-selected',
+                  )}
                 >
                   {KIND_LABEL[k]}
                 </button>
@@ -347,7 +356,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
 
             {kind === 'answer' ? (
               <fieldset className="grid gap-2" data-testid="answer-questions">
-                <legend className="mb-1 text-base font-medium">Questions this reply answers</legend>
+                <legend className="mb-1 text-sm font-bold text-fg">Questions this reply answers</legend>
                 {openQuestions.map(q => (
                   <Checkbox
                     key={q.id}
@@ -366,14 +375,14 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
 
             {primary ? (
               <div>
-                <Button variant="secondary" size="touch" icon={Check} onClick={primary.run} disabled={primary.disabled} busy={busy} busyLabel="Saving" className="text-base">
+                <Button variant="secondary" size="touch" icon={Check} onClick={primary.run} disabled={primary.disabled} busy={busy} busyLabel="Saving">
                   {primary.label}
                 </Button>
               </div>
             ) : null}
           </div>
         ) : null}
-      </div>
+        </div>
       </FoldRow>
     </div>
   )
@@ -399,7 +408,7 @@ function PickButton({ icon, label, accept, capture, onFiles }: { icon: typeof Ca
           if (list.length) onFiles(list)
         }}
       />
-      <Button size="touch" icon={icon} onClick={() => input.current?.click()} className="text-base">
+      <Button variant="secondary" size="touch" icon={icon} onClick={() => input.current?.click()}>
         {label}
       </Button>
     </>
@@ -508,12 +517,12 @@ function PriceSection({
 
   return (
     <div className="grid gap-3" data-testid="add-price">
-      <label className="grid gap-1 text-base font-medium">
+      <label className="grid gap-1 text-sm font-bold text-fg">
         Supplier
         <select
           value={supplierId ?? ''}
           onChange={e => onSupplier(e.target.value)}
-          className="min-h-touch rounded border border-line-input bg-surface px-3 text-base font-regular"
+          className={cn(controlClass, 'max-md:h-touch')}
           aria-label="Supplier"
         >
           {supplierId ? null : <option value="">Choose the supplier</option>}
@@ -561,7 +570,7 @@ function PriceSection({
       )}
       {set && set.suggestions.length > 0 && inquiry ? (
         <div>
-          <Button variant="secondary" size="touch" icon={Check} onClick={() => void accept()} disabled={selected.size === 0} busy={busy} busyLabel="Saving" className="text-base">
+          <Button variant="secondary" size="touch" icon={Check} onClick={() => void accept()} disabled={selected.size === 0} busy={busy} busyLabel="Saving">
             {selected.size === 1 ? 'Accept 1 price' : `Accept ${selected.size} prices`}
           </Button>
         </div>

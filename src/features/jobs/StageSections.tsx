@@ -5,12 +5,14 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
 import { useWonDialog } from '@/features/orders/useWonDialog'
-import { CircleCheck, CircleDashed, CircleDot, CircleX, Minus, type LucideIcon } from 'lucide-react'
+import { Building2, CircleCheck, CircleDashed, CircleDot, CircleX, Minus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
-import { FoldRow, type FoldRowTone } from '@/ui/FoldRow'
+import { FoldRow, type FoldRowChip, type FoldRowChipTone } from '@/ui/FoldRow'
+import { STEP_CHIP as CHIP } from '@/features/jobs/lib/stepChip'
+import type { StepTone } from '@/lib/status'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import type { JobFacts } from '@/features/jobs/api'
@@ -257,7 +259,29 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   return STOPS.map((stop, index) => ({ stop, shown: model.stops[index].shown, index, state: state(index), summary: summaries[index], body: bodies[index] }))
 }
 
+/** From 768 px each step is its own white card; on a phone the rows share the one card above. */
+const CARD = 'px-card md:rounded-card md:border md:bg-surface md:shadow-e1'
+
 export const NO_ENQUIRY_ROW = 'No RFQ or quotation: this job started as an order'
+
+/** The drawn chip per row (Forest 30-job-page): Done, Not yet; the step the job is at says who acts next, as the hero's chip does. */
+const CHIP_TONE: Record<StepTone, FoldRowChipTone> = { now: 'warning', waiting: 'info', late: 'danger', done: 'success', inert: 'neutral' }
+function chipOf(state: StopState, current: StepTone, word: StepTone = current): FoldRowChip {
+  if (state === 'done') return { icon: CircleCheck, word: 'Done', tone: 'success' }
+  // the word follows the step (an imported job still "Needs action"); the colour follows the tone (grey for an imported job)
+  // the colour follows the word too: an imported job's "Needs action" is the usual amber chip (owner, audit 2)
+  if (state === 'current') return { ...CHIP[word], tone: CHIP_TONE[word] }
+  if (state === 'future') return { icon: CircleDashed, word: 'Not yet', tone: 'neutral' }
+  if (state === 'stopped') return { icon: CircleX, word: 'Not reached', tone: 'neutral' }
+  if (state === 'office') return OFFICE_CHIP
+  return { icon: Minus, word: 'None', tone: 'neutral' }
+}
+
+/** An engineer's Billing and Payment rows (audit 2): the office's steps, so neither the chip nor the heard state says Done or Not yet. */
+const OFFICE_CHIP: FoldRowChip = { icon: Building2, word: 'Office', tone: 'neutral' }
+/** The office's Payment row while an advance is in (the ruler's half-filled stop): not "Not yet" (audit 2: the row contradicted the ruler). */
+const ADVANCE_CHIP: FoldRowChip = { icon: CircleDot, word: 'Advance in', tone: 'info' }
+const OFFICE_STATE = { icon: Building2, word: WITH_OFFICE, className: 'text-fg-muted' }
 
 const STATE: Record<StopState, { icon: LucideIcon; word: string; className: string }> = {
   done: { icon: CircleCheck, word: 'Done', className: 'text-tone-success-fg' },
@@ -265,23 +289,25 @@ const STATE: Record<StopState, { icon: LucideIcon; word: string; className: stri
   future: { icon: CircleDashed, word: 'Not yet', className: 'text-fg-muted' },
   none: { icon: Minus, word: 'Not part of this job', className: 'text-fg-muted' },
   stopped: { icon: CircleX, word: 'Not reached', className: 'text-fg-muted' },
+  office: { icon: Building2, word: WITH_OFFICE, className: 'text-fg-muted' },
 }
 
 /**
- * The job's seven steps as one hairline list (clarity redesign): each step is one FoldRow, closed, in its natural order on a phone and a
- * computer. The step the job is at is marked by a filled dot and a coloured summary; it is not moved and not opened. The ids (stage-N)
- * stay with their rows, so ?stage= links and the ruler still find them.
+ * The job's seven steps (Forest 30-job-page): each step is one FoldRow, closed, in its natural order, with its state as a chip (Done,
+ * Waiting, Not yet). On a phone they are one card of hairline rows; from 768 px each step is its own card. The step the job is at has
+ * the brand edge (a left bar on a phone, a ring on a computer); it is not moved and not opened. The ids (stage-N) stay with their rows,
+ * so ?stage= links and the ruler still find them.
  */
-export function StageSections({ facts, data, model, ctx, open, onToggle, meta }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void; meta?: ReactNode }) {
+export function StageSections({ facts, data, model, ctx, open, onToggle, meta, tone = 'now', chip }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void; meta?: ReactNode; tone?: StepTone; chip?: StepTone }) {
   const [, setWon] = useWonDialog()
   const built = buildSections(facts, data, model, ctx, () => setWon(true), meta)
   // A job that began as an order has no enquiry and no quotation: one grey row says so, instead of two rows that each say it.
   const merged = facts.job.kind === 'direct'
   const sections = merged ? built.slice(2) : built
   return (
-    <div className="min-w-0 lg:rounded-panel lg:border lg:bg-surface lg:px-4 lg:[&>:last-child]:border-b-0" data-stages>
+    <div className="grid min-w-0 overflow-hidden rounded-card border bg-surface shadow-e1 max-md:[&>:last-child]:border-b-0 md:gap-2 md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none" data-stages>
       {merged ? (
-        <div id="stage-0" data-stage="RFQ" data-fold-row="" className="flex min-h-touch items-center gap-3 border-b py-2 text-fg-muted">
+        <div id="stage-0" data-stage="RFQ" data-fold-row="" className={cn('flex min-h-touch items-center gap-3 border-b py-3 text-fg-muted', CARD)}>
           <Icon icon={Minus} />
           <p className="type-body min-w-0">
             <span id="stage-1" data-stage="Quotation" />
@@ -293,8 +319,10 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta }:
         const none = s.state === 'none'
         const isOpen = open === s.index && !none
         // The money steps are the office's: an engineer's rows say so, whatever their mark, and so does the quotation while the job waits at it.
+        // The quotation the job waits at is still heard as "Now" (the row the job is at), only its words say the office has it.
         const withOffice = !ctx.money && (s.stop === 'Invoice' || s.stop === 'Payment' || (s.state === 'current' && s.stop === 'Quotation'))
-        const tone: FoldRowTone | undefined = s.state === 'current' ? 'warning' : undefined
+        const current = s.state === 'current'
+        const advance = !withOffice && s.state === 'future' && model.stops[s.index]?.half === true
         return (
           <FoldRow
             key={s.stop}
@@ -302,11 +330,12 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta }:
             dataStage={s.stop}
             controlsId={`stage-body-${s.index}`}
             bodyLabel={`${s.shown} stage`}
-            state={STATE[s.state]}
+            state={withOffice && !current ? OFFICE_STATE : STATE[s.state]}
             title={s.shown}
-            summary={withOffice ? WITH_OFFICE : s.state === 'future' ? 'Not yet' : s.summary}
-            tone={tone}
-            muted={s.state === 'future' || none || s.state === 'stopped'}
+            summary={withOffice ? WITH_OFFICE : advance ? s.summary : s.state === 'future' ? 'Not yet' : s.summary}
+            chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : chipOf(s.state, tone, chip)}
+            className={cn(CARD, current && 'relative before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-brand-500 md:before:hidden md:ring-2 md:ring-inset md:ring-brand-500')}
+            muted={(s.state === 'future' && !advance) || none || s.state === 'stopped'}
             disabled={none}
             open={isOpen}
             onToggle={() => onToggle(s.index)}

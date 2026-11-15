@@ -29,14 +29,15 @@ export const ToggleButton = forwardRef<HTMLButtonElement, ToggleButtonProps>(fun
         if (!e.defaultPrevented) onPressedChange(!pressed)
       }}
       className={cn(
-        'inline-flex h-control items-center gap-2 whitespace-nowrap rounded border px-3 text-sm font-medium transition-colors duration-fast ease-out',
-        pressed ? 'border-chrome bg-chrome text-chrome-fg' : 'border-line-strong bg-surface text-fg hover:border-line-input hover:bg-sunken',
-        'disabled:border-line disabled:bg-sunken disabled:text-fg-disabled disabled:hover:border-line',
+        'inline-flex h-control items-center gap-2 whitespace-nowrap rounded-control border px-4 text-sm font-bold transition-[background-color,border-color,color,transform] duration-fast ease-out active:scale-press',
+        // Forest: pressed is filled forest green with white words, 6.5:1 against the page and the unpressed tile (WCAG 1.4.11).
+        pressed ? 'border-primary bg-primary text-primary-foreground hover:bg-primary-hover' : 'border-line-strong bg-surface text-fg hover:bg-selected',
+        'disabled:border-transparent disabled:bg-deep disabled:text-fg-disabled disabled:active:transform-none',
         className,
       )}
       {...rest}
     >
-      {icon ? <Icon icon={icon} className={pressed ? "text-chrome-fg-2" : "text-fg-muted"} /> : null}
+      {icon ? <Icon icon={icon} className={pressed ? "" : "text-fg-muted"} /> : null}
       {children}
     </button>
   )

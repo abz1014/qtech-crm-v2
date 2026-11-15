@@ -47,7 +47,7 @@ test.describe('shell width', () => {
     }
   })
 
-  test('the top bar fits at 768, 1024 and 1920 with every label in words, and Help and Settings are in it', async ({ page }) => {
+  test('the top bar fits at 768, 1024 and 1920, the rail shows its lanes in words from 1024, and Help and Settings are in the bar', async ({ page }) => {
     await openAs(page, 'admin', '/todo')
     for (const width of [768, 1024, 1920]) {
       await page.setViewportSize({ width, height: 800 })
@@ -58,9 +58,11 @@ test.describe('shell width', () => {
       expect(m.bar, `top bar at ${width}`).toBeLessThanOrEqual(m.view)
       expect(m.barOverflow, `top bar scrolls inside itself at ${width}`).toBe(false)
       const nav = page.getByRole('navigation', { name: 'Main' }).first()
-      for (const name of ['To do', 'Jobs', 'Money', 'Companies']) {
+      for (const name of ['Home', 'Sell', 'Deliver', 'Money', 'Companies']) {
         const box = await nav.getByRole('link', { name: new RegExp(`^${name}`) }).locator('[data-nav-label]').boundingBox()
-        expect(box?.width ?? 0, `${name} shown in words at ${width}`).toBeGreaterThan(2)
+        // 768 to 1023: the icon rail (72 wide), the word read out only
+        if (width >= 1024) expect(box?.width ?? 0, `${name} shown in words at ${width}`).toBeGreaterThan(2)
+        else expect(box?.width ?? 0, `${name} is an icon at ${width}`).toBeLessThanOrEqual(2)
       }
       // Help and Settings sit in the bar at every width (they were behind the avatar only), fully inside the window
       for (const id of ['topbar-help', 'topbar-settings']) {

@@ -4,6 +4,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Checkbox } from '@/ui/form/Checkbox'
+import { keepCodes } from '@/ui/codes'
 
 /*
  * ConfirmDelete: the ONE confirm for deleting a record (owner decision 2026-10-22, from the expense delete). Every delete button asks
@@ -115,7 +116,7 @@ export function ConfirmDelete({
           ) : null}
           {also && also.length > 0 ? (
             <p data-slot="delete-also">
-              <span className="font-medium">Also deletes:</span> {also.join(', ')}
+              <span className="font-medium">Also deletes:</span> {keepCodes(also.join(', '))}
             </p>
           ) : null}
           {loading ? <p className="text-fg-muted">Checking what goes with it…</p> : null}

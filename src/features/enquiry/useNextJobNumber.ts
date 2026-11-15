@@ -15,7 +15,11 @@ export async function loadNextJobNumber(): Promise<number | null> {
   return typeof top === 'number' ? top + 1 : 1
 }
 
-export function useNextJobNumber(enabled = true): number | null {
+/**
+ * The number, and whether the read failed: it is the page's only read before anything is typed, so when it fails (no connection) the
+ * form says so at once instead of letting someone fill it in and find out at Create job.
+ */
+export function useNextJobNumber(enabled = true): { next: number | null; failed: boolean; retry: () => void } {
   const q = useQuery({ queryKey: [...qk.rfqs.all, 'next-job-number'], queryFn: loadNextJobNumber, enabled, staleTime: 0, gcTime: 0 })
-  return q.data ?? null
+  return { next: q.data ?? null, failed: q.isError, retry: () => void q.refetch() }
 }

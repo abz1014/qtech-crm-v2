@@ -27,7 +27,7 @@ export function RankedOptionRow({ q, className }: { q: RankedQuote; among?: read
   return (
     <span className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2', className)}>
       <span className="grid min-w-0">
-        <b className="text-sm font-medium leading-[18px]">{q.supplierName}</b>
+        <b className="text-sm font-medium">{q.supplierName}</b>
         {q.inStock ? <span className="text-xs text-fg-muted">In stock</span> : null}
       </span>
       <span className="num text-right text-xs">
@@ -76,9 +76,9 @@ export function RankedPicker({
           type="button"
           id={id}
           aria-haspopup="listbox"
-          className="grid min-h-[36px] w-full grid-cols-[minmax(0,1fr)_16px] items-center gap-2 rounded border border-line-input bg-surface px-2 py-1 text-left hover:border-fg-muted"
+          className="grid min-h-control w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-control border border-line-input bg-surface px-3 py-1 text-left hover:border-fg-muted"
         >
-          <span className="grid min-w-0 leading-[17px]">
+          <span className="grid min-w-0">
             <span className="sr-only">{label}: </span>
             <b className="min-w-0 [overflow-wrap:anywhere] text-sm font-medium">{chosen ? chosen.supplierName : (extra?.label ?? 'Choose a supplier')}</b>
             {chosen ? <span className="num text-pretty text-xs text-fg-muted">{priceTexts(chosen).price}</span> : null}

@@ -5,6 +5,8 @@ import { getHomeRoute } from '@/app/roleRoutes'
 import { ROLE_LABEL, useSession } from '@/app/session'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
+import { CARD } from '@/ui/card'
+import { cn } from '@/lib/utils'
 
 const WHO: Record<string, string> = { admin: 'admins', sales: 'sales', engineer: 'engineers' }
 
@@ -34,22 +36,24 @@ export function NoAccessPage({ area, roles, adminNote }: { area?: string; roles?
       : `Your role is ${ROLE_LABEL[role] ?? role}. Ask an admin ${area ? (NEED[area] ?? `if you need access to ${area}`) : 'if you need access to this page'}.`
     : 'Your account has no role assigned. Ask an admin to set one on the Team screen.'
   return (
-    <div className="mx-auto grid max-w-list content-start px-4 pb-12 pt-6 md:px-8 md:pt-12">
+    <div className="mx-auto grid max-w-list content-start px-gutter pb-12 pt-6 md:pt-12">
       <h1 className="sr-only">{title}</h1>
-      <EmptyState
-        mood="warning"
-        bordered
-        title={title}
-        actions={
-          known ? (
-            <Button icon={ArrowLeft} onClick={() => navigate(home)}>
-              Go to Today
-            </Button>
-          ) : undefined
-        }
-      >
-        {body}
-      </EmptyState>
+      {/* Forest (58 #money-checks-sales, 59 #rp-noaccess): the one white card, not a dashed placeholder box */}
+      <div className={cn(CARD, 'p-card')}>
+        <EmptyState
+          mood="warning"
+          title={title}
+          actions={
+            known ? (
+              <Button icon={ArrowLeft} onClick={() => navigate(home)}>
+                Go to Home
+              </Button>
+            ) : undefined
+          }
+        >
+          {body}
+        </EmptyState>
+      </div>
     </div>
   )
 }

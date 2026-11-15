@@ -107,7 +107,7 @@ export const SCENES: Scene[] = SCENE_LIST.flatMap(s =>
 /**
  * Open a gallery URL in a state that renders the same every time: the clock is installed at FIXED_NOW
  * and paused (so Date, timers and countdowns stand still), animations and transitions are off, and the
- * Archivo faces (the UI face and the wide title cut) are confirmed loaded before anything is photographed or checked.
+ * Geist faces (the UI face at body and title weights, and Geist Mono) are confirmed loaded before anything is photographed or checked.
  */
 export async function openGallery(page: Page, search = ''): Promise<void> {
   await page.clock.install({ time: FIXED_NOW })
@@ -119,9 +119,9 @@ export async function openGallery(page: Page, search = ''): Promise<void> {
   await page.addStyleTag({ content: FREEZE_CSS })
   await page.evaluate(() => document.fonts.ready)
   const fonts = await page.evaluate(async () => {
-    const faces = ['400 16px "Archivo"', '600 16px "Archivo"', '750 16px "Archivo Wide"']
+    const faces = ['400 16px "Geist"', '600 16px "Geist"', '800 16px "Geist"', '400 16px "Geist Mono"']
     await Promise.all(faces.map(f => document.fonts.load(f)))
     return faces.map(f => document.fonts.check(f))
   })
-  expect(fonts, 'Archivo and Archivo Wide must be loaded before a baseline is taken').toEqual([true, true, true])
+  expect(fonts, 'Geist and Geist Mono must be loaded before a baseline is taken').toEqual([true, true, true, true])
 }

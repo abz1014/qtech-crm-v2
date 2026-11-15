@@ -319,7 +319,8 @@ export function collect(opts: CollectOptions): Metrics {
   const transparent = (c: string) => c === 'transparent' || /rgba\(.*,\s*0\)$/.test(c)
   const isPrimary = (el: Element) => {
     const cls = typeof (el as HTMLElement).className === 'string' ? (el as HTMLElement).className : ''
-    return /(^|\s)bg-primary(\s|$)/.test(cls) || el.getAttribute('data-variant') === 'primary' || (!transparent(primaryBg) && style(el).backgroundColor === primaryBg)
+    // A lime Button is a forest hero's one action (Button variant lime): it is the page's primary, drawn on the forest.
+    return /(^|\s)bg-primary(\s|$)/.test(cls) || (el.tagName === 'BUTTON' && /(^|\s)bg-lime-300(\s|$)/.test(cls)) || el.getAttribute('data-variant') === 'primary' || (!transparent(primaryBg) && style(el).backgroundColor === primaryBg)
   }
   const actions: Metrics['actions'] = { total: 0, aboveFold: 0, buttons: 0, links: 0, mainAboveFold: 0 }
   const primary: Metrics['primary'] = { inMain: 0, inMainAboveFold: 0, disabledInMain: 0, inChrome: 0, labels: [], onScreen: 0, anywhere: 0, onScreenLabels: [] }

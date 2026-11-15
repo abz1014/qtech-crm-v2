@@ -6,6 +6,8 @@ import { RatesTable } from '@/features/settings/RatesTable'
 import { ratesStatusLine } from '@/features/settings/ratesModel'
 import { Icon } from '@/ui/Icon'
 import { PageHeader } from '@/ui/PageHeader'
+import { button } from '@/ui/buttonStyles'
+import { cn } from '@/lib/utils'
 
 /*
  * Settings home: where sales and engineers land (an admin goes to Team). The side menu already lists Company profile and
@@ -18,13 +20,13 @@ export function SettingsHomePage() {
   return useSeesPrices() ? <RatesHome /> : <NoRatesHome />
 }
 
-const LINK =
-  'inline-flex h-control shrink-0 items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium text-fg hover:bg-sunken max-md:h-touch'
+// The page's one way on: a white button (buttonStyles), the same look as every secondary action in Forest.
+const LINK = cn(button({ variant: 'secondary' }), 'max-md:h-touch')
 
 function RatesHome() {
   const fx = useFxLatest()
   return (
-    <div className="grid content-start gap-4">
+    <div className="grid content-start gap-card-gap">
       <PageHeader
         title="Today's exchange rates"
         lede={fx.data ? ratesStatusLine(fx.data) : undefined}
@@ -42,7 +44,7 @@ function RatesHome() {
 
 function NoRatesHome() {
   return (
-    <div className="grid content-start gap-4">
+    <div className="grid content-start gap-card-gap">
       <PageHeader
         title="Settings"
         lede="Company details for documents. Ask an admin to change them."

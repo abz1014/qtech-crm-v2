@@ -3,6 +3,7 @@ import { ExternalLink, FileText, Image as ImageIcon, Trash2 } from 'lucide-react
 import { formatBytes } from '@/lib/fileIntake'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
+import { buttonStyles } from '@/ui/buttonStyles'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
@@ -12,8 +13,8 @@ import { HasPricesToggle } from '@/features/rfqs/HasPricesToggle'
 import { canPreview } from '@/features/rfqs/lib'
 
 /*
- * One file on an RFQ (R10), as it appears in the Files panel and under a photo answer (g2-rfq-detail ".att"): a 56 by 42
- * thumbnail, the name, the size, and what it is. An image opens in a lightbox; a PDF (or a photo the browser cannot
+ * One file on an RFQ (R10), as it appears in the Files panel and under a photo answer (26-job-questions-files .qb-file): a square
+ * thumbnail, the whole name (it wraps), the size, and what it is. An image opens in a lightbox; a PDF (or a photo the browser cannot
  * show, such as HEIC) opens in a new tab. Delete asks once, because a file cannot be brought back.
  */
 
@@ -28,7 +29,7 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
   const previewable = canPreview(att.mimeType)
 
   const thumb = (
-    <span className="grid h-[42px] w-[56px] shrink-0 place-items-center overflow-hidden rounded-[3px] bg-selected text-fg-muted">
+    <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-control bg-brand-100 text-brand-700">
       {url && previewable && !broken ? (
         <img src={url} alt="" loading="lazy" onError={() => setBroken(true)} className="size-full object-cover" />
       ) : (
@@ -37,11 +38,12 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
     </span>
   )
 
-  const openClass = 'flex min-w-0 flex-1 items-center gap-3 rounded text-left focus-visible:outline-none'
+  const openClass = 'group/open flex min-w-0 flex-1 items-center gap-3 rounded-control text-left'
+  // The whole name wraps, never cut (live bug 6); the title still carries it for a pointer.
   const text = (
-    <span className="grid min-w-0 text-xs">
-      <b title={att.fileName} className="line-clamp-2 break-words text-sm font-medium">{att.fileName}</b>
-      <span className="num truncate text-fg-muted">{[formatBytes(att.sizeBytes), note].filter(Boolean).join(' · ')}</span>
+    <span className="grid min-w-0">
+      <b title={att.fileName} className="break-words text-sm font-semibold text-fg [overflow-wrap:anywhere] group-hover/open:underline">{att.fileName}</b>
+      <span className="num break-words text-sm text-fg-muted">{[formatBytes(att.sizeBytes), note].filter(Boolean).join(' · ')}</span>
     </span>
   )
 
@@ -57,7 +59,7 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
 
   return (
     <div className="grid gap-1">
-    <div className="flex min-w-0 items-center gap-2 rounded border border-line bg-surface p-1">
+    <div className="flex min-h-row min-w-0 items-center gap-2 rounded-control border bg-surface py-2 pl-2 pr-1 transition-colors duration-fast hover:border-line-strong">
       {previewable ? (
         <button type="button" className={openClass} onClick={() => setViewing(true)}>
           {thumb}
@@ -86,8 +88,8 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
           footer={
             <>
               {url ? (
-                <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex h-control items-center gap-2 rounded border border-line-strong bg-surface px-3 text-sm font-medium hover:bg-sunken">
-                  <Icon icon={ExternalLink} className="text-fg-muted" />
+                <a href={url} target="_blank" rel="noopener noreferrer" className={buttonStyles({ variant: 'secondary' })}>
+                  <Icon icon={ExternalLink} />
                   Open in a new tab
                 </a>
               ) : null}
@@ -97,7 +99,14 @@ export function AttachmentItem({ rfqId, orderId, att, url, note, removable = tru
             </>
           }
         >
-          {url ? <img src={url} alt={att.fileName} className="mx-auto max-h-[70dvh] max-w-full rounded object-contain" /> : <p className="text-sm text-fg-muted">The picture is not available right now. Try again in a moment.</p>}
+          {url ? (
+            <img src={url} alt={att.fileName} className="mx-auto max-h-[70dvh] max-w-full rounded-control object-contain" />
+          ) : (
+            <div className="grid place-items-center gap-2 rounded-control bg-deep px-4 py-10 text-center text-sm text-fg-muted">
+              <Icon icon={ImageIcon} size="lg" />
+              <p>The picture is not available right now. Try again in a moment.</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

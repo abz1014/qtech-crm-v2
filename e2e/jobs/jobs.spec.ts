@@ -8,6 +8,9 @@ import { db } from '../verify/support/db'
  * palette. A job is a read-only view over rfqs and orders (migration 0099): "Job 139" is an RFQ, "Job O-45" an order with no RFQ.
  * Every test makes its own records with unique names.
  */
+/** The Job page's one action: the lime button on the forest hero (a computer), or a green one (Forest, Button variant lime). */
+const ONE_ACTION = '#main button.bg-primary, #main button.bg-lime-300'
+
 async function openPalette(page: Page) {
   await page.locator('#main').waitFor()
   await expect(async () => {
@@ -250,6 +253,75 @@ test.describe('Jobs list: stage filters and Customer PO (2026-11-03)', () => {
   })
 })
 
+/** The Forest review pictures (REVIEW_DIR, uploaded by CI): the whole page at 1440 and at 375, then the viewport is put back. */
+async function shot(page: Page, name: string): Promise<void> {
+  const dir = process.env.REVIEW_DIR
+  if (!dir) return
+  const was = page.viewportSize()
+  for (const [w, h, tag] of [[1440, 900, 'desktop'], [375, 812, 'phone']] as const) {
+    await page.setViewportSize({ width: w, height: h })
+    await page.waitForTimeout(300)
+    await page.screenshot({ path: `${dir}/${name}-${tag}.png`, fullPage: true })
+  }
+  if (was) await page.setViewportSize(was)
+}
+
+test.describe('Sell and Deliver lanes (Forest, gate 2)', () => {
+  const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`Job ${key}\\b`) })
+
+  test('Sell holds the enquiry with no order, Deliver the ordered jobs; each has its stages, an All jobs link, and a job opened from a lane carries it', async ({ page }) => {
+    const f = await seed()
+    // an RFQ with no order yet: Sell, at RFQ
+    const sell = await createRfq(f.company.id, { customer_ref: `${f.ref}-S`, due_on: karachiDay(7) })
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await openAs(page, 'admin', '/jobs?lane=sell&chip=open')
+    await expect(page.getByRole('heading', { name: 'Sell', level: 1 })).toBeVisible()
+    await expect(row(page, String(sell.number)).first()).toBeVisible()
+    await expect(row(page, String(f.rfq.number))).toHaveCount(0)
+    await expect(row(page, `O-${f.direct.number}`)).toHaveCount(0)
+    await expect(page.getByTestId('stage-filter').getByRole('radio')).toHaveText(['All', 'RFQs', 'Quotations'])
+    await page.getByRole('radio', { name: 'RFQs' }).click()
+    await expect(page).toHaveURL(/lane=sell.*stage=rfq|stage=rfq.*lane=sell/)
+    await expect(row(page, String(sell.number)).first()).toBeVisible()
+    await review(page, 'forest-a2-lanes-desktop')
+    expect(await axeViolations(page)).toEqual([])
+
+    await row(page, String(sell.number)).first().click()
+    await expect(page).toHaveURL(new RegExp(`/jobs/${sell.number}\\?from=sell$`))
+
+    await page.goto('/jobs?lane=deliver&chip=open')
+    await expect(page.getByRole('heading', { name: 'Deliver', level: 1 })).toBeVisible()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+    await expect(row(page, String(sell.number))).toHaveCount(0)
+    await expect(page.getByTestId('stage-filter').getByRole('radio')).toHaveText(['All', 'Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
+
+    await page.getByRole('link', { name: 'All jobs' }).click()
+    await expect(page).toHaveURL(/\/jobs\?chip=open$/)
+    await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
+    await expect(row(page, String(sell.number)).first()).toBeVisible()
+    await expect(row(page, `O-${f.direct.number}`).first()).toBeVisible()
+  })
+
+  test('on a phone Sell is cards; an engineer who opens Sell is sent to Jobs', async ({ page, browser }) => {
+    const f = await seed()
+    const sell = await createRfq(f.company.id, { customer_ref: `${f.ref}-P`, due_on: karachiDay(7) })
+    await page.setViewportSize({ width: 375, height: 800 })
+    await openAs(page, 'admin', '/jobs?lane=sell&chip=open')
+    await expect(page.getByRole('heading', { name: 'Sell', level: 1 })).toBeVisible()
+    // the card whose job label is exactly this job (a card's text runs "Job 2" into "2 items", so a plain text filter also hit Job 2)
+    await expect(page.locator('tr[data-card]').filter({ has: page.getByText(`Job ${sell.number}`, { exact: true }) })).toHaveCount(1)
+    await review(page, 'forest-a2-lanes-phone')
+
+    const eng = await (await browser.newContext()).newPage()
+    await openAs(eng, 'engineer', '/jobs?lane=sell')
+    await expect(eng.getByText('Sell is for admin and sales')).toBeVisible()
+    await expect(eng.getByRole('row')).toHaveCount(0)
+    await eng.getByRole('link', { name: 'Open Jobs' }).click()
+    await expect(eng).toHaveURL(/\/jobs$/)
+    await expect(eng.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
+  })
+})
+
 test.describe('Job page (P5-C, P5-D1)', () => {
   test('the page for an enquiry: header, seven-stop ruler, one green button, and the enquiry work on the Quotation stage', async ({ page }) => {
     const f = await seed()
@@ -266,7 +338,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.locator('[data-stage-block]')).toHaveCount(1)
     await expect(page.locator('[data-stages] > [data-fold-row]')).toHaveCount(7)
     for (const b of await page.locator('[data-stages]').getByRole('button').all()) await expect(b).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await expect(page.locator(ONE_ACTION)).toHaveCount(1)
     await page.getByRole('button', { name: 'Ask suppliers' }).click()
     await expect(page.locator('[data-stages]').getByRole('button', { name: /^Quotation/ })).toHaveAttribute('aria-expanded', 'true')
     await review(page, 'job-page-1440')
@@ -276,7 +348,14 @@ test.describe('Job page (P5-C, P5-D1)', () => {
   test('the order steps are on the page (P5-D2): the green button opens the Supplier order stage, which holds the supplier work; Invoice offers nothing before delivery', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'admin', `/jobs/${f.rfq.number}`)
-    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await expect(page.locator(ONE_ACTION)).toHaveCount(1)
+    // Forest (30-job-page.html): the hero says the step and holds the one green button; the track card says the stage over seven stops
+    const hero = page.getByRole('region', { name: 'Next step' })
+    await expect(hero).toContainText(`Next step · Job ${f.rfq.number}`)
+    await expect(hero.getByRole('heading', { level: 2 })).toHaveText('Choose a supplier for the items')
+    await expect(page.locator('[data-stage-phone]')).toHaveText('Stage 4 of 7 · Supplier order')
+    await expect(page.getByRole('list', { name: 'Stages of this job' }).getByRole('listitem')).toHaveCount(7)
+    await shot(page, 'forest-a3-jobpage')
     await page.getByRole('button', { name: 'Choose suppliers' }).click()
     const stage = page.getByRole('region', { name: 'Supplier order stage' })
     await expect(stage).toBeVisible()
@@ -287,7 +366,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     // the customer PO is shown once, in the key facts line under the stage block; the Order step does not repeat it
     await expect(page.getByLabel('Key facts').getByText(f.po)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Create invoice' })).toHaveCount(0)
-    await expect(page.locator('button.bg-primary')).toHaveCount(1)
+    await expect(page.locator(ONE_ACTION)).toHaveCount(1)
   })
 
   for (const role of ['sales', 'engineer'] as const) {

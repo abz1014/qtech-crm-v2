@@ -11,6 +11,7 @@ import { useSession } from '@/app/session'
 import { AdminOnly, PricesOnly, SettingsHome, SettingsLayout } from '@/features/settings/SettingsLayout'
 import { AppShell } from '@/app/shell/AppShell'
 import { preloadRouteCode, routeChunks } from '@/app/routeChunks'
+import { PageLoading } from '@/app/pages/PageLoading'
 
 // Lazy: the sign-in form brings zod, react-hook-form and its resolvers, which nothing else on first paint needs (perf/client).
 const SignInPage = lazy(() => routeChunks.signIn().then(m => ({ default: m.SignInPage })))
@@ -39,13 +40,11 @@ const CategoriesPage = lazy(() => import('@/features/settings/CategoriesPage').t
 const ChangePasswordPage = lazy(() => import('@/features/settings/ChangePasswordPage').then(m => ({ default: m.ChangePasswordPage })))
 const MyDetailsPage = lazy(() => import('@/features/settings/MyDetailsPage').then(m => ({ default: m.MyDetailsPage })))
 const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfilePage').then(m => ({ default: m.CompanyProfilePage })))
-/** New RFQ (R05): its own route, so it works under whichever screen owns the rest of /rfqs. */
-const IntakeScreen = lazy(routeChunks.rfqNew)
 /** 0087: an engineer's "I paid" (their own expense claims). The page itself refuses anyone but an engineer. */
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Shared with Q-Tech CRM page. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
-/** New enquiry (P4-A): the document beside what was read; wraps the intake. */
+/** New RFQ (P4-A; /enquiries/new and /rfqs/new): the document beside what was read; wraps the intake. */
 const NewEnquiryPage = lazy(routeChunks.enquiryNew)
 /** The old RFQ and Order addresses (they redirect to Jobs, src/app/oldAddresses.tsx) keep the access they had: every staff role. */
 const oldItem = (label: string, path: string): NavItem => ({ key: 'jobs', label, path, icon: Briefcase, roles: ['admin', 'sales', 'engineer'] })
@@ -142,7 +141,7 @@ function AppRouteTable() {
             path="todo/review"
             element={
               <AdminOnly area="Weekly review">
-                <Suspense fallback={null}>
+                <Suspense fallback={<PageLoading />}>
                   <ReviewPage />
                 </Suspense>
               </AdminOnly>
@@ -153,7 +152,7 @@ function AppRouteTable() {
           <Route
             path="my-expenses"
             element={
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoading />}>
                 <MyClaimsPage />
               </Suspense>
             }
@@ -161,7 +160,7 @@ function AppRouteTable() {
           <Route
             path="capture"
             element={
-              <Suspense fallback={null}>
+              <Suspense fallback={<PageLoading />}>
                 <CaptureRoute />
               </Suspense>
             }
@@ -172,7 +171,7 @@ function AppRouteTable() {
               path="team"
               element={
                 <AdminOnly area="Team">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <TeamPage />
                   </Suspense>
                 </AdminOnly>
@@ -182,7 +181,7 @@ function AppRouteTable() {
               path="backups"
               element={
                 <AdminOnly area="Backups and usage">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <BackupsPage />
                   </Suspense>
                 </AdminOnly>
@@ -192,7 +191,7 @@ function AppRouteTable() {
               path="export"
               element={
                 <AdminOnly area="Export data">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <ExportPage />
                   </Suspense>
                 </AdminOnly>
@@ -202,7 +201,7 @@ function AppRouteTable() {
               path="targets"
               element={
                 <AdminOnly area="Targets">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <TargetsPage />
                   </Suspense>
                 </AdminOnly>
@@ -212,7 +211,7 @@ function AppRouteTable() {
               path="categories"
               element={
                 <AdminOnly area="Expense categories">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <CategoriesPage />
                   </Suspense>
                 </AdminOnly>
@@ -222,7 +221,7 @@ function AppRouteTable() {
               path="product-categories"
               element={
                 <AdminOnly area="Product categories">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <ProductCategoriesPage />
                   </Suspense>
                 </AdminOnly>
@@ -231,7 +230,7 @@ function AppRouteTable() {
             <Route
               path="company"
               element={
-                <Suspense fallback={null}>
+                <Suspense fallback={<PageLoading />}>
                   <CompanyProfilePage />
                 </Suspense>
               }
@@ -239,7 +238,7 @@ function AppRouteTable() {
             <Route
               path="details"
               element={
-                <Suspense fallback={null}>
+                <Suspense fallback={<PageLoading />}>
                   <MyDetailsPage />
                 </Suspense>
               }
@@ -248,7 +247,7 @@ function AppRouteTable() {
               path="tax-deadlines"
               element={
                 <PricesOnly area="Tax deadlines">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <TaxDeadlinesPage />
                   </Suspense>
                 </PricesOnly>
@@ -258,7 +257,7 @@ function AppRouteTable() {
               path="exchange-rates"
               element={
                 <PricesOnly area="Exchange rates">
-                  <Suspense fallback={null}>
+                  <Suspense fallback={<PageLoading />}>
                     <ExchangeRatesPage />
                   </Suspense>
                 </PricesOnly>
@@ -267,7 +266,7 @@ function AppRouteTable() {
             <Route
               path="password"
               element={
-                <Suspense fallback={null}>
+                <Suspense fallback={<PageLoading />}>
                   <ChangePasswordPage />
                 </Suspense>
               }
@@ -278,18 +277,19 @@ function AppRouteTable() {
             path="enquiries/new"
             element={
               <RequireRole item={rfqsItem}>
-                <Suspense fallback={null}>
+                <Suspense fallback={<PageLoading />}>
                   <NewEnquiryPage />
                 </Suspense>
               </RequireRole>
             }
           />
+          {/* /rfqs/new (Sell's New RFQ, a company page's New RFQ / Ask for prices, the palette) is the same New RFQ page. */}
           <Route
             path="rfqs/new"
             element={
               <RequireRole item={rfqsItem}>
-                <Suspense fallback={null}>
-                  <IntakeScreen />
+                <Suspense fallback={<PageLoading />}>
+                  <NewEnquiryPage />
                 </Suspense>
               </RequireRole>
             }
@@ -331,7 +331,7 @@ function AppRouteTable() {
                 path={`${item.path.slice(1)}/*`}
                 element={
                   <RequireRole item={guard}>
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<PageLoading />}>
                       <Screen />
                     </Suspense>
                   </RequireRole>

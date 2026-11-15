@@ -80,3 +80,28 @@ test('an engineer sees no "Show other roles\' help" and cannot open another role
   await expect(help.getByRole('heading', { name: /Lock a month/ })).toHaveCount(0)
   await expect(help.getByRole('checkbox', { name: "Show other roles' help" })).toHaveCount(0)
 })
+
+test('Forest look: the Help panel beside Home at 1440 (side panel) and 375 (full-height sheet), with an answer open', async ({ browser }) => {
+  // Review pictures for the Forest help lane (82-help.html); they land in test-results, which CI uploads.
+  for (const [width, height, kind] of [
+    [1440, 900, 'side'],
+    [375, 812, 'sheet'],
+  ] as const) {
+    const page = await (await browser.newContext({ baseURL: 'http://127.0.0.1:4173', viewport: { width, height } })).newPage()
+    await signIn(page, 'sales@test.invalid')
+    await page.goto('/todo?help=')
+    const help = page.getByRole('dialog', { name: 'Help' })
+    await expect(help).toHaveAttribute('data-help-panel', kind)
+    await expect(help.getByRole('region', { name: 'Home' })).toBeVisible()
+    await expect(help.getByRole('region', { name: 'Sell and Deliver' })).toBeVisible()
+    await expect(help.getByRole('region', { name: 'To do' })).toHaveCount(0)
+    await expect(help.getByRole('checkbox', { name: "Show other roles' help" })).toBeVisible()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: test.info().outputPath(`forest-d3-help-list-${width}.png`) })
+    await help.getByRole('button', { name: 'Log a new RFQ' }).first().click()
+    await expect(help.getByRole('heading', { name: /Log a new RFQ/ })).toBeFocused()
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: test.info().outputPath(`forest-d3-help-answer-${width}.png`) })
+    await page.context().close()
+  }
+})

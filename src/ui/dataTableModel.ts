@@ -18,8 +18,13 @@ export interface Column<T> {
   cell?: (row: T) => ReactNode
   align?: 'left' | 'right'
   sortable?: boolean
-  /** Fixed width in px (or any CSS length). Text then truncates with an ellipsis. */
+  /**
+   * Fixed width in px (or any CSS length). Text then truncates with an ellipsis, except in a column whose header is hidden (a column of
+   * row actions: its buttons are never cut) or one with `truncate: false`; there the width is the column's width and nothing is clipped.
+   */
   width?: number | string
+  /** false: a fixed `width` that never cuts its cell (buttons, a badge that must stay whole). */
+  truncate?: boolean
   /** The header is read by screen readers only (a column of row actions has no visible title in the design). */
   hiddenHeader?: boolean
   /** Hide below the md breakpoint (tablet portrait and phones). */

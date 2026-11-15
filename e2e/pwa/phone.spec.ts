@@ -133,7 +133,7 @@ test.describe('phone platform', () => {
     await main.evaluate(el => el.scrollTo(0, 600))
     await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(600)
 
-    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Jobs' }).click()
+    await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Deliver' }).click()
     await expect(page).toHaveURL(/\/jobs/)
     await expect.poll(() => main.evaluate(el => el.scrollTop)).toBe(0)
 

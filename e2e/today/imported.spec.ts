@@ -28,7 +28,7 @@ test('an imported order\'s late goods wait in "Imported, to review", grey and no
   const live = await lateGoods(false)
   await openAs(page, 'sales', '/todo')
   await showAllTodo(page)
-  await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
 
   const due = page.locator('section[data-block="late"], section[data-block="today"]')
   await expect(due.locator('li[data-rule="goods_late"]').filter({ hasText: live.supplier })).toBeVisible()

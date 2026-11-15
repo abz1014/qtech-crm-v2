@@ -111,7 +111,7 @@ describe('Invoices on a phone: admin', () => {
     await user.click(open)
     const nav = await screen.findByRole('navigation', { name: 'All Money pages' })
     expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual([
-      'To collect', 'Invoices', 'Expenses', 'Lock a month', 'Reports', 'Margins', 'Mistakes to fix', 'Bank check', 'Review imported', 'GST to FBR', 'Profitability',
+      'To collect', 'Invoices', 'Payments', 'Expenses', 'Lock a month', 'Reports', 'Margins', 'Mistakes to fix', 'Bank check', 'Review imported', 'GST to FBR', 'Profitability',
     ])
     expect(within(nav).getByRole('link', { name: 'Invoices' })).toHaveAttribute('aria-current', 'page')
     await user.keyboard('{Escape}')

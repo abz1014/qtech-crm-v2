@@ -66,7 +66,7 @@ function Foundations() {
             Save
           </Button>
         </Row>
-        <Row title="Button, sizes" note="44, 40, 36 and the 44 touch size (40, 32, 28 with smaller text). Icon-only needs an aria-label.">
+        <Row title="Button, sizes" note="48, 40, 36 and the 44 touch size (40, 32, 28 with smaller text; every size is 48 or more on a touch screen). Icon-only needs an aria-label.">
           <Button size="lg" icon={Plus}>
             New RFQ
           </Button>

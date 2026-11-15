@@ -7,6 +7,7 @@ import { SessionProvider } from '@/app/SessionProvider'
 import type { SessionState } from '@/app/session'
 import { AppShell } from '@/app/shell/AppShell'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
+import { Rail } from '@/app/shell/Rail'
 import { TopBar } from '@/app/shell/TopBar'
 import { settingsLinksFor } from '@/features/settings/settingsLinks'
 import { installFakeDb } from '@/test/fakeSupabase'
@@ -18,51 +19,111 @@ function Where() {
   return <output data-testid="where">{`${l.pathname}${l.search}`}</output>
 }
 
-describe('phone tabs: the top bar counts as badges', () => {
-  it('a count shows on the icon and is read with the label; no badge for zero or no count', () => {
+describe('phone bottom bar (86-phone-shell.html#ps-bars)', () => {
+  it('Home carries the number on its icon and in its name; Money a red dot; no badge for zero or no count', () => {
     render(
       <MemoryRouter initialEntries={['/todo']}>
         <BottomTabs role="admin" counts={{ today: 140 }} dots={{ money: true }} />
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getByRole('link', { name: /^To do\s?, 140 due now$/ })).toHaveTextContent('99+')
-    expect(within(nav).getByRole('link', { name: 'Jobs' }).querySelector('[data-needs-count]')).toBeNull()
-    expect(within(nav).getByRole('link', { name: 'Companies' }).querySelector('[data-needs-count]')).toBeNull()
+    const home = within(nav).getByRole('link', { name: /^Home\s?, 140 due now$/ })
+    expect(home).toHaveTextContent('99+')
+    expect(home).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: 'Sell' }).querySelector('[data-needs-count]')).toBeNull()
+    expect(within(nav).getByRole('link', { name: 'Deliver' }).querySelector('[data-needs-count]')).toBeNull()
+    // Companies is not on the phone bar (owner decision 12 Nov 2026): it is reached from Home and Search
+    expect(within(nav).queryByRole('link', { name: 'Companies' })).toBeNull()
     // Money has no number, only a red dot while an invoice is late, and its name says so
     const money = within(nav).getByRole('link', { name: /^Money\s?, an invoice is late$/ })
     expect(money.querySelector('[data-needs-count]')).toBeNull()
     expect(money.querySelector('[data-late-dot]')).not.toBeNull()
   })
 
-  it('every column is at least as wide as its label, so a long label never clips', () => {
+  it('five equal columns that may shrink (no label is wider than its column at 320: e2e/gallery.visual.spec.ts measures it)', () => {
     render(
       <MemoryRouter>
         <BottomTabs role="admin" />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('navigation', { name: 'Main' }).style.gridTemplateColumns).toMatch(/minmax\(min-content, 1fr\)/)
+    expect(screen.getByRole('navigation', { name: 'Main' }).style.gridTemplateColumns).toBe('repeat(5, minmax(0, 1fr))')
   })
-})
 
-describe('top bar at 768 to 1023 and the Help and Settings buttons (navigation review)', () => {
-  it('every destination keeps its word and its count from md up: no label is screen-reader-only, no count or dot is hidden below lg', () => {
+  it('the + opens the Create sheet with the live rows, and a row goes to its screen', async () => {
     render(
       <MemoryRouter initialEntries={['/todo']}>
-        <TopBar user={user} counts={{ today: 3, jobs: 2 }} dots={{ money: true }} />
+        <BottomTabs role="admin" />
+        <Routes>
+          <Route path="*" element={<Where />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    const u = userEvent.setup()
+    await u.click(screen.getByRole('button', { name: 'Create' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Create' })
+    expect(within(sheet).getAllByRole('button').map(b => b.textContent).filter(t => t && t !== 'Close')).toEqual(['New RFQ', 'Expense', 'Payment received', 'Order without RFQ'])
+    await u.click(within(sheet).getByRole('button', { name: 'Order without RFQ' }))
+    expect(screen.getByTestId('where')).toHaveTextContent('/orders?new=1')
+  })
+
+  it('an engineer gets Home, Camera, I paid and Jobs, and no +', () => {
+    render(
+      <MemoryRouter initialEntries={['/capture']}>
+        <BottomTabs role="engineer" counts={{ today: 2 }} />
       </MemoryRouter>,
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    for (const name of ['To do', 'Jobs', 'Money', 'Companies']) {
-      const label = within(nav).getByRole('link', { name: new RegExp('^' + name) }).querySelector('[data-nav-label]') as HTMLElement
-      expect(label.textContent).toBe(name)
-      expect(label.className).not.toMatch(/sr-only/)
-    }
-    const counts = [...nav.querySelectorAll('[data-needs-count], [data-late-dot]')]
-    expect(counts).toHaveLength(3)
-    for (const c of counts) expect(c.className).not.toMatch(/max-lg:hidden/)
+    expect(within(nav).getAllByRole('link').map(a => a.getAttribute('href'))).toEqual(['/todo', '/capture', '/my-expenses', '/jobs'])
+    expect(within(nav).getByRole('link', { name: 'Camera' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).queryByRole('button', { name: 'Create' })).toBeNull()
+    expect(nav.textContent).not.toMatch(/Money|Sell|Deliver/)
+  })
+})
+
+describe('the forest rail (768 up)', () => {
+  it('admin: the lime Create, the lanes with Companies under a divider, the number and the late dot read out with the words', () => {
+    render(
+      <MemoryRouter initialEntries={['/jobs?lane=sell']}>
+        <Rail user={user} counts={{ today: 3 }} dots={{ money: true }} collapsed={false} onToggle={() => {}} />
+      </MemoryRouter>,
+    )
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: /^Home\s?, 3 due now$/ })).toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: /^Money\s?, an invoice is late$/ })).toBeInTheDocument()
+    expect(within(nav).getByRole('link', { name: 'Sell' })).toHaveAttribute('aria-current', 'page')
+    expect(nav.querySelector('hr')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Create' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute('aria-pressed', 'false')
   })
 
+  it('collapsed (and from 768 to 1023): every word stays in the name, drawn for screen readers only', () => {
+    render(
+      <MemoryRouter initialEntries={['/todo']}>
+        <Rail user={user} collapsed onToggle={() => {}} />
+      </MemoryRouter>,
+    )
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    for (const name of ['Home', 'Sell', 'Deliver', 'Money', 'Companies']) {
+      const label = within(nav).getByRole('link', { name }).querySelector('[data-nav-label]') as HTMLElement
+      expect(label.className).toContain('sr-only')
+    }
+    expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('an engineer: Take photo instead of Create, and Home, I paid, Jobs', () => {
+    render(
+      <MemoryRouter initialEntries={['/todo']}>
+        <Rail user={{ ...user, role: 'engineer' }} collapsed={false} onToggle={() => {}} />
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('link', { name: 'Take photo' })).toHaveAttribute('href', '/capture')
+    expect(screen.queryByRole('button', { name: 'Create' })).toBeNull()
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual(['Home', 'I paid', 'Jobs'])
+  })
+})
+
+describe('top bar: Search, then Help, Settings, the role and the initial (81-create-account.html#ca-bar)', () => {
   it('Help and Settings are in the bar for every role, Settings goes to /settings and Help opens the Help panel', async () => {
     for (const role of ['admin', 'sales', 'engineer']) {
       const { unmount } = render(
@@ -74,49 +135,29 @@ describe('top bar at 768 to 1023 and the Help and Settings buttons (navigation r
         </MemoryRouter>,
       )
       expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/settings')
+      expect(screen.getByRole('button', { name: 'Search or jump to' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Account menu/ })).toBeInTheDocument()
       await userEvent.setup().click(screen.getByRole('button', { name: 'Help' }))
       expect(screen.getByTestId('where')).toHaveTextContent('help=')
       unmount()
     }
   })
 
-  it('the phone bar has a Help button beside Search, and the account menu is still there', async () => {
+  it('the phone band: the title, then Search, Help and the account initial; no Create word in it (R-004)', async () => {
     render(
       <MemoryRouter initialEntries={['/todo']}>
-        <MobileBar user={user} title="To do" />
+        <MobileBar user={user} title="Companies" />
         <Routes>
           <Route path="*" element={<Where />} />
         </Routes>
       </MemoryRouter>,
     )
+    expect(screen.getByText('Companies')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^(New|Create)$/ })).toBeNull()
     await userEvent.setup().click(screen.getByRole('button', { name: 'Help' }))
     expect(screen.getByTestId('where')).toHaveTextContent('help=')
     expect(screen.getByRole('button', { name: /Account menu/ })).toBeInTheDocument()
-  })
-})
-
-describe('the phone bar New button shows its word', () => {
-  it('admin: the button reads "New" (visible text, same accessible name) beside Search and Help', () => {
-    render(
-      <MemoryRouter initialEntries={['/todo']}>
-        <MobileBar user={user} title="Companies" />
-      </MemoryRouter>,
-    )
-    const btn = screen.getByRole('button', { name: 'New' })
-    expect(btn).toHaveTextContent('New')
-    // below 360 px the word hides (the title "Companies" does not fit beside it at 320) and the name stays
-    expect(btn).toHaveAttribute('aria-label', 'New')
-    expect(btn.querySelector('span')?.className).toContain('max-[359px]:hidden')
-    expect(screen.getByRole('button', { name: 'Search' })).toBeInTheDocument()
-  })
-
-  it('an engineer has no New button on the phone bar', () => {
-    render(
-      <MemoryRouter initialEntries={['/todo']}>
-        <MobileBar user={{ ...user, role: 'engineer' }} title="To do" />
-      </MemoryRouter>,
-    )
-    expect(screen.queryByRole('button', { name: 'New' })).toBeNull()
   })
 })
 

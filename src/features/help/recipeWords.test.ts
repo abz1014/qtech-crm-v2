@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { navItems } from '@/app/navConfig'
+import { navItems, railLinks } from '@/app/navConfig'
 import { parseRecipe, recipesAs } from '@/features/help/recipes'
 
 /*
@@ -32,8 +32,9 @@ describe('help recipes use the current words', () => {
   })
 
   it('the menu words a recipe taps are the menu\'s own', () => {
-    const menu = new Set(navItems.map(i => i.label))
-    const tapped = files.flatMap(f => [...body(f).matchAll(/(Select|Open) \[(To do|Jobs|Money|Companies|Today)\]/g)].map(m => `${f}: ${m[2]}`))
+    // The destinations and the rail's lanes (Forest: Home, Sell, Deliver; the engineer's I paid). "To do" and "Today" are retired menu words.
+    const menu = new Set([...navItems.map(i => i.label), ...['admin', 'engineer'].flatMap(r => railLinks(r).map(l => l.label))])
+    const tapped = files.flatMap(f => [...body(f).matchAll(/(Select|Open) \[(Home|Sell|Deliver|To do|Jobs|Money|Companies|Today)\]/g)].map(m => `${f}: ${m[2]}`))
     expect(tapped.filter(t => !menu.has(t.split(': ')[1]))).toEqual([])
   })
 

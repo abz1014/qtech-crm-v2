@@ -3,6 +3,7 @@ import { openStage } from '../support/job'
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
+import { forestC2Screens } from './forest-c2'
 
 /*
  * M04 and M07 end to end, against the local CI stack: the Margin panel on the order page, Money > Lock a month > Margins and Things to
@@ -194,7 +195,7 @@ test.describe('Money > Lock a month > Mistakes to fix (admin)', () => {
     const unknown = await seedOrder({ flags: ['value_basis_unknown'], lines: [{ qty: 1, net: 1000, supplierPrice: null }] })
 
     await openAs(page, 'admin', '/money/exceptions')
-    await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 1 })).toBeVisible()
     const list = page.getByRole('list', { name: 'Mistakes to fix' })
     const over = list.getByRole('listitem').filter({ hasText: ordRef(o.number) }).filter({ hasText: 'Payments exceed total' })
     await expect(over).toContainText('Customer payments (15,000) exceed the order')
@@ -268,10 +269,13 @@ for (const width of [1440, 375]) {
       expect(await axeViolations(page), 'margins').toEqual([])
       await shot(page, `m04-money-margins-${width}`)
       await page.goto('/money/exceptions')
-      await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 2 })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Mistakes to fix', level: 1 })).toBeVisible()
       await expect(page.getByRole('list', { name: 'Mistakes to fix' })).toBeVisible()
       expect(await axeViolations(page), 'exceptions').toEqual([])
       await shot(page, `m07-money-exceptions-${width}`)
     })
   })
 }
+
+// Forest lane C2 review pictures (credit, statement, margin card, order margins, profitability): e2e/money/forest-c2.ts.
+forestC2Screens()

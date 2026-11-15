@@ -90,6 +90,9 @@ export function PdfPickButton({
 const PICK_ACCEPT = 'application/pdf,.pdf,image/*,.xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv'
 const isSheetName = (f: File) => /\.(?:xlsx|xlsm|xls|csv)$/i.test(f.name) || /spreadsheetml|ms-excel|text\/csv/.test(f.type)
 
+/** Forest .qb-cochip in the sunken tint: who the text says it is from, and the one action that uses it. */
+const SENDER_ROW = 'flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-control border bg-sunken px-3 py-3 text-base'
+
 const WHY = { email: 'Their email is on file', domain: 'Their email domain is on file', phone: 'Their phone number is on file', name: 'Same name on file' } as const
 
 /**
@@ -103,14 +106,14 @@ export function SenderSuggestion({ hint, canCreate, onUse }: { hint: SenderHint;
   const hit = found.data
   if (hit) {
     return (
-      <div className="type-body flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 py-1 pl-3">
-        <Icon icon={Building2} className="text-fg-muted" />
-        <span className="min-w-0 flex-1">
+      <div className={SENDER_ROW}>
+        <Icon icon={Building2} className="shrink-0 text-brand-700" />
+        <span className="min-w-0 flex-[1_1_12rem]">
           <span className="text-fg-2">From the text: </span>
           <strong className="font-medium">{hit.name}</strong>
-          <span className="block text-xs text-fg-muted">{WHY[hit.why]}</span>
+          <span className="block text-sm text-fg-muted">{WHY[hit.why]}</span>
         </span>
-        <Button size="sm" variant="primary" onClick={() => onUse({ id: hit.id, name: hit.name, country: hit.country, city: hit.city ?? null, role: hit.role })}>
+        <Button variant="primary" className="h-auto min-h-control max-w-full whitespace-normal py-2 text-left" onClick={() => onUse({ id: hit.id, name: hit.name, country: hit.country, city: hit.city ?? null, role: hit.role })}>
           Use {hit.name}
         </Button>
       </div>
@@ -126,14 +129,14 @@ export function SenderSuggestion({ hint, canCreate, onUse }: { hint: SenderHint;
       />
     </Suspense>
   ) : (
-    <div className="type-body flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 py-1 pl-3">
-      <Icon icon={Building2} className="text-fg-muted" />
-      <span className="min-w-0 flex-1">
+    <div className={SENDER_ROW}>
+      <Icon icon={Building2} className="shrink-0 text-brand-700" />
+      <span className="min-w-0 flex-[1_1_12rem]">
         <span className="text-fg-2">From the text: </span>
         <strong className="font-medium">{hint.name}</strong>
-        <span className="block text-xs text-fg-muted">Not on file yet</span>
+        <span className="block text-sm text-fg-muted">Not on file yet</span>
       </span>
-      <Button size="sm" icon={Plus} onClick={() => setCreating(true)}>
+      <Button icon={Plus} onClick={() => setCreating(true)} className="h-auto min-h-control max-w-full whitespace-normal py-2 text-left">
         Add {hint.name} as a new company
       </Button>
     </div>

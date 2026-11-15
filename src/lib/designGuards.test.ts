@@ -76,14 +76,14 @@ describe('token parity (U01)', () => {
   })
 
   it('fails when a token value is changed in index.css', () => {
-    const r = run(index.replace('--primary: #1a7b46;', '--primary: #1a7b47;'))
+    const r = run(index.replace('--primary-text: #1a7645;', '--primary-text: #1a7646;'))
     expect(r.status).toBe(1)
-    expect(r.stderr).toContain('--primary')
+    expect(r.stderr).toContain('--primary-text')
   })
 
   it('fails when a token is removed or invented', () => {
-    expect(run(index.replace('--radius: 10px;', '')).status).toBe(1)
-    expect(run(index.replace('--radius: 10px;', '--radius: 4px; --extra: 1px;')).status).toBe(1)
+    expect(run(index.replace('--radius: 12px;', '')).status).toBe(1)
+    expect(run(index.replace('--radius: 12px;', '--radius: 4px; --extra: 1px;')).status).toBe(1)
   })
 
   it('fails when a status-map rule differs', () => {

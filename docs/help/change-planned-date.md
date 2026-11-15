@@ -8,4 +8,4 @@ screens: /jobs
 1. Open the job, select Delivery, then the [Commissioning] row and select [Edit].
 2. Pick the new [Planned on] date and select [Save].
 
-Note: Today shows the job again a few working days before the new date.
+Note: Home shows the job again a few working days before the new date.

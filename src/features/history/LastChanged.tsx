@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { History as HistoryIcon } from 'lucide-react'
+import { Icon } from '@/ui/Icon'
 import { MenuItem } from '@/ui/Popover'
+import { cn } from '@/lib/utils'
 import { useSeesPrices } from '@/app/session'
 import { whenContentDrawn } from '@/lib/afterContent'
 import { useRecordHistory, type HistoryTable } from '@/features/history/api'
@@ -18,6 +20,7 @@ export function HistoryMenuItem({ onOpen }: { onOpen: () => void }) {
 /**
  * "Last changed by Ayesha, 2 days ago": a small line for a detail header. It reads the same cached history as the panel, so
  * opening History straight after costs nothing. Draws nothing until it has an answer, and nothing when there is no history.
+ * Forest .hs-last (mockup 85): a muted history glyph, then the words in the medium weight; the caller's className sets size and ink.
  */
 export function LastChanged({ table, id, className }: { table: HistoryTable; id: string | null | undefined; className?: string }) {
   // Asked for once the page has drawn, never in the page's first round of reads (perf: the RFQ and order pages' LCP).
@@ -40,8 +43,9 @@ export function LastChanged({ table, id, className }: { table: HistoryTable; id:
   const text = lastChangedLine(q.data?.pages[0]?.events[0])
   if (!text) return null
   return (
-    <p className={className ?? 'text-base text-fg-2'} data-testid="last-changed">
-      {text}
+    <p className={cn('flex min-w-0 items-center gap-2 font-medium', className ?? 'text-base text-fg-2')} data-testid="last-changed">
+      <Icon icon={HistoryIcon} size="md" className="shrink-0 text-fg-muted" />
+      <span className="min-w-0 [overflow-wrap:anywhere]">{text}</span>
     </p>
   )
 }

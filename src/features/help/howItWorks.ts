@@ -1,7 +1,7 @@
 import type { HelpRole } from '@/features/help/recipes'
 
 /*
- * The "How this works" card on Today (learnability spec 1.3): 3 to 5 lines per role, each with a "Show me" that opens the
+ * The "How this works" card on Home (learnability spec 1.3): 3 to 5 lines per role, each with a "Show me" that opens the
  * matching recipe in the Help panel. A writer changes the words here without touching a screen. **Bold** is a screen word.
  * labelSync.test.ts checks that every recipe named here exists.
  */
@@ -17,10 +17,10 @@ export const HOW_IT_WORKS: Record<HelpRole, HowItWorksStep[]> = {
     { text: 'A customer asks for prices: **New RFQ**, then paste their message.', recipe: 'new-rfq' },
     { text: '**Ask suppliers**: one message, copied into WhatsApp.', recipe: 'ask-suppliers' },
     { text: 'Prices come in: paste their reply, and the app compares them in PKR.', recipe: 'supplier-prices' },
-    { text: '**Issue quotation** makes the PDF. To do reminds you to follow up until it is won or lost.', recipe: 'issue-quotation' },
+    { text: '**Issue quotation** makes the PDF. Home reminds you to follow up until it is won or lost.', recipe: 'issue-quotation' },
   ],
   engineer: [
-    { text: '**To do** lists your site jobs and their dates.', recipe: 'today-jobs' },
+    { text: '**Home** lists your site jobs and their dates.', recipe: 'today-jobs' },
     { text: 'On site, **Add to this job** saves a photo or note on the job. No forms.', recipe: 'paste-or-photo' },
     { text: 'Select **Delivered today** or **Installed today** when done. To reverse it, select **Undo**.', recipe: 'goods-delivered' },
   ],

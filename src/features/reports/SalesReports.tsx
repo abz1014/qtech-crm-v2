@@ -1,12 +1,14 @@
 import { NoPrimary } from '@/ui/NoPrimary'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { formatShortDate } from '@/lib/formatDay'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { SumBar } from '@/ui/SumBar'
+import { CARD } from '@/ui/card'
 import { useFloatReport, useOutcomes, useRepeatCustomers, useTurnaround } from '@/features/reports/hooks'
 import {
   daysText,
@@ -26,8 +28,8 @@ import {
  * The enquiry and customer reports (P01), now a part of Money > Reports (owner decision 2026-10-19). Admin and sales. Counts
  * only, never money, read from what the team already records; the database views count over all time, so the section says so.
  * Three numbers lead (win rate, RFQs won, customers who came back); each report below is one line with its headline, and opens
- * to its figures and table. The labels are the questions they answer, in plain words. No mockup exists, so this is composed from
- * the design system: SumBar and DataTable.
+ * to its figures and table. The labels are the questions they answer, in plain words. Forest 59-reports #rp-enquiries: the
+ * glance tiles a card, each report a fold card (question over headline, chevron right), its figures and a flat table inside.
  */
 export function SalesReports() {
   const outcomes = useOutcomes()
@@ -36,15 +38,16 @@ export function SalesReports() {
   const r = repeat.data ? summariseRepeat(repeat.data) : null
   return (
     // The page title (Reports frame h1) already names it: only the scope line here, not the title twice.
-    <section aria-label="RFQs and customers" className="grid gap-3">
+    <section aria-label="RFQs and customers" className="grid gap-card-gap">
       <NoPrimary />
-      <p className="text-sm text-fg-2">All time, counts only</p>
+      <p className="type-body text-fg-2">All time, counts only</p>
       {o && r ? (
         o.total === 0 && r.customers === 0 ? (
-          <p className="rounded border bg-surface px-5 py-4 text-sm text-fg-2">Not enough data yet. These fill in as RFQs are won or closed and orders are placed.</p>
+          <p className={cn(CARD, 'type-body p-card text-fg-2')}>Not enough data yet. These fill in as RFQs are won or closed and orders are placed.</p>
         ) : (
           <SumBar
             label="At a glance"
+            className="rounded-card shadow-e1"
             items={[
               { label: 'Win rate', figure: showPct(o.winRate), sub: o.winRate === null ? 'No RFQ decided yet' : `Of the ${o.won + o.closed} RFQs decided` },
               { label: 'RFQs won', count: o.won, sub: `${o.open} still open` },
@@ -52,9 +55,10 @@ export function SalesReports() {
           />
         )
       ) : outcomes.isLoading || repeat.isLoading ? (
-        <Skeleton className="h-[88px] w-full" aria-label="Loading the headline figures" />
+        <GlanceLoading />
       ) : null}
-      <div className="grid overflow-hidden rounded-panel border bg-surface">
+      {/* Forest 59-reports #enq-sections: each report is its own fold card, a card gap between them. */}
+      <div className="grid gap-card-gap">
         <OutcomesReport />
         <FloatReport />
         <TurnaroundReport />
@@ -64,22 +68,96 @@ export function SalesReports() {
   )
 }
 
+/** The headline figures while they load: the two tiles' shape, not a grey bar. */
+function GlanceLoading() {
+  return (
+    <div role="status" aria-label="Loading the headline figures" className={cn(CARD, 'grid grid-cols-2 gap-px overflow-hidden bg-line')}>
+      {[0, 1].map(i => (
+        <div key={i} className="grid gap-2 bg-surface px-5 py-4 max-sm:px-4">
+          <Skeleton className="w-[6rem]" />
+          <Skeleton className="h-6 w-16" />
+          <Skeleton className="w-[8rem]" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 /** One report, one line until it is opened: the question, its headline figure, and the figures and table inside. */
 function Section({ id, title, headline, children }: { id: string; title: string; headline: ReactNode; children: ReactNode }) {
   return (
-    <details id={id} className="group border-t first:border-t-0">
-      {/* The question, then its headline, with the chevron on the right of the same line (round 3: on a phone it sat alone above). */}
-      <summary className="grid min-h-touch cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-5 py-3 hover:bg-sunken md:grid-cols-[minmax(0,1fr)_auto_auto] [&::-webkit-details-marker]:hidden">
-        <h2 className="text-base font-medium">{title}</h2>
-        <span className="text-sm text-fg-2 max-md:col-start-1 max-md:row-start-2">{headline}</span>
-        <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90 max-md:col-start-2 max-md:row-span-2 max-md:row-start-1" />
+    // Forest .qb-fold: a card; closed it reads the question over its headline, the chevron on the right; open, the figures sit
+    // under a hairline. The summary is the whole top of the card, so the tap target is the card's full width.
+    <details id={id} className={cn(CARD, 'group overflow-hidden')}>
+      <summary className="grid min-h-touch cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 px-card py-4 transition-colors duration-fast hover:bg-sunken motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
+        <span className="grid min-w-0 gap-1">
+          <h2 className="type-section [overflow-wrap:anywhere]">{title}</h2>
+          <span className="type-body text-fg-2">{headline}</span>
+        </span>
+        <Icon icon={ChevronDown} className="text-fg-muted transition-transform duration-fast group-open:rotate-180 motion-reduce:transition-none" />
       </summary>
-      <div className="grid gap-3 border-t bg-canvas px-5 py-4">{children}</div>
+      <div className="grid min-w-0 gap-4 border-t px-card pb-card pt-5">{children}</div>
     </details>
   )
 }
 
-const Loading = ({ label }: { label: string }) => <Skeleton className="h-[72px] w-full" aria-label={label} />
+/** A report's figures while they load: four tiles' shape. */
+/** A phone row (59-reports .rp-cardrow): the name and its main count on one line, the other figures in words under it. */
+function CardRow({ name, figure, children }: { name: ReactNode; figure: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 gap-y-1 py-1">
+      <span className="min-w-0 font-medium [overflow-wrap:break-word]">{name}</span>
+      <span className="num text-right">{figure}</span>
+      <span className="col-span-2 text-sm text-fg-2">{children}</span>
+    </div>
+  )
+}
+const reasonCard = (r: ReasonLine) => (
+  <CardRow name={r.label} figure={String(r.count)}>
+    Share of the lost ones <span className="num">{showPct(r.share)}</span>
+  </CardRow>
+)
+const floatCard = (r: FloatLine) => (
+  <CardRow name={r.label} figure={`${r.rfqs} ${r.rfqs === 1 ? 'RFQ' : 'RFQs'}`}>
+    {r.state === 'not_floated' ? null : <>Items priced <span className="num">{`${r.itemsQuoted} of ${r.itemsTotal}`}</span> · </>}
+    won <span className="num">{r.won}</span> · lost <span className="num">{r.closed}</span> · open <span className="num">{r.open}</span>
+    <span className="block">
+      Won of decided <span className="num">{showPct(r.winRate)}</span>
+    </span>
+  </CardRow>
+)
+const turnaroundCard = (r: TurnaroundRow) => (
+  <CardRow name={monthLabel(r.month)} figure={`${r.asked} asked`}>
+    answered <span className="num">{r.answered}</span> · still open <span className="num">{r.open}</span>
+    <span className="block">
+      Average to answer <span className="num">{daysText(r.avgDays)}</span>
+    </span>
+  </CardRow>
+)
+const repeatCard = (r: RepeatRow) => (
+  <CardRow
+    name={
+      <Link to={`/companies/${r.companyId}`} className="text-primary underline-offset-4 hover:underline">
+        {r.name}
+      </Link>
+    }
+    figure={`${r.orders} ${r.orders === 1 ? 'order' : 'orders'}`}
+  >
+    Came back {r.isRepeat ? 'Yes' : 'No'}
+    {r.lastOrderOn ? ` · last order ${formatShortDate(r.lastOrderOn, undefined, true)}` : ''}
+  </CardRow>
+)
+
+const Loading = ({ label }: { label: string }) => (
+  <div role="status" aria-label={label} className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border bg-line md:grid-cols-4">
+    {[0, 1, 2, 3].map(i => (
+      <div key={i} className="grid gap-2 bg-surface px-5 py-4 max-sm:px-4">
+        <Skeleton className="w-[5rem]" />
+        <Skeleton className="h-5 w-12" />
+      </div>
+    ))}
+  </div>
+)
 
 /** A closed line's headline: the figure, "Not enough data yet", "Could not load" after a failed read, or "…" while it loads. */
 function headlineOf<T>(q: { isError: boolean }, s: T | null, ready: (s: T) => boolean, say: (s: T) => string): string {
@@ -110,7 +188,12 @@ function OutcomesReport() {
     <Section
       id="rep-outcomes"
       title="RFQs won and lost, with the reasons"
-      headline={headlineOf(q, s, x => x.total > 0, x => `${x.won} won, ${x.closed} lost, ${x.open} open`)}
+      headline={headlineOf(
+        q,
+        s,
+        x => x.total > 0,
+        x => `${x.won} won, ${x.closed} lost, ${x.open} open`,
+      )}
     >
       {s && s.total > 0 ? (
         <SumBar
@@ -126,10 +209,12 @@ function OutcomesReport() {
         <Loading label="Loading RFQ outcomes" />
       ) : null}
       <DataTable
+        flat
         label="RFQs lost, by reason"
         noun="reasons"
         columns={reasonColumns}
         rows={s?.reasons ?? []}
+        mobileRow={reasonCard}
         getRowId={r => r.key}
         loading={q.isLoading}
         error={q.isError ? { message: 'The outcomes could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
@@ -144,14 +229,7 @@ function OutcomesReport() {
 const floatColumns: Column<FloatLine>[] = [
   { id: 'state', header: 'Where it stands', value: r => r.label },
   { id: 'rfqs', header: 'RFQs', kind: 'num', value: r => r.rfqs },
-  {
-    id: 'items',
-    header: 'Items priced',
-    kind: 'num',
-    value: r => r.itemsQuoted,
-    cell: r => (r.state === 'not_floated' ? '' : `${r.itemsQuoted} of ${r.itemsTotal}`),
-    hideBelowMd: true,
-  },
+  { id: 'items', header: 'Items priced', kind: 'num', value: r => r.itemsQuoted, cell: r => (r.state === 'not_floated' ? '' : `${r.itemsQuoted} of ${r.itemsTotal}`), hideBelowMd: true },
   { id: 'won', header: 'Won', kind: 'num', value: r => r.won },
   { id: 'closed', header: 'Lost', kind: 'num', value: r => r.closed, hideBelowMd: true },
   { id: 'open', header: 'Open', kind: 'num', value: r => r.open, hideBelowMd: true },
@@ -165,7 +243,12 @@ function FloatReport() {
     <Section
       id="rep-float"
       title="Effect of asking suppliers for prices on wins"
-      headline={headlineOf(q, s, x => x.lines.length > 0, x => askingHeadline(x.floatedWinRate, x.notFloatedWinRate))}
+      headline={headlineOf(
+        q,
+        s,
+        x => x.lines.length > 0,
+        x => askingHeadline(x.floatedWinRate, x.notFloatedWinRate),
+      )}
     >
       {s && s.lines.length > 0 ? (
         <SumBar
@@ -181,10 +264,12 @@ function FloatReport() {
         <Loading label="Loading asking suppliers" />
       ) : null}
       <DataTable
+        flat
         label="Asking suppliers"
         noun="groups"
         columns={floatColumns}
         rows={s?.lines ?? []}
+        mobileRow={floatCard}
         getRowId={r => r.state}
         loading={q.isLoading}
         error={q.isError ? { message: 'This report could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
@@ -212,7 +297,12 @@ function TurnaroundReport() {
     <Section
       id="rep-turnaround"
       title="How fast customers answer questions"
-      headline={headlineOf(q, s, x => x.asked > 0, x => (x.avgDays === null ? `${x.asked} asked, none answered yet` : `${daysText(x.avgDays)} on average`))}
+      headline={headlineOf(
+        q,
+        s,
+        x => x.asked > 0,
+        x => (x.avgDays === null ? `${x.asked} asked, none answered yet` : `${daysText(x.avgDays)} on average`),
+      )}
     >
       {s && s.asked > 0 ? (
         <SumBar
@@ -228,10 +318,12 @@ function TurnaroundReport() {
         <Loading label="Loading how fast customers answer" />
       ) : null}
       <DataTable
+        flat
         label="How fast customers answer"
         noun="months"
         columns={turnaroundColumns}
         rows={s?.rows ?? []}
+        mobileRow={turnaroundCard}
         getRowId={r => r.month}
         loading={q.isLoading}
         error={q.isError ? { message: 'This report could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}
@@ -248,7 +340,7 @@ const repeatColumns: Column<RepeatRow>[] = [
     header: 'Customer',
     value: r => r.name,
     cell: r => (
-      <Link to={`/companies/${r.companyId}`} className="font-medium text-fg hover:underline">
+      <Link to={`/companies/${r.companyId}`} className="font-medium text-primary underline-offset-4 hover:underline">
         {r.name}
       </Link>
     ),
@@ -256,21 +348,8 @@ const repeatColumns: Column<RepeatRow>[] = [
   },
   { id: 'orders', header: 'Orders', kind: 'num', value: r => r.orders, sortable: true },
   { id: 'repeat', header: 'Came back', value: r => (r.isRepeat ? 'Yes' : 'No'), hideBelowMd: true },
-  {
-    id: 'first',
-    header: 'First order',
-    kind: 'date',
-    value: r => r.firstOrderOn,
-    cell: r => (r.firstOrderOn ? formatShortDate(r.firstOrderOn, undefined, true) : ''),
-    hideBelowMd: true,
-  },
-  {
-    id: 'last',
-    header: 'Last order',
-    kind: 'date',
-    value: r => r.lastOrderOn,
-    cell: r => (r.lastOrderOn ? formatShortDate(r.lastOrderOn, undefined, true) : ''),
-  },
+  { id: 'first', header: 'First order', kind: 'date', value: r => r.firstOrderOn, cell: r => (r.firstOrderOn ? formatShortDate(r.firstOrderOn, undefined, true) : ''), hideBelowMd: true },
+  { id: 'last', header: 'Last order', kind: 'date', value: r => r.lastOrderOn, cell: r => (r.lastOrderOn ? formatShortDate(r.lastOrderOn, undefined, true) : '') },
   { id: 'rfqs', header: 'RFQs', kind: 'num', value: r => r.rfqs, hideBelowMd: true },
 ]
 
@@ -281,7 +360,12 @@ function RepeatReport() {
     <Section
       id="rep-repeat"
       title="Returning customers"
-      headline={headlineOf(q, s, x => x.customers > 0, x => `${x.repeat} of ${x.customers} came back`)}
+      headline={headlineOf(
+        q,
+        s,
+        x => x.customers > 0,
+        x => `${x.repeat} of ${x.customers} came back`,
+      )}
     >
       {s && s.customers > 0 ? (
         <SumBar
@@ -297,10 +381,12 @@ function RepeatReport() {
         <Loading label="Loading repeat customers" />
       ) : null}
       <DataTable
+        flat
         label="Customers who came back"
         noun="customers"
         columns={repeatColumns}
         rows={s?.rows ?? []}
+        mobileRow={repeatCard}
         getRowId={r => r.companyId}
         loading={q.isLoading}
         error={q.isError ? { message: 'The customers could not be read. Nothing was changed.', onRetry: () => void q.refetch() } : null}

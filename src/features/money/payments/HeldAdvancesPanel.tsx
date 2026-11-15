@@ -24,9 +24,9 @@ export function HeldAdvancesPanel({ isAdmin }: { isAdmin: boolean }) {
 export function HeldAdvancesList({ rows }: { rows: readonly HeldAdvance[] }) {
   const total = rows.reduce((s, r) => s + r.held, 0)
   return (
-    <section aria-label="Advance held — refund or keep" className="mt-6 rounded-panel border border-dashed border-line-input bg-canvas">
+    <section aria-label="Advance held — refund or keep" className="mt-6 rounded-card border border-dashed border-line-input bg-canvas">
       <header className="flex flex-wrap items-center gap-3 border-b border-dashed border-line-input px-5 py-3">
-        <h2 className="text-base font-semibold">Advance held — refund or keep</h2>
+        <h2 className="text-base font-heavy">Advance held — refund or keep</h2>
         <InfoTip label="About advances held">
           Paid on an order that was cancelled before it was invoiced. No balance is due on it, so it is not counted above and never reminded.
           Refund it (void the payment on the order with the reason) or retain it.

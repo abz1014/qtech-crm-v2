@@ -96,7 +96,7 @@ test.describe('Money > Profitability (admin)', () => {
     const cash = flows.filter(r => inRange(r.month)).reduce((a, r) => a + Number(r.money_in), 0)
 
     await goto(page, '/money/profit')
-    await expect(page.getByRole('heading', { name: 'Profitability', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Profitability', level: 1 })).toBeVisible()
     const avg = page.getByTestId('profit-average')
     await expect(avg).toContainText('Average monthly income')
     await expect(avg).toContainText('GST left out')
@@ -175,7 +175,9 @@ test.describe('who sees profitability', () => {
       await openAs(page, role, '/money/receivables')
       await page.goto('/money/profit')
       await page.waitForLoadState('networkidle')
-      await expect(page.getByRole('heading', { name: 'Profitability' })).toHaveCount(0)
+      // the page's own heading (exact): sales meet "Profitability is for admins", the no-access page
+      await expect(page.getByRole('heading', { name: 'Profitability', exact: true })).toHaveCount(0)
+      if (role === 'sales') await expect(page.getByRole('heading', { name: 'Profitability is for admins' })).toBeVisible()
       await expect(page.getByTestId('profit-average')).toHaveCount(0)
       expect(seen, `${role}: no profit view is requested`).toEqual([])
       await context.close()

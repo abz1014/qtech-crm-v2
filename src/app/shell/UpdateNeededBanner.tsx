@@ -28,11 +28,11 @@ export function UpdateNeededBanner() {
     <div
       role="alert"
       data-update-needed-banner=""
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-2 text-sm text-fg-2"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-tone-danger-bg px-4 py-2 text-sm font-medium text-tone-danger-fg"
     >
-      <Icon icon={CircleArrowUp} className="shrink-0 text-tone-danger-fg" />
-      <p className="min-w-0 flex-1 text-pretty">
-        <b className="font-semibold text-fg">Update required. Select Reload.</b>
+      <Icon icon={CircleArrowUp} className="shrink-0" />
+      <p className="min-w-0 flex-[1_1_12rem] text-pretty">
+        <b className="font-heavy">Update required. Select Reload.</b>
         {' — '}
         {warned
           ? 'Reloading clears what is typed in the open form. A New RFQ keeps its draft. Copy anything needed, then select Reload again.'

@@ -263,6 +263,23 @@ describe('Company profile screen', () => {
     expect(screen.queryByText('IBAN')).toBeNull()
     expect(screen.queryByText('Not set')).toBeNull() // no NTN/STRN warning either: they are not the engineer's to see
     expect(screen.getByText('Only an admin can edit')).toBeInTheDocument()
+    // gate 2, answer 10: payment terms and the quotation / PO wording carry money words, so an engineer sees business details only
+    expect(screen.getByText('Business details')).toBeInTheDocument()
+    expect(screen.queryByText('Payment terms')).toBeNull()
+    expect(screen.queryByText('Default payment terms')).toBeNull()
+    expect(screen.queryByText('Quotations and purchase orders')).toBeNull()
+    expect(screen.queryByText('Quotation terms')).toBeNull()
+    expect(screen.queryByText('Purchase order terms')).toBeNull()
+    expect(screen.queryByText('1. Prices are in PKR.')).toBeNull()
+    expect(screen.getByTestId('page')).not.toHaveTextContent(/payment|terms|validity/i)
+  })
+
+  it('sales still read the payment terms and the quotation and purchase order wording', async () => {
+    mount('sales')
+    await screen.findByText('Q-Tech Solutions (Private) Limited')
+    expect(screen.getByText('Payment terms')).toBeInTheDocument()
+    expect(screen.getByText('Quotations and purchase orders')).toBeInTheDocument()
+    expect(screen.getByText('1. Prices are in PKR.')).toBeInTheDocument()
   })
 
   it('admin and sales ask for every column', async () => {

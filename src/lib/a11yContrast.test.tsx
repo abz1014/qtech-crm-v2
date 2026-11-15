@@ -312,7 +312,7 @@ describe('direction C: the navy chrome and the next-step band', () => {
     expect(contrast('primary', 'bg-chrome')).toBeLessThan(3)
     expect(read('docs/design/tokens.css')).toMatch(/--shadow-on-navy: 0 0 0 2px var\(--neutral-0\);/)
     expect(contrast('neutral-0', 'bg-chrome')).toBeGreaterThanOrEqual(3)
-    expect(read('src/ui/Button.tsx')).toContain('[[data-surface=navy]_&]:shadow-on-navy')
+    expect(read('src/ui/buttonStyles.ts')).toContain('[[data-surface=navy]_&]:shadow-on-navy')
   })
   it('the late sentence on the navy band (tone-danger-bg ink) is 7:1', () => {
     expect(read('src/ui/NextStepBox.tsx')).toContain("tone === 'late' && 'text-tone-danger-bg'")
@@ -366,9 +366,15 @@ describe('direction C: the colour blocks and what sits on them', () => {
     expect(read('src/ui/Tag.tsx')).toContain('bg-tone-info-bg text-block-week-fg')
     expect(contrast('block-week-fg', 'tone-info-bg')).toBeGreaterThanOrEqual(7)
   })
-  it('the open To do tile: the ink ring is 3:1 against the white tile (WCAG 1.4.11)', () => {
-    expect(read('src/features/today/TodayScreen.tsx')).toContain('after:ring-2 after:ring-inset after:ring-fg')
-    expect(contrast('fg', 'bg-surface')).toBeGreaterThanOrEqual(3)
+  it('the open Home row: the brand bar at its left edge is 3:1 against the white card and its own tint (WCAG 1.4.11)', () => {
+    expect(read('src/features/today/TodayScreen.tsx')).toContain('bg-selected before:pointer-events-none before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-pill before:bg-brand-700')
+    expect(contrast('brand-700', 'bg-surface')).toBeGreaterThanOrEqual(3)
+    expect(contrast('brand-700', 'bg-selected')).toBeGreaterThanOrEqual(3)
+  })
+  it('the lime hero button: forest words on lime are 7:1, and lime is never drawn on white (under 3:1)', () => {
+    expect(read('src/ui/buttonStyles.ts')).toContain('border-lime-300 bg-lime-300 text-lime-on')
+    expect(contrast('on-lime', 'lime-300')).toBeGreaterThanOrEqual(7)
+    expect(contrast('lime-300', 'bg-surface')).toBeLessThan(3)
   })
   it('the table header rule (2 px ink) is 3:1 on the white table', () => {
     expect(read('src/ui/DataTable.tsx')).toContain('border-b-2 border-fg bg-surface')

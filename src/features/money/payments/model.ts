@@ -215,3 +215,23 @@ export function paymentNote(f: PaymentFacts, amount: number | null): PaymentNote
   if (after <= 1) return { kind: 'settles', text: `This settles the order: PKR ${fmt(amount)} of ${fmt(f.gross)} gross${priorText}. Type a smaller amount to record a part payment.` }
   return { kind: 'part', text: `A part payment: PKR ${fmt(amount)} of ${fmt(f.gross)} gross${priorText}. PKR ${fmt(round2(after))} will still be due.` }
 }
+
+// ------------------------------------------------------------------------------------------------ Payments (gate 2)
+
+/** One payment received, as Money > Payments lists it (payments_in, voided ones never read). Gross, GST included. */
+export interface ReceivedPayment {
+  id: string
+  receivedOn: string
+  amount: number
+  paidVia: string
+  reference: string | null
+  orderId: string | null
+  orderNumber: number | null
+  /** The order's customer; null when the order cannot be read. */
+  company: string | null
+}
+
+/** What a month of payments adds up to: the total received (gross) and how many payments make it. Paisa-safe (whole paisa). */
+export function receivedTotal(rows: readonly Pick<ReceivedPayment, 'amount'>[]): { total: number; count: number } {
+  return { total: rows.reduce((t, r) => t + Math.round(r.amount * 100), 0) / 100, count: rows.length }
+}

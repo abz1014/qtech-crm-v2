@@ -9,6 +9,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { orderRef } from '@/lib/refs'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
+import { Icon } from '@/ui/Icon'
 import { ChannelLink } from '@/ui/ChannelLink'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { MessageActions } from '@/ui/MessageActions'
@@ -187,12 +188,12 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
             <>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-2 text-sm text-fg-2">
-                  <Phone className="size-[14px] text-fg-muted" aria-hidden="true" />
+                  <Icon icon={Phone} size="sm" className="text-fg-muted" />
                   {draft.contact ? `To ${draft.contact.name}${draft.contact.phone ? ` · ${draft.contact.phone}` : ''}` : 'No contact on record'}
                 </span>
                 <ChannelLink value={channel} onChange={setChannel} />
               </div>
-              <pre data-testid="draft-text" className="max-h-[18rem] overflow-auto whitespace-pre-wrap break-words rounded border bg-sunken p-3 font-sans text-sm text-fg">
+              <pre data-testid="draft-text" className="max-h-[18rem] overflow-auto whitespace-pre-wrap break-words rounded-control border bg-sunken p-4 font-sans text-sm text-fg">
                 {channel === 'email' && draft.email.subject ? `Subject: ${draft.email.subject}\n\n` : ''}
                 {(channel === 'email' ? draft.email : draft.whatsapp).body}
               </pre>

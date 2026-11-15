@@ -58,7 +58,7 @@ export function BarChart({ labels, series, summary, format, reference, tableCapt
         <ul className="flex flex-wrap gap-x-4 gap-y-1" aria-label="Legend">
           {series.map((s, i) => (
             <li key={s.name} className="inline-flex items-center gap-2">
-              <i aria-hidden="true" className={cn('inline-block size-4 rounded-[2px]', i === 0 ? 'bg-fg' : 'bg-brand-green')} />
+              <i aria-hidden="true" className={cn('inline-block size-4 rounded-[var(--sp-1)]', i === 0 ? 'bg-fg' : 'bg-brand-green')} />
               {s.name}
             </li>
           ))}

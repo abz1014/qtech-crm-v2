@@ -57,12 +57,23 @@ export function Popover(props: RootProps) {
   return <mod.PopoverImpl {...props} defaultOpen={Boolean(props.defaultOpen) || wanted} />
 }
 
+/**
+ * The Radix half, but only under a Radix root: while this popover's root still draws the light stand-in (it provides Want), its
+ * parts stay light too. The download can land between the root's render and its children's, and a Radix part under the light root
+ * threw "PopoverPortal must be used within Popover" (audit 2, New RFQ at 1024).
+ */
+function useRootImpl() {
+  const mod = usePopoverImpl()
+  const want = useContext(Want)
+  return want ? null : mod
+}
+
 type TriggerProps = ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Trigger>
 
 export const PopoverTrigger = forwardRef<HTMLButtonElement, TriggerProps>(function PopoverTrigger({ asChild, children, onClick, ...rest }, ref) {
   const mod = usePopoverImpl()
   const want = useContext(Want)
-  if (mod) {
+  if (mod && !want) {
     return (
       <mod.PopoverTriggerImpl ref={ref} asChild={asChild} onClick={onClick} {...rest}>
         {children}
@@ -97,17 +108,17 @@ export const PopoverTrigger = forwardRef<HTMLButtonElement, TriggerProps>(functi
 })
 
 export function PopoverAnchor({ children }: { children?: ReactNode; asChild?: boolean }) {
-  const mod = usePopoverImpl()
+  const mod = useRootImpl()
   return mod ? <mod.PopoverAnchorImpl asChild>{children as ReactElement}</mod.PopoverAnchorImpl> : <>{children}</>
 }
 
 export function PopoverClose({ children, ...rest }: ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Close>) {
-  const mod = usePopoverImpl()
+  const mod = useRootImpl()
   return mod ? <mod.PopoverCloseImpl {...rest}>{children}</mod.PopoverCloseImpl> : null
 }
 
 export const PopoverContent = forwardRef<HTMLDivElement, Impl.ContentProps>(function PopoverContent(props, ref) {
-  const mod = usePopoverImpl()
+  const mod = useRootImpl()
   return mod ? <mod.PopoverContentImpl ref={ref} {...props} /> : null
 })
 
@@ -143,15 +154,15 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
         if (!keepOpen && !e.defaultPrevented) state?.close()
       }}
       className={cn(
-        'flex h-control w-full items-center gap-2 rounded px-2 text-left text-sm transition-colors duration-fast ease-out',
-        'hover:bg-sunken focus-visible:bg-selected focus-visible:outline-offset-[-2px] disabled:text-fg-disabled disabled:hover:bg-transparent',
+        'flex h-control w-full items-center gap-2 rounded-control px-2 text-left text-sm font-card transition-colors duration-fast ease-out',
+        'hover:bg-selected focus-visible:bg-selected focus-visible:outline-offset-[-2px] disabled:text-fg-disabled disabled:hover:bg-transparent',
         danger ? 'text-tone-danger-fg' : 'text-fg',
         className,
       )}
       {...rest}
     >
-      {icon ? <Icon icon={icon} className={danger ? '' : 'text-fg-muted'} /> : null}
-      <span className="min-w-0 flex-1 truncate">{children}</span>
+      {icon ? <Icon icon={icon} className={danger ? '' : 'text-primary'} /> : null}
+      <span className="min-w-0 flex-1 truncate" title={typeof children === 'string' ? children : undefined}>{children}</span>
       {hint ? <span className="shrink-0 text-xs text-fg-muted">{hint}</span> : null}
       {radio ? <Icon icon={Check} className={cn('text-primary', !checked && 'invisible')} /> : null}
     </button>
@@ -164,7 +175,7 @@ export function MenuGroup({ label, children }: { label: string; children: ReactN
   const id = useId()
   return (
     <div role="group" aria-labelledby={id} className="grid">
-      <span id={id} className="px-2 pb-1 pt-2 text-xs font-medium text-fg-muted">
+      <span id={id} className="px-3 pb-1 pt-2 text-xs font-card text-fg-muted">
         {label}
       </span>
       {children}

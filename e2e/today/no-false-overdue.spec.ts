@@ -124,10 +124,10 @@ async function todayReading(page: Page) {
   const header = page.locator('[data-needs-you-count]')
   await expect(header).toBeVisible()
   const n = Number(await header.innerText())
-  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^To do\\s?, ${n} due now$`) : /^To do$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
+  await expect(nav(page).getByRole('link', { name: n > 0 ? new RegExp(`^Home\\s?, ${n} due now$`) : /^Home$/ })).toBeVisible({ timeout: 10_000 }).catch(() => undefined)
   await showAllTodo(page)
   const rules = await dueRows(page).evaluateAll(ls => ls.map(l => l.getAttribute('data-rule') ?? ''))
-  const link = (await nav(page).getByRole('link', { name: /^To do/ }).first().textContent()) ?? ''
+  const link = (await nav(page).getByRole('link', { name: /^Home/ }).first().textContent()) ?? ''
   return { badge: Number(/(\d+)/.exec(link)?.[1] ?? 0), header: Number(await header.innerText()), rows: rules.length, rules }
 }
 
@@ -227,7 +227,7 @@ for (const role of ['admin', 'sales'] as const) {
     test.setTimeout(240_000)
     const s = await seed(role)
     await openAs(page, role, '/todo')
-    await expect(page.getByRole('heading', { level: 1, name: 'To do' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
 
     await checkToday(page, s)
     await checkRfqs(page, s)

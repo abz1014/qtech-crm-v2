@@ -369,10 +369,23 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
     expect(legend?.className).toContain('pointer-events-none')
   })
 
-  it('loading says what is loading and keeps a skeleton footer; the error has a default sentence and a stamp', () => {
+  it('a load that takes 5 s says it is still loading and what to check (audit 1 major 5)', () => {
+    vi.useFakeTimers()
+    try {
+      mount(<DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} loading toolbar={toolbar} />)
+      expect(el.textContent).toContain('Loading RFQs')
+      act(() => void vi.advanceTimersByTime(5_000))
+      expect(el.textContent).not.toContain('Loading RFQs')
+      expect(el.textContent).toContain('Still loading. Check your connection.')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('loading says what is loading in the footer band (where the count will be); the error has a default sentence and a stamp', () => {
     mount(<DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} loading toolbar={toolbar} />)
-    expect(el.textContent).toContain('Loading RFQs')
-    expect(el.querySelector('.border-t .skeleton')).not.toBeNull()
+    expect(el.querySelector('.border-t')?.textContent).toContain('Loading RFQs')
+    expect(el.querySelector('[data-table-toolbar]')?.textContent).not.toContain('Loading')
     act(() =>
       root!.render(
         <DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} error={{ reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />,
@@ -469,5 +482,23 @@ describe('DataTable cell wrapping', () => {
     expect(cell.className).toContain('whitespace-nowrap')
     expect(cell.className).toContain('[&_[class*=overflow-wrap]]:whitespace-normal')
     expect(el.querySelector('tbody td span[class*=overflow-wrap]')).not.toBeNull()
+  })
+})
+
+describe('DataTable: flat (a table inside a card)', () => {
+  it('draws no card of its own: no edge, corner, shadow or white; the toolbar is a plain line', () => {
+    mount(<DataTable label="Items" columns={columns} rows={INVOICES} getRowId={r => r.id} flat toolbar={<h2>Items</h2>} />)
+    const root = el.querySelector<HTMLElement>('[data-table-root]')!
+    expect(root.dataset.tableFlat).toBe('true')
+    for (const c of ['rounded-card', 'border', 'bg-surface', 'shadow-e1', 'overflow-clip']) expect(root.classList.contains(c)).toBe(false)
+    const toolbar = el.querySelector<HTMLElement>('[data-table-toolbar]')!
+    for (const c of ['border-b', 'px-4', 'py-3', 'rounded-card']) expect(toolbar.classList.contains(c)).toBe(false)
+  })
+
+  it('without flat the table keeps its one card', () => {
+    mount(<DataTable label="Items" columns={columns} rows={INVOICES} getRowId={r => r.id} />)
+    const root = el.querySelector<HTMLElement>('[data-table-root]')!
+    expect(root.dataset.tableFlat).toBeUndefined()
+    for (const c of ['rounded-card', 'border', 'bg-surface', 'shadow-e1']) expect(root.classList.contains(c)).toBe(true)
   })
 })

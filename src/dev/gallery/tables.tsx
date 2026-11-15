@@ -205,6 +205,10 @@ export function StatusMoneyTableSections() {
           <Row title="Is GST included?" note="Legacy value whose net or gross was never recorded, shown as typed."><Money value="3640000" size="xl" basisUnknown /></Row>
           <Row title="Below cost" note="True minus, red, and the words."><Margin value="-84500" state="final" size="xl" /></Row>
           <Row title="Not set" note="An em dash in muted text, never 0."><Money value={null} /></Row>
+          <Row title="Fits its tile" note="fit: a big figure steps its size down to the tile's width, never below 16 px, never broken inside the digits.">
+            <span className="grid w-[11rem] shrink-0 gap-1 rounded-card border bg-surface p-card"><span className="text-sm text-fg-2">To collect</span><Money value="104116750088" size="kpi" fit /></span>
+            <span className="grid w-[11rem] shrink-0 gap-1 rounded-card border bg-surface p-card"><span className="text-sm text-fg-2">Received</span><Money value="845000" size="kpi" fit /></span>
+          </Row>
         </div>
       </Section>
 

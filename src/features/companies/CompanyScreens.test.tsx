@@ -208,16 +208,21 @@ describe('supplier page', () => {
     expect(open).toHaveTextContent('Waiting for their replyNone')
   })
 
-  it('an engineer does not see the supplier currency row; sales do', async () => {
+  it('an engineer does not see the supplier currency row or the currency in the header line (gate 2 answer 28); sales do', async () => {
     installFakeDb(supplierDb)
     const { unmount } = mount('/companies/s1', <CompanyPage />, 'engineer')
     const open = await screen.findByRole('region', { name: 'Open with them' })
     await waitFor(() => expect(open).toHaveTextContent('Supplier orders'))
     expect(open).not.toHaveTextContent('Currency')
+    const header = screen.getByRole('heading', { level: 1 }).closest('header') as HTMLElement
+    await waitFor(() => expect(header).toHaveTextContent('Linz, Austria'))
+    expect(header).not.toHaveTextContent(/Supplier prices in|EUR/)
     unmount()
     mount('/companies/s1', <CompanyPage />, 'sales')
     const salesOpen = await screen.findByRole('region', { name: 'Open with them' })
     await waitFor(() => expect(salesOpen).toHaveTextContent('Currency'))
+    const salesHeader = screen.getByRole('heading', { level: 1 }).closest('header') as HTMLElement
+    await waitFor(() => expect(salesHeader).toHaveTextContent('Supplier prices in EUR'))
   })
 
   it('Details (in the fold) holds the brands carried as tags, with how often each was quoted, and Add and remove', async () => {

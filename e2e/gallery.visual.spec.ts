@@ -59,39 +59,46 @@ const useText = async (page: Page, text: 'normal' | 'small') => {
 
 test.describe('shell widths', () => {
   for (const text of ['normal', 'small'] as const)
-  for (const tabs of [5, 6]) {
-    test(`the top bar fits from 768 to 1920 with ${tabs} destinations, labels in words from 1024 (${text} text)`, async ({ page }, info) => {
+  for (const role of ['admin', 'engineer'] as const) {
+    const tabs = role === 'engineer' ? 4 : 5
+    const lanes = role === 'engineer' ? 3 : 5
+    test(`the top bar fits from 768 to 1920 beside the rail, ${role}'s lanes in words from 1024 (${text} text)`, async ({ page }, info) => {
       test.skip(info.project.name !== 'w1440', 'the test sets its own widths')
-      await openGallery(page, `?scene=shell&tabs=${tabs}`)
+      await openGallery(page, `?scene=shell&role=${role}`)
       await page.locator('[data-shell-scene] > nav').waitFor({ state: 'attached' })
       await useText(page, text)
       for (const width of [768, 1024, 1093, 1280, 1366, 1440, 1536, 1920]) {
         await page.setViewportSize({ width, height: 800 })
         const m = await page.evaluate(() => {
           const bar = document.querySelector<HTMLElement>('[data-shell-scene] > header')!
-          const labels = Array.from(bar.querySelectorAll<HTMLElement>('[data-nav-label]'))
+          const rail = document.querySelector<HTMLElement>('[data-shell-scene] > [data-rail]')!
+          const labels = Array.from(rail.querySelectorAll<HTMLElement>('[data-nav-label]'))
           return {
             view: document.documentElement.clientWidth,
             page: document.documentElement.scrollWidth,
             barScroll: bar.scrollWidth,
             barClient: bar.clientWidth,
             right: Math.max(...Array.from(bar.querySelectorAll<HTMLElement>('*')).map(e => e.getBoundingClientRect().right)),
+            railScroll: rail.scrollWidth,
+            railClient: rail.clientWidth,
             shownLabels: labels.filter(l => l.getBoundingClientRect().width > 2).length,
             labels: labels.length,
           }
         })
-        const at = `${tabs} destinations at ${width}, ${text} text`
+        const at = `${role} at ${width}, ${text} text`
         expect(m.page, `page scrolls sideways, ${at}`).toBeLessThanOrEqual(m.view)
         expect(m.barScroll, `top bar overflows, ${at}`).toBeLessThanOrEqual(m.barClient)
         expect(m.right, `something in the top bar ends past the window, ${at}`).toBeLessThanOrEqual(m.view)
-        expect(m.labels, at).toBe(tabs)
-        if (width >= 1024) expect(m.shownLabels, `labels shown in words, ${at}`).toBe(tabs)
+        expect(m.railScroll, `rail overflows sideways, ${at}`).toBeLessThanOrEqual(m.railClient)
+        expect(m.labels, at).toBe(lanes)
+        // 768 to 1023: the icon rail (gate 2 question 2), words read out but not drawn; 1024 up: every lane in words.
+        expect(m.shownLabels, `lanes shown in words, ${at}`).toBe(width >= 1024 ? lanes : 0)
       }
     })
 
-    test(`the phone tabs fit at 320 and 375 with ${tabs} destinations (${text} text)`, async ({ page }, info) => {
+    test(`the phone bar fits at 320 and 375 with ${role}'s ${tabs} places (${text} text)`, async ({ page }, info) => {
       test.skip(info.project.name !== 'w1440', 'the test sets its own widths')
-      await openGallery(page, `?scene=shell&tabs=${tabs}`)
+      await openGallery(page, `?scene=shell&role=${role}`)
       await page.locator('[data-shell-scene] > nav').waitFor({ state: 'attached' })
       await useText(page, text)
       for (const width of [320, 360, 375]) {
@@ -134,7 +141,7 @@ test.describe('shell widths', () => {
  * smaller, never the buttons. A phone-like context (touch, mobile), so (pointer: coarse) matches.
  */
 test.describe('touch targets at Smaller text', () => {
-  test('controls, small buttons and segments 44, large buttons 52, rows 56; the phone bar and tabs stay 44 or taller', async ({ browser }, info) => {
+  test('controls, small buttons and segments 48, large buttons 56, rows 64 (Forest); the phone bar and tabs stay 44 or taller', async ({ browser }, info) => {
     test.skip(info.project.name !== 'w1440', 'it makes its own phone context')
     const context = await browser.newContext({ ...info.project.use, viewport: { width: 375, height: 700 }, hasTouch: true, isMobile: true })
     const page = await context.newPage()
@@ -159,7 +166,7 @@ test.describe('touch targets at Smaller text', () => {
           }
         })
         expect(m.coarse, 'the context is a touch screen').toBe(true)
-        expect([m.control, m.controlLg, m.controlSm, m.segment, m.row, m.touch], `${text} text`).toEqual([44, 52, 44, 44, 56, 44])
+        expect([m.control, m.controlLg, m.controlSm, m.segment, m.row, m.touch], `${text} text`).toEqual([48, 56, 48, 48, 64, 48])
         expect(m.bar.filter(h => h < 44), `phone bar targets under 44 px, ${text} text`).toEqual([])
         expect(m.tabs.filter(h => h < 44), `tabs under 44 px, ${text} text`).toEqual([])
       }

@@ -45,8 +45,8 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
     <RadixTabs.Trigger
       ref={ref}
       className={cn(
-        'group relative inline-flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded px-3 text-sm font-medium text-fg-2',
-        'transition-colors duration-fast ease-out hover:text-fg data-[state=active]:text-fg disabled:text-fg-disabled',
+        'group relative inline-flex h-control shrink-0 items-center gap-2 whitespace-nowrap rounded-control px-4 text-sm font-card text-fg-2',
+        'transition-colors duration-fast ease-out hover:bg-sunken hover:text-fg data-[state=active]:font-heavy data-[state=active]:text-primary disabled:text-fg-disabled',
         className,
       )}
       {...rest}
@@ -55,7 +55,7 @@ export const Tab = forwardRef<ElementRef<typeof RadixTabs.Trigger>, TabProps>(fu
       <NeedsCount n={needs} variant={needsVariant} />
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-3 bottom-0 h-1 rounded-t bg-brand-green opacity-0 group-data-[state=active]:opacity-100"
+        className="pointer-events-none absolute inset-x-3 bottom-0 h-1 rounded-t-pill bg-primary opacity-0 group-data-[state=active]:opacity-100"
       />
     </RadixTabs.Trigger>
   )

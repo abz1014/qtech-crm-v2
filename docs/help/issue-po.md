@@ -12,4 +12,4 @@ related: goods-delivered
 4. Select [Issue PO], then send the PDF to the supplier.
 5. If the goods were ordered another way, select ⋯ on the supplier order, then [Mark placed, no PO].
 
-Note: Issuing marks the supplier order placed today. Today then shows when the goods are late. For goods already delivered without a PO, [Issue PO] is under ⋯ on that supplier order.
+Note: Issuing marks the supplier order placed today. Home then shows when the goods are late. For goods already delivered without a PO, [Issue PO] is under ⋯ on that supplier order.
