@@ -3,9 +3,16 @@ import { useEffect, type RefObject } from 'react'
 /** What a person can Tab to inside a page. */
 const TABBABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]'
 
+/** Drawn and reachable: not display:none (a phone hides the desktop breadcrumb and sub-nav), not hidden, not inert. */
+function reachable(e: Element): boolean {
+  if (e.closest('[inert], [aria-hidden="true"]')) return false
+  if (typeof (e as HTMLElement).getClientRects === 'function' && e.getClientRects().length === 0 && document.body.getClientRects().length > 0) return false
+  return getComputedStyle(e).visibility !== 'hidden'
+}
+
 /** True when the scroller scrolls and nothing inside it can be reached with Tab (so the keyboard could not scroll it). */
 export function needsTabStop(el: HTMLElement): boolean {
-  return el.scrollHeight > el.clientHeight + 1 && el.querySelector(TABBABLE) === null
+  return el.scrollHeight > el.clientHeight + 1 && !Array.from(el.querySelectorAll(TABBABLE)).some(reachable)
 }
 
 /**

@@ -32,6 +32,9 @@ describe('a scrolling <main> the keyboard can reach (audit 1 minor 27)', () => {
     expect(needsTabStop(el)).toBe(false)
     el.innerHTML = '<button disabled>Save</button><h1 tabindex="-1">Title</h1>'
     expect(needsTabStop(el)).toBe(true)
+    // a link nobody can reach (inside a hidden or inert part) does not count
+    el.innerHTML = '<div aria-hidden="true"><a href="/settings">Settings</a></div><div inert><button>Edit</button></div>'
+    expect(needsTabStop(el)).toBe(true)
   })
 
   it('joins the Tab order with its ring marker while that holds; otherwise keeps tabIndex -1', async () => {
