@@ -156,8 +156,10 @@ export function StageBlock({
 }) {
   const m = stageModel(job)
   const chip = CHIP[chipTone ?? tone]
-  const detail = m.ending ? null : sentences(m.detail)
   const title = text || (m.ending ?? m.label)
+  // a detail the title already says is not said again (audit 2: "Waiting for the customer to order" over "Waiting for the customer.")
+  const said = title.toLowerCase()
+  const detail = m.ending ? null : sentences((m.detail ?? '').split(', ').filter(p => !said.includes(p.trim().toLowerCase())).join(', ') || null)
   return (
     <>
       <section aria-label="Next step" data-stage-block data-surface="navy" className="mt-4 grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2 md:mt-6">

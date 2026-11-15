@@ -58,26 +58,47 @@ function PageTitle({ jobKey }: { jobKey?: string }) {
 }
 
 function PageSkeleton({ jobKey }: { jobKey?: string }) {
+  // The phone bar while the job is read: its key and the way back, no tab bar (the loaded page hides it too).
+  useMobileBar({ title: jobKey ? jobLabel(jobKey) : 'Job', back: 'history', fallback: '/jobs', hideTabs: true })
+  // Shaped like the page (audit 2): the forest hero, the white track card with its seven stops, the steps card and the side cards.
   // Every grid here has a minmax(0,1fr) track: a bare grid sizes its track to the widest bar (24rem), wider than a 375 phone.
   return (
     <Shell>
       <PageTitle jobKey={jobKey} />
       <div role="status" className="grid grid-cols-[minmax(0,1fr)] gap-4" aria-busy="true" aria-label="Loading job">
-        <Skeleton className="h-4 w-[10rem]" />
-        <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
-        <Skeleton className="h-5 w-[18rem] max-w-full" />
-        {/* the hero and the track card */}
-        <Skeleton className="h-[10rem] w-full rounded-card" />
-        <Skeleton className="h-[8rem] w-full rounded-card" />
-        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-card-gap lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12" />
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-2 max-md:hidden">
+          <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
+          <Skeleton className="h-5 w-[18rem] max-w-full" />
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-card bg-hero p-card shadow-e2">
+          <Skeleton className="h-4 w-[9rem] max-w-full bg-chrome-field" />
+          <Skeleton className="h-8 w-[16rem] max-w-full bg-chrome-field" />
+          <Skeleton className="h-4 w-[12rem] max-w-full bg-chrome-field" />
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-4 rounded-card border bg-surface p-card shadow-e1">
+          <Skeleton className="h-5 w-[14rem] max-w-full" />
+          <div className="flex items-center justify-between gap-2">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="size-8 shrink-0 rounded-pill" />
             ))}
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
-            <Skeleton className="h-[8rem] rounded-card" />
-            <Skeleton className="h-[10rem] rounded-card" />
+        </div>
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-card-gap lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-card border bg-surface shadow-e1">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between gap-4 border-b px-card py-4 last:border-b-0">
+                <span className="grid min-w-0 flex-1 gap-2">
+                  <Skeleton className="h-4 w-[8rem] max-w-full" />
+                  <Skeleton className="h-3 w-[6rem] max-w-full" />
+                </span>
+                <Skeleton className="h-chip w-[5rem] shrink-0 rounded-pill" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-2 rounded-card border bg-surface p-card shadow-e1">
+            <Skeleton className="h-4 w-[6rem]" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
           </div>
         </div>
       </div>
@@ -239,7 +260,8 @@ function JobView({ facts }: { facts: JobFacts }) {
 
       <StageBlock
         job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }}
-        label={role === 'engineer' ? 'Where it stands' : `Next step · ${jobLabel(job.key)}${imported ? ' · Imported' : ''}`}
+        // with nothing for anyone to do (a paid job) the hero says where it stands, not "Next step" over "Done" (audit 2)
+        label={role === 'engineer' ? 'Where it stands' : `${next.tone === 'done' ? 'Where it stands' : 'Next step'} · ${jobLabel(job.key)}${imported ? ' · Imported' : ''}`}
         text={next.text}
         tone={next.tone}
         chip={next.chip}

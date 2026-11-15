@@ -13,8 +13,9 @@ import { InfoTip } from '@/ui/InfoTip'
 import { CARD } from '@/ui/card'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
-import { DATE_FOCUS, FIELD, PanelCard, PHONE_FOLD } from '@/features/money/expenses/Panel'
+import { FIELD, PanelCard, PHONE_FOLD } from '@/features/money/expenses/Panel'
 import { NumberInput } from '@/ui/form/NumberInput'
+import { DateInput } from '@/ui/form/DateInput'
 import { useAddCashTopup, useCashInHand, useRecordCashCount } from '@/features/money/expenses/hooks'
 import { pkr } from '@/features/money/expenses/model'
 import type { CashInHand as CashState } from '@/features/money/expenses/claimsApi'
@@ -178,6 +179,7 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
   const [counted, setCounted] = useState<number | null>(null)
   const [note, setNote] = useState('')
   const [on, setOn] = useState(today)
+  const dateId = useId()
   const [id] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
   const record = useRecordCashCount()
@@ -213,7 +215,7 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
         size="sm"
         footer={
           <>
-            <Button variant="quiet" onClick={onClose} data-cancel className="text-base">
+            <Button onClick={onClose} data-cancel className="text-base">
               Cancel
             </Button>
             <Button variant="primary" onClick={submit} busy={record.isPending} busyLabel="Saving" className="text-base">
@@ -234,10 +236,13 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
             <NumberInput value={counted} onChange={setCounted} min={0} inputMode="decimal" autoFocus className="num h-control-lg text-lg max-md:h-control-lg" aria-label="Cash in hand, PKR" />
           </label>
           {opening ? (
-            <label className="grid gap-2">
-              <span className="text-sm font-bold">At the start of</span>
-              <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num', DATE_FOCUS)} />
-            </label>
+            // the app's own date field ("Sun 15 Nov 2026" and its calendar), as every other date (audit 2: this one was the browser's)
+            <div className="grid gap-2">
+              <label htmlFor={dateId} className="text-sm font-bold">
+                At the start of
+              </label>
+              <DateInput id={dateId} value={on} max={today} defaultToday={false} onChange={v => v && setOn(v)} />
+            </div>
           ) : null}
           {diff !== null ? (
             <p className={cn('rounded-control px-3 py-2', diff === 0 ? 'bg-tone-success-bg text-tone-success-fg' : 'bg-tone-warning-bg text-tone-warning-fg')} aria-live="polite" data-testid="count-difference">
@@ -266,6 +271,7 @@ function TopupDialog({ onClose }: { onClose: () => void }) {
   const today = businessToday()
   const [amount, setAmount] = useState<number | null>(null)
   const [on, setOn] = useState(today)
+  const dateId = useId()
   const [note, setNote] = useState('')
   const [id] = useState(() => crypto.randomUUID())
   const [error, setError] = useState<string | null>(null)
@@ -297,7 +303,7 @@ function TopupDialog({ onClose }: { onClose: () => void }) {
         size="sm"
         footer={
           <>
-            <Button variant="quiet" onClick={onClose} data-cancel className="text-base">
+            <Button onClick={onClose} data-cancel className="text-base">
               Cancel
             </Button>
             <Button variant="primary" onClick={submit} busy={add.isPending} busyLabel="Saving" className="text-base">
@@ -317,10 +323,12 @@ function TopupDialog({ onClose }: { onClose: () => void }) {
             <span className="text-sm font-bold">Amount, PKR</span>
             <NumberInput value={amount} onChange={setAmount} min={0.01} inputMode="decimal" autoFocus className="num h-control-lg text-lg max-md:h-control-lg" aria-label="Amount drawn, PKR" />
           </label>
-          <label className="grid gap-2">
-            <span className="text-sm font-bold">Date</span>
-            <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num', DATE_FOCUS)} />
-          </label>
+          <div className="grid gap-2">
+            <label htmlFor={dateId} className="text-sm font-bold">
+              Date
+            </label>
+            <DateInput id={dateId} value={on} max={today} defaultToday={false} onChange={v => v && setOn(v)} />
+          </div>
           <label className="grid gap-2">
             <span className="text-sm font-bold">
               Note <span className="font-regular text-fg-muted">optional</span>

@@ -71,7 +71,7 @@ function Frame({ context, footer, children }: { context?: ReactNode; footer?: Re
 }
 
 const cancelButton = (onCancel: () => void) => (
-  <Button variant="quiet" onClick={onCancel} data-cancel>
+  <Button onClick={onCancel} data-cancel>
     Cancel
   </Button>
 )

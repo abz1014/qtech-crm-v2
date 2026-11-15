@@ -35,9 +35,9 @@ export function BackupsPage() {
       <PageHeader title="Backups and usage" lede="Nightly backup status, free plan usage and the monthly check that the key opens a backup." />
       {q.isPending ? (
         <div role="status" aria-busy="true" aria-label="Loading backups and usage" className="grid gap-card-gap">
-          <SectionSkeleton rows={2} />
-          <SectionSkeleton rows={2} />
-          <SectionSkeleton rows={1} />
+          <SectionSkeleton rows={4} facts />
+          <SectionSkeleton rows={2} facts />
+          <SectionSkeleton rows={1} facts />
         </div>
       ) : q.isError || !q.data ? (
         <EmptyState mood="error" bordered title="Could not load backups and usage" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>

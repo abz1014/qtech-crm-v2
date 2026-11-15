@@ -920,11 +920,6 @@ function TableView<T>(props: DataTableProps<T>) {
         <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : ownToolbar ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
           {/* The toolbar's own controls take a whole row on a phone, so the loading line (or Export) goes under them instead of squeezing them (audit 2: Invoices at 375). */}
           <div className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-3', toolbarNode && 'max-sm:basis-full')}>{toolbarNode}</div>
-          {loading ? (
-            <span className="text-xs text-fg-muted" data-slow={slow || undefined}>
-              {slow ? SLOW_LOAD_TEXT : `Loading ${what}`}
-            </span>
-          ) : null}
           {densityOn ? (
             <SegmentedControl
               aria-label="Density"
@@ -1045,7 +1040,12 @@ function TableView<T>(props: DataTableProps<T>) {
         // when focus left, and a click on a control beside the table (Copy and mark reminded) lost its mouseup to that jump.
         // The toolbar, this band and the first and last cells share one inset (20 px; flush in a flat table), so the words line up down the card.
         <div className={cn('flex min-h-10 items-center justify-between gap-3 py-2 text-xs text-fg-muted', apart ? 'mt-3 px-1' : 'border-t', !apart && (flat ? 'px-0' : 'bg-surface px-5'))}>
-          {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
+          {/* the loading line sits where the count will be, under the rows (audit 2: in the toolbar it floated beside the controls) */}
+          {loading && !shown ? (
+            <span data-slow={slow || undefined}>{slow ? SLOW_LOAD_TEXT : `Loading ${what}`}</span>
+          ) : (
+            <span>{shown}</span>
+          )}
           {hintsNode}
         </div>
       ) : hints ? (

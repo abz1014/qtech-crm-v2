@@ -76,16 +76,24 @@ export function SaveBar({ dirty, message, children }: { dirty: boolean; message:
 }
 
 /** A loading card shaped like a section: a title line, a hint line, then `rows` field-sized bars. */
-export function SectionSkeleton({ rows = 2 }: { rows?: number }) {
+export function SectionSkeleton({ rows = 2, facts = false }: { rows?: number; facts?: boolean }) {
   return (
     <div className={cn(CARD, 'grid gap-4 p-card')} aria-hidden="true">
       <div className="grid gap-2">
         <Skeleton className="h-6 w-1/3" />
         <Skeleton className="h-4 w-2/3" />
       </div>
-      {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-control w-full" />
-      ))}
+      {/* `facts`: a section of label and value lines (Backups), not of fields (audit 2: input blocks stood for words) */}
+      {Array.from({ length: rows }, (_, i) =>
+        facts ? (
+          <div key={i} className="grid gap-2">
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+        ) : (
+          <Skeleton key={i} className="h-control w-full" />
+        ),
+      )}
     </div>
   )
 }

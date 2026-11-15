@@ -390,11 +390,12 @@ export function GstRegisterPage() {
     >
       {register.isPending ? (
         // Shaped like the figures it stands for: a tile each on a card from 640 (four for the admin, two for sales), a line each on a phone.
-        <div aria-hidden="true" data-testid="register-totals-loading" className={cn('grid gap-3 max-sm:px-1 sm:auto-cols-fr sm:grid-flow-col sm:gap-px sm:overflow-hidden sm:bg-line', !narrow && CARD)}>
+        // on a phone the lines sit in the same white card as the loaded lines (audit 2: they were bare on the canvas)
+        <div aria-hidden="true" data-testid="register-totals-loading" className={cn(CARD, 'grid gap-3 max-sm:p-card sm:auto-cols-fr sm:grid-flow-col sm:gap-px sm:overflow-hidden sm:bg-line')}>
           {(isAdmin ? [0, 1, 2, 3] : [0, 1]).map(i => (
-            <div key={i} className="grid gap-2 bg-surface max-sm:bg-transparent sm:px-5 sm:py-4">
+            <div key={i} className="flex items-center justify-between gap-4 bg-surface sm:grid sm:gap-2 sm:px-5 sm:py-4">
               <Skeleton className="h-4 w-[5rem]" />
-              <Skeleton className="h-6 w-[8rem] max-sm:hidden" />
+              <Skeleton className="h-4 w-[6rem] sm:h-6 sm:w-[8rem]" />
             </div>
           ))}
         </div>
