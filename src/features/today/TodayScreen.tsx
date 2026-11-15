@@ -547,7 +547,7 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
         onClick={onPick}
         aria-expanded={wide ? undefined : open}
         aria-current={wide && open ? 'true' : undefined}
-        className="grid w-full min-w-0 gap-px rounded-row px-3 pb-1 pt-2 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken"
+        className="grid min-h-touch w-full min-w-0 content-start gap-px rounded-row px-3 pb-1 pt-2 text-left transition-colors duration-fast hover:bg-sunken focus-visible:bg-sunken"
       >
         <span className={cn('type-row min-w-0 [overflow-wrap:anywhere]', (waiting || faded) && 'font-regular text-fg-2')}>{waiting ? (item.waitingTitle ?? item.title) : item.title}</span>
         <span className="type-body min-w-0 [overflow-wrap:anywhere]">

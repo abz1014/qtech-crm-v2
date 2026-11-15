@@ -81,7 +81,7 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, back, sub, more
         <Breadcrumb items={breadcrumb} className="mb-2 max-md:hidden" />
       ) : null}
       <div className={cn('flex items-start justify-between gap-4', back && 'md:min-h-control md:items-center', phoneSrOnly && 'max-md:sr-only max-md:focus-within:not-sr-only')}>
-        <h1 className="min-w-0 text-2xl font-heavy tracking-tight text-pretty max-md:text-xl">
+        <h1 className="min-w-0 text-2xl font-heavy tracking-tight text-pretty [overflow-wrap:anywhere] max-md:text-xl">
           {nameHref ? (
             <Link to={nameHref} className="rounded-control underline-offset-4 hover:underline">
               {name}

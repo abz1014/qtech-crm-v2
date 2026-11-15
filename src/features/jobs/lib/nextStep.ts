@@ -18,6 +18,12 @@ export interface JobNext {
   query?: string
   /** The order-side steps are done on the job page itself (P5-D2): the stop whose section the button opens (0 enquiry ... 6 payment). */
   stop?: number
+  /**
+   * The word the job page's chips say ("Needs action", "Waiting") when it is not the tone's own: an imported job's step is drawn in
+   * grey (`tone` inert, never red, no task) but still says who acts next, so the chip never reads "Nothing to do" over "Imported ·
+   * Place the supplier order" and its button.
+   */
+  chip?: StepTone
 }
 
 export interface NextInput {
@@ -38,7 +44,7 @@ export interface NextOptions {
 export function jobNext(input: NextInput, options: NextOptions = {}): JobNext {
   const n = stepFor(input)
   if (!input.imported || !n.text || n.tone === 'done' || n.tone === 'inert') return n
-  return { ...n, tone: 'inert', text: options.imported === 'tag' ? n.text : `Imported · ${n.text}` }
+  return { ...n, tone: 'inert', chip: n.tone, text: options.imported === 'tag' ? n.text : `Imported · ${n.text}` }
 }
 
 function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {

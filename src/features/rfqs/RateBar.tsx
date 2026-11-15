@@ -54,7 +54,7 @@ export function RateBar({ entries }: { entries: readonly RateBarEntry[] }) {
                 title={rateBarNote(e)}
               >
                 {e.staleness === 'stale' ? <Icon icon={TriangleAlert} size="chip" /> : null}
-                <b className="font-mono font-semibold tabular-nums">{`${e.currency} ${formatRate(e.ratePkr)}`}</b>
+                <b className="num font-semibold">{`${e.currency} ${formatRate(e.ratePkr)}`}</b>
                 {e.staleness === 'stale' ? <span>{`${e.ageDays} days old`}</span> : null}
               </span>
             )}

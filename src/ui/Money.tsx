@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { CircleAlert, Clock, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
@@ -19,6 +19,7 @@ import {
   type PaisaMode,
 } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
+import { fitEms } from '@/ui/moneyFit'
 
 /*
  * Money (D08 section 03). Rules, all from the design system:
@@ -32,7 +33,7 @@ import { formatDay } from '@/lib/formatDay'
  *    typed, with the dashed warning chip ("Is GST included?"). Nothing here converts or hides either.
  */
 /** `kpi`: the Forest headline figure (proposal .qb-kpi): the kpi step, heavy, as on the Money hub, Profitability and the credit card. */
-type Size = 'sm' | 'base' | 'lg' | 'xl' | 'display' | 'kpi'
+type Size = 'sm' | 'base' | 'lg' | 'xl' | 'display' | 'kpi' | 'hero'
 const SIZE: Record<Size, string> = {
   sm: 'text-sm',
   base: 'text-base',
@@ -40,8 +41,13 @@ const SIZE: Record<Size, string> = {
   xl: 'text-xl tracking-snug',
   display: 'text-display font-medium tracking-tight',
   kpi: 'text-kpi font-heavy tracking-snug',
+  hero: 'text-hero font-heavy tracking-tight',
 }
-const CCY_SIZE: Record<Size, string> = { sm: 'text-xs', base: 'text-xs', lg: 'text-xs', xl: 'text-xs', display: 'text-base', kpi: 'text-sm' }
+const CCY_SIZE: Record<Size, string> = { sm: 'text-xs', base: 'text-xs', lg: 'text-xs', xl: 'text-xs', display: 'text-base', kpi: 'text-sm', hero: 'text-lg' }
+/** The size tokens behind each step, for `fit` (the figure never grows past its own step). */
+const SIZE_VAR: Record<Size, string> = { sm: 'sm', base: 'base', lg: 'lg', xl: 'xl', display: 'display', kpi: 'kpi', hero: 'hero' }
+const CCY_VAR: Record<Size, string> = { sm: 'xs', base: 'xs', lg: 'xs', xl: 'xs', display: 'base', kpi: 'sm', hero: 'lg' }
+
 
 export interface MoneyProps {
   value: Amount | null | undefined
@@ -60,6 +66,14 @@ export interface MoneyProps {
   strong?: boolean
   /** A statement line that is negative by design (a cost under "money out"): the minus is kept, the danger colour is not. */
   plainNegative?: boolean
+  /**
+   * Stat tiles and heroes (audit 1 blocker 2): the figure takes the full width it is given and its font size steps down from
+   * `size` (a container query) until the whole number fits, never below 16 px (the reading floor) and never breaking inside the
+   * digits; on a tile too narrow for both, "PKR" goes to the line above.
+   * The figure gives its box no width of its own (container size), so the tile must have one: a grid cell, a flex item with a
+   * basis, or a set width. A tile that is a shrinking flex item would collapse to its label.
+   */
+  fit?: boolean
   className?: string
 }
 
@@ -73,16 +87,28 @@ export function Money({
   mark = 'chip',
   strong,
   plainNegative,
+  fit,
   className,
 }: MoneyProps) {
   const missing = value === null || value === undefined
   const p = missing ? null : toPaisa(value)
   const negative = p !== null && p < 0n
+  const text = missing ? '' : formatPaisa(p as bigint, paisa)
+  const step = size ?? 'base'
+  const fitStyle =
+    fit && !missing
+      ? ({
+          '--fit-ems': String(fitEms(text)),
+          '--fit-max': `var(--text-${SIZE_VAR[step]})`,
+          '--fit-pre': prefix ? `calc(var(--text-${CCY_VAR[step]}) * 2.2 + 0.25rem)` : '0px',
+        } as CSSProperties)
+      : undefined
   return (
-    <span className={cn('inline-flex flex-wrap items-baseline gap-x-2', className)}>
+    <span className={cn(fit ? 'money-fit flex w-full min-w-0 flex-wrap items-baseline gap-x-2' : 'inline-flex flex-wrap items-baseline gap-x-2', className)} style={fitStyle}>
       <span
         className={cn(
-          'num whitespace-nowrap',
+          // fit: only the digits are kept together; on a tile too narrow for both, "PKR" sits on the line above the figure
+          fit ? 'num' : 'num whitespace-nowrap',
           size && SIZE[size],
           (strong || size === 'display') && size !== 'kpi' && 'font-medium',
           negative && !plainNegative && 'text-tone-danger-fg',
@@ -97,14 +123,16 @@ export function Money({
         ) : (
           <>
             {prefix ? <span className={cn('mr-1 font-sans font-regular text-fg-muted', size ? CCY_SIZE[size] : 'text-xs')}>PKR</span> : null}
+            {prefix && fit ? <wbr /> : null}
             <span
               data-provisional={provisional ? '' : undefined}
               className={cn(
+                fit && 'whitespace-nowrap',
                 provisional && 'underline decoration-dashed underline-offset-4',
                 provisional && (mark === 'chip' ? 'decoration-tone-warning-fg' : 'decoration-fg-muted'),
               )}
             >
-              {formatPaisa(p as bigint, paisa)}
+              {text}
             </span>
           </>
         )}

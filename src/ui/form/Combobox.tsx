@@ -141,7 +141,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
   return (
     <RadixPopover.Root open={showList}>
       <RadixPopover.Anchor asChild>
-        <div className="relative min-w-0">
+        <span className="relative block min-w-0">
       <input
         ref={node => {
           inputRef.current = node
@@ -175,7 +175,7 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
         }}
         className={cn(controlClass, className)}
       />
-        </div>
+        </span>
       </RadixPopover.Anchor>
       {/* A popper in a portal, so a dialog body's overflow cannot clip the list. Focus never leaves the input. */}
       <RadixPopover.Portal>

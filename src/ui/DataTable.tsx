@@ -15,6 +15,7 @@ import { TruncateTip } from '@/ui/Tooltip'
 import { useTableDensity } from '@/ui/useTableDensity'
 import { downloadCSV, generateCSV } from '@/lib/csvExport'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { SLOW_LOAD_TEXT, useSlowLoad } from '@/lib/useSlowLoad'
 import { paisaToFixed } from '@/lib/money'
 import {
   columnShowsPaisa,
@@ -250,6 +251,7 @@ function TableView<T>(props: DataTableProps<T>) {
   const hasError = !!error
   const errorAt = useMemo(() => (hasError ? new Date() : null), [hasError])
   const what = noun ?? label.toLowerCase()
+  const slow = useSlowLoad(!!loading)
 
   // ---- sort ---------------------------------------------------------------
   const [innerSort, setInnerSort] = useState<SortState | null>(props.defaultSort ?? null)
@@ -559,10 +561,11 @@ function TableView<T>(props: DataTableProps<T>) {
   }
 
   // The U07 Checkbox, drawn without a visible label (the aria-label names it). The padded wrapper keeps a 44px touch target.
+  // A div, not a span: the Checkbox draws a div (block content inside a span is invalid HTML, audit 1 minor 24).
   const checkbox = (checked: boolean | 'indeterminate', onChange: (shift: boolean) => void, aria: string) => (
-    <span className="-m-3 flex p-3">
+    <div className="-m-3 flex p-3">
       <Checkbox aria-label={aria} checked={checked} onClick={e => onChange(e.shiftKey)} />
-    </span>
+    </div>
   )
 
   const labelCols = firstTotal < 0 ? columns.length : firstTotal
@@ -680,7 +683,7 @@ function TableView<T>(props: DataTableProps<T>) {
           )}
         >
           <td role="cell" className={cn('flex min-h-touch gap-3 px-4', apart ? 'min-h-row-tall items-center py-2' : 'items-start py-3')}>
-            {selection ? <span className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</span> : null}
+            {selection ? <div className="pt-[0.125rem]">{checkbox(ticked, shift => toggleRow(id, shift), selection.rowLabel ? `Select ${selection.rowLabel(row)}` : 'Select row')}</div> : null}
             <div className="min-w-0 flex-1">
               {mobileRow(row)}
               {isOpen ? (
@@ -871,7 +874,11 @@ function TableView<T>(props: DataTableProps<T>) {
       {toolbarNode || exportCsv ? (
         <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : ownToolbar ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
-          {loading ? <span className="text-xs text-fg-muted">{`Loading ${what}`}</span> : null}
+          {loading ? (
+            <span className="text-xs text-fg-muted" data-slow={slow || undefined}>
+              {slow ? SLOW_LOAD_TEXT : `Loading ${what}`}
+            </span>
+          ) : null}
           {densityOn ? (
             <SegmentedControl
               aria-label="Density"

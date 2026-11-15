@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Camera, Check, CircleAlert, Trash2, X } from 'lucide-react'
+import { Camera, Check, CircleAlert, ReceiptText, Trash2, X } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { NoAccessPage } from '@/app/pages/NoAccessPage'
@@ -59,6 +59,8 @@ function MyClaims() {
   const [visitId, setVisitId] = useState('')
   const visitTouched = useRef(false)
   const dateId = useId()
+  const jobId = useId()
+  const visitFieldId = useId()
   const [photo, setPhoto] = useState<AddedFile | null>(null)
   const [error, setError] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
@@ -129,14 +131,16 @@ function MyClaims() {
   // calendar button's name does not join the field's.
   const dateField = (
     <div className="grid min-w-0 gap-2">
-      <label htmlFor={dateId}>{label('Date')}</label>
+      <label htmlFor={dateId} className="flex">{label('Date')}</label>
       <DateInput id={dateId} value={spentOn} max={today} onChange={setSpentOn} className="text-base max-md:h-touch" />
     </div>
   )
+  // The select's wrapper is a div (its chevron), so the label is its own element tied by id: no block inside a <label> (audit 24).
   const jobField = (
-    <label className="grid min-w-0 gap-2">
-      {label('Job', true)}
+    <div className="grid min-w-0 gap-2">
+      <label htmlFor={jobId} className="flex">{label('Job', true)}</label>
       <NativeSelect
+        id={jobId}
         value={orderId}
         onChange={e => {
           visitTouched.current = true
@@ -153,13 +157,14 @@ function MyClaims() {
           </option>
         ))}
       </NativeSelect>
-    </label>
+    </div>
   )
   const visitField =
     (visits.data ?? []).length > 0 ? (
-      <label className="grid min-w-0 gap-2">
-        {label('Which visit?', true)}
+      <div className="grid min-w-0 gap-2">
+        <label htmlFor={visitFieldId} className="flex">{label('Which visit?', true)}</label>
         <NativeSelect
+          id={visitFieldId}
           value={visitId}
           onChange={e => {
             visitTouched.current = true
@@ -175,7 +180,7 @@ function MyClaims() {
             </option>
           ))}
         </NativeSelect>
-      </label>
+      </div>
     ) : null
   const photoButton =
     photo && !photo.error ? (
@@ -281,7 +286,7 @@ function MyClaims() {
           </div>
         ) : (claims.data ?? []).length === 0 ? (
           <div className={cn(CARD, 'p-card')}>
-            <EmptyState title="Nothing yet">Submitted claims and their approval status appear here.</EmptyState>
+            <EmptyState icon={ReceiptText} title="Nothing yet">Submitted claims and their approval status appear here.</EmptyState>
           </div>
         ) : (
           <ul className={cn(CARD, 'divide-y overflow-clip')}>

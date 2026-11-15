@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from '@/app/ErrorBoundary'
 import { activeLink, navItemForPath, railLinks, type CountKey } from '@/app/navConfig'
@@ -20,6 +20,7 @@ import { preloadPopover } from '@/ui/popoverStore'
 import { preloadDialog } from '@/ui/dialogStore'
 import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
+import { useKeyboardScroll } from '@/app/shell/useKeyboardScroll'
 
 /*
  * The top bar's counts read the whole Today list (a dozen requests). They load, with the Today rules, once the page has its
@@ -106,6 +107,8 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   const title = phoneTitle(pathname) ?? section ?? 'Q-Tech CRM'
 
   useRouteFocus(pathname, section)
+  const mainRef = useRef<HTMLElement>(null)
+  useKeyboardScroll(mainRef)
 
   return (
     <div className="grid h-dvh grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] bg-canvas md:grid-cols-[auto_minmax(0,1fr)] md:grid-rows-[auto_minmax(0,1fr)]">
@@ -118,7 +121,7 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       <Rail user={user} counts={badges} dots={dots} collapsed={collapsed} onToggle={toggleRail} />
       <TopBar user={user} onSearch={palette.open} />
       <MobileBar user={user} title={title} onSearch={palette.open} />
-      <main id="main" tabIndex={-1} className="relative min-h-0 min-w-0 overflow-y-auto focus:outline-none">
+      <main ref={mainRef} id="main" tabIndex={-1} className="relative min-h-0 min-w-0 overflow-y-auto focus:outline-none">
         <ErrorBoundary key={pathname} variant="inline">
           <NavCountsContext.Provider value={nav.ready ? counts : null}>
             <Outlet />

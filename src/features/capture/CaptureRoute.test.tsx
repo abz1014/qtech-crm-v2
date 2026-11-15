@@ -18,8 +18,9 @@ const job = (key: string, over: Record<string, unknown> = {}) => ({
   key, kind: 'order', rfqId: null, orderId: null, companyId: 'c', companyName: `Company ${key}`, siteName: null, ownerId: 'someone', ownerName: null,
   items: `Part of ${key}`, stage: 'work', stageDetail: null, isHistory: false, lastActivityOn: '2026-10-01', repeatOf: null, cancelledOrders: 0, engineerIds: [], ...over,
 })
+const listFails = vi.hoisted(() => ({ on: false, refetch: vi.fn() }))
 vi.mock('@/features/jobs/hooks', () => ({
-  useJobsList: () => ({
+  useJobsList: () => listFails.on ? { isPending: false, isError: true, data: undefined, refetch: listFails.refetch } : ({
     isPending: false,
     isError: false,
     data: [
@@ -123,6 +124,30 @@ describe('Capture route: Photo or note with nothing shared', () => {
     await user.type(screen.getByLabelText('Find the job'), 'Harbour')
     await user.click(await screen.findByRole('button', { name: /Job 139/ }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139?shared=oldnull'))
+  })
+
+  it('when the job list cannot be read it says so with Try again, instead of leaving a gap (audit 5)', async () => {
+    listFails.on = true
+    try {
+      const user = userEvent.setup()
+      render(
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ali', role: 'engineer' } }}>
+          <ToastProvider>
+            <MemoryRouter initialEntries={['/capture']}>
+              <Routes>
+                <Route path="/capture" element={<CaptureRoute />} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
+        </SessionProvider>,
+      )
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent('Your jobs could not be loaded. Search above, or try again.')
+      await user.click(within(alert).getByRole('button', { name: 'Try again' }))
+      expect(listFails.refetch).toHaveBeenCalledTimes(1)
+    } finally {
+      listFails.on = false
+    }
   })
 
   it('a share that is gone says shared items are kept up to 7 days and that signing out clears them (live bug 48)', async () => {

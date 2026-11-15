@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 import { Margin, Money, MoneyFx, NetGstGross } from '@/ui/Money'
+import { fitEms } from '@/ui/moneyFit'
 import { AfterDrawings, ExactEquation, SumBar } from '@/ui/SumBar'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { StatusText } from '@/ui/StatusText'
@@ -178,5 +179,38 @@ describe('SumBar headline (approved mockup: whole rupees; exact paisa lives in t
     const parts = [{ amount: '2280635.60', label: 'net' }, { amount: '410514.40', label: 'GST' }, { amount: '150000', label: 'not yet split' }]
     expect(text(<ExactEquation total="2841150" parts={parts} />)).toBe('2,841,150 = 2,280,635.60 net + 410,514.40 GST + 150,000 not yet split')
     expect(text(<ExactEquation total="2841151" parts={parts} />)).toContain('parts add to 2,841,150')
+  })
+})
+
+describe('Money fit (audit 1 blocker 2: big amounts in tiles)', () => {
+  it('fills its tile and steps the size down by the figure width; the digits never break', () => {
+    const { container } = render(<Money value="104116750088" size="kpi" fit />)
+    const outer = container.firstElementChild as HTMLElement
+    expect(outer.className.split(/\s+/)).toEqual(expect.arrayContaining(['money-fit', 'w-full', 'min-w-0']))
+    expect(outer.style.getPropertyValue('--fit-ems')).toBe(String(fitEms('104,116,750,088')))
+    expect(outer.style.getPropertyValue('--fit-max')).toBe('var(--text-kpi)')
+    expect(outer.style.getPropertyValue('--fit-pre')).toContain('var(--text-sm)')
+    const num = outer.querySelector('.num') as HTMLElement
+    expect(num.className).not.toMatch(/overflow-wrap|break-all|break-words/)
+    // the digits stay on one line; only "PKR" may go to the line above
+    const digits = Array.from(num.querySelectorAll('span')).find(e => e.textContent === '104,116,750,088') as HTMLElement
+    expect(digits.className.split(/\s+/)).toContain('whitespace-nowrap')
+  })
+
+  it('a longer figure needs more ems; without fit nothing changes', () => {
+    expect(fitEms('104,116,750,088')).toBeGreaterThan(fitEms('1,250'))
+    expect(fitEms('1,250')).toBe(3)
+    const { container } = render(<Money value="1250" size="kpi" />)
+    const outer = container.firstElementChild as HTMLElement
+    expect(outer.className).not.toContain('money-fit')
+    expect(outer.getAttribute('style')).toBeNull()
+  })
+
+  it('hero size: the hero step, PKR prefix at the lg step', () => {
+    const { container } = render(<Money value="5000" size="hero" fit />)
+    const outer = container.firstElementChild as HTMLElement
+    expect(outer.style.getPropertyValue('--fit-max')).toBe('var(--text-hero)')
+    expect(outer.querySelector('.num')?.className).toContain('text-hero')
+    expect(outer.textContent).toBe('PKR5,000')
   })
 })

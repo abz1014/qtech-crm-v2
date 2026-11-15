@@ -52,7 +52,7 @@ function Price({ fact, source }: { fact: PriceFact; source?: boolean }) {
   return (
     <>
       <p className="flex flex-wrap items-baseline gap-x-2">
-        <span className="font-mono text-lg font-bold tabular-nums">{fact.amount}</span>
+        <span className="num text-lg font-bold">{fact.amount}</span>
         <span className="text-xs text-fg-muted">each</span>
       </p>
       {fact.pkr ? (
@@ -89,7 +89,7 @@ function EvidenceView({ block }: { block: EvidenceBlock }) {
       <ul className="m-0 list-none p-0">
         {block.orders.map((o, i) => (
           <li key={`${i}-${o.ref}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] gap-3 border-t px-4 py-2 text-sm first:border-t-0" data-evidence-order>
-            <span className="font-mono text-xs font-medium tabular-nums">{o.ref}</span>
+            <span className="num text-xs font-medium">{o.ref}</span>
             <span className="grid min-w-0 gap-px">
               <span className="text-pretty">{o.what}</span>
               {o.when ? <span className="num text-xs text-fg-muted">{o.when}</span> : null}

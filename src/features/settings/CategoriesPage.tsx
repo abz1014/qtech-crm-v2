@@ -277,12 +277,13 @@ function GroupSection({
   const headId = `grp-${s.group.id}`
   return (
     <section aria-labelledby={headId} data-group={s.group.name} className={cn(CARD, 'overflow-hidden')}>
-      <header className="flex min-h-row items-center gap-3 border-b bg-canvas py-1 pl-card pr-2">
+      <header className="flex min-h-row items-center gap-x-3 border-b bg-canvas py-1 pl-card pr-2 max-md:flex-wrap max-md:pb-2">
         <h2 id={headId} className="type-section min-w-0 flex-1 [overflow-wrap:break-word]">
           {s.group.name}
           {kindNote(s.group) ? <span className="block text-base font-regular text-fg-muted md:ml-3 md:inline">{kindNote(s.group)}</span> : null}
         </h2>
-        <span className="num shrink-0 text-base font-medium" data-testid="group-total">
+        {/* phones: the total takes its own line under the name, so the name never breaks inside a word */}
+        <span className="num shrink-0 text-base font-medium max-md:order-last max-md:basis-full" data-testid="group-total">
           PKR {amountText(s.monthTotal)}
           <span className="ml-2 font-regular text-fg-muted">this month</span>
         </span>

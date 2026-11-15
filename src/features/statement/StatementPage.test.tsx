@@ -97,4 +97,26 @@ describe('Comparative statement layout (live bug 7: nothing scrolls the page sid
     expect(screen.queryByRole('table')).toBeNull()
     expect(document.querySelectorAll('li[data-statement-row]')).toHaveLength(2)
   })
+
+  it('every amount is in the sans with tabular figures (num), never monospace (owner rule)', () => {
+    const { unmount } = render(<ItemSection sec={statement.sections[0]} sort={DEFAULT_SORT} onSort={() => undefined} showNoReply compact={false} />)
+    const amounts = screen.getAllByRole('cell').filter(c => /9,000|100\.00/.test(c.textContent ?? ''))
+    expect(amounts.length).toBeGreaterThan(0)
+    for (const c of amounts) expect(c.className.split(' ')).toContain('num')
+    unmount()
+    render(<Totals totals={statement.totals} quotedAny compact />)
+    expect(document.querySelector('.font-mono')).toBeNull()
+  })
+
+  it('a phone card stacks each label over its value when the card is narrow, and an unbroken name may wrap anywhere', () => {
+    render(<ItemSection sec={statement.sections[0]} sort={DEFAULT_SORT} onSort={() => undefined} showNoReply compact />)
+    const card = document.querySelector('li[data-statement-row]') as HTMLElement
+    expect(card.className).toContain('grid-cols-[minmax(0,1fr)]')
+    expect(card.className).toContain('[container-type:inline-size]')
+    const dl = card.querySelector('dl') as HTMLElement
+    expect(dl.className).toMatch(/^grid grid-cols-\[minmax\(0,1fr\)\] /)
+    expect(dl.className).toContain('[@container(min-width:18.5em)]:grid-cols-[minmax(0,8rem)_minmax(0,1fr)]')
+    expect(card.querySelector('p')?.className).toContain('[overflow-wrap:anywhere]')
+    expect(card.querySelector('.font-mono')).toBeNull()
+  })
 })

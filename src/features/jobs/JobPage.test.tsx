@@ -250,6 +250,37 @@ describe('Job page', () => {
     )
     expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
   })
+
+  it('while it loads and when it cannot load, the page still has its one h1, and the skeleton never outgrows a phone', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u1', name: 'F', role: 'admin' } }}>
+          <ToastProvider><MemoryRouter initialEntries={['/jobs/139']}>
+            <Routes>
+              <Route path="/jobs/*" element={<JobsScreen />} />
+            </Routes>
+          </MemoryRouter></ToastProvider>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    const loading = await screen.findByRole('status', { name: 'Loading job' })
+    expect(screen.getByRole('heading', { level: 1, name: 'Job 139' })).toBeInTheDocument()
+    // a bare grid sizes its track to the widest bar (24rem): every grid in the skeleton has a minmax(0,1fr) track
+    for (const g of [loading, ...loading.querySelectorAll('div.grid')]) expect(g.className).toContain('grid-cols-[minmax(0,1fr)]')
+    expect(await screen.findByText('Could not open this job')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 1 }).map(h => h.textContent)).toEqual(['Job 139'])
+  })
+
+  it('an imported job that still has a step says who acts next in its chips (grey, never "Nothing to do" over a button)', async () => {
+    const { container } = mount(job({ key: 'O-2', kind: 'direct', rfqId: null, stage: 'ordered', stageDetail: 'supplier order to place', imported: true }), 'admin')
+    const hero = await waitFor(() => container.querySelector('[data-stage-block]') as HTMLElement)
+    expect(hero).toHaveTextContent('Imported · Place the supplier order')
+    const chip = hero.querySelector('[data-tone]') as HTMLElement
+    expect(chip).toHaveTextContent('Needs action')
+    expect(chip).toHaveAttribute('data-tone', 'inert')
+    expect(container.textContent).not.toContain('Nothing to do')
+  })
 })
 
 const phoneMedia = () => {
