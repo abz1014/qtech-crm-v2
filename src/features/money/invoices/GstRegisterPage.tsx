@@ -194,8 +194,8 @@ export function GstRegisterPage() {
         sortable: true,
         value: r => r.number,
         // Audit 1 (item 10): the register fits its card from 1024 up, so nothing scrolls sideways. Below 1280 the number and day
-        // ride under the customer (this column hides); a long number is cut with the whole of it in the title.
-        hideClass: 'hidden xl:table-cell',
+        // ride under the customer (this column is left out, so the month rows still span the right columns); a long number is cut
+        // with the whole of it in the title.
         cell: r => (
           <span className="grid gap-px">
             <span className="flex min-w-0 items-center gap-2">
@@ -234,11 +234,9 @@ export function GstRegisterPage() {
                 )}
                 <KindTag r={r} />
                 {r.invoiceDate ? <span className="num whitespace-nowrap">· {shortDay(r.invoiceDate)}</span> : null}
-                {r.orderNumber !== null ? <span className="num whitespace-nowrap">· {orderRef(r.orderNumber)}</span> : null}
               </span>
-            ) : r.orderNumber !== null ? (
-              <span className="num text-sm text-fg-2">{orderRef(r.orderNumber)}</span>
             ) : null}
+            {r.orderNumber !== null ? <span className="num text-sm text-fg-2">{orderRef(r.orderNumber)}</span> : null}
           </span>
         ),
       },
@@ -285,7 +283,8 @@ export function GstRegisterPage() {
     ]
     // Sales stamp too (M08 sends them the TCS and FBR items; the 0020 RPCs allow it): they keep the ticks, the toggles and the
     // stamps, and only lose the Net and GST columns, which are the admin's filing figures.
-    return isAdmin ? cols : cols.filter(c => c.id !== 'net' && c.id !== 'gst')
+    const shown = belowXl ? cols.filter(c => c.id !== 'number') : cols
+    return isAdmin ? shown : shown.filter(c => c.id !== 'net' && c.id !== 'gst')
     // a ticked row has the selected background, where the amber text is below 4.5:1, so it reads in the body colour there
   }, [isAdmin, belowXl, below2xl])
 
