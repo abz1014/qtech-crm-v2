@@ -299,6 +299,10 @@ for (const r of AUDIT_ROUTES) {
                 let release: () => void = () => undefined
                 if (state === 'empty') await makeEmpty(page)
                 if (state === 'error') await makeError(page)
+                // Home and Weekly review show the Today read the shell's nav counts made a moment ago (features/today/hooks.ts
+                // JUST_READ_MS, 10 s): opened at once they rightly make no request, so nothing of theirs failed. Wait the window out,
+                // so the screen reads again and its error state is what is measured (L5, audit round 1 false positive).
+                if (state === 'error' && path.startsWith('/todo')) await page.waitForTimeout(10_500)
                 if (state === 'loading') release = await makeLoading(page)
                 await spaGo(page, path)
                 if (state === 'loading') await page.waitForTimeout(1_200)

@@ -26,10 +26,10 @@ export function TargetTile({ today, className }: { today: string; className?: st
   const [open, setOpen] = useState(false)
   const panel = useId()
 
-  if (q.isPending) return <div className={cn('grid gap-2 p-4', className)} aria-busy="true"><Skeleton className="h-4 w-1/2" /><Skeleton className="h-6 w-2/3" /><Skeleton className="h-2 w-full" /></div>
+  if (q.isPending) return <div className={cn('grid gap-2 p-card', className)} aria-busy="true"><Skeleton className="h-4 w-1/2" /><Skeleton className="h-6 w-2/3" /><Skeleton className="h-2 w-full" /></div>
   if (q.isError) {
     return (
-      <div className={cn('p-4 text-sm text-fg-muted', className)}>
+      <div className={cn('p-card text-sm text-fg-muted', className)}>
         Your target could not be read. <button type="button" className="underline" onClick={() => void q.refetch()}>Try again</button>
       </div>
     )
@@ -39,7 +39,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
     const quarter = q.data?.quarter ?? Math.floor((Number(today.slice(5, 7)) - 1) / 3) + 1
     // One small line, not a block: with no target there is nothing to show, and the list above needs the room.
     return (
-      <section aria-label={`Your Q${quarter} target`} data-target-empty className={cn('px-4 py-2 text-sm text-fg-muted', className)}>
+      <section aria-label={`Your Q${quarter} target`} data-target-empty className={cn('px-card py-2 text-sm text-fg-muted', className)}>
         No Q{quarter} target set.{' '}
         {isAdmin ? (
           <Link to="/settings/targets" className="inline-flex min-h-touch items-center font-medium text-primary underline underline-offset-2">
@@ -52,7 +52,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
     )
   }
   return (
-    <section aria-label={`Your ${w.label} target`} className={cn('grid grid-cols-[minmax(0,1fr)] gap-2 p-4', className)}>
+    <section aria-label={`Your ${w.label} target`} className={cn('grid grid-cols-[minmax(0,1fr)] gap-2 p-card', className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <p className="whitespace-nowrap text-sm text-fg-muted">Your {w.label} target <InfoTip label="About your target">Money received this quarter on your orders, without GST. Set by the admin.</InfoTip></p>
         <Status w={w} />
@@ -62,8 +62,13 @@ export function TargetTile({ today, className }: { today: string; className?: st
         <span className="num text-xs text-fg-muted">of {pkr(w.target)}</span>
       </p>
       <div className="grid gap-1">
-        <p className="num text-xs" style={{ paddingLeft: `min(${w.markerPct}%, calc(100% - 9rem))` }}>
-          on pace PKR {millions(w.onPace)}
+        {/* The label sits over the pace marker and never leaves the bar: placed at the marker's share of the bar, then pulled back by
+            the same share of its own width, so at 0 % it starts at the left edge and at 100 % it ends at the right one. */}
+        <p className="num relative text-xs">
+          <span aria-hidden="true" className="invisible">on pace</span>
+          <span className="absolute top-0 whitespace-nowrap" style={{ left: `${w.markerPct}%`, transform: `translateX(-${w.markerPct}%)` }}>
+            on pace PKR {millions(w.onPace)}
+          </span>
         </p>
         <div
           role="img"
@@ -104,7 +109,7 @@ export function TargetTile({ today, className }: { today: string; className?: st
           <Row k="On pace today" v={pkr(w.onPace)} />
           <Row k="Achieved so far" v={`− ${pkr(w.achieved)}`} />
           <div className="my-1 border-t" />
-          <Row k={w.status === 'ahead' ? 'Ahead of pace' : 'Behind pace'} v={pkr(w.status === 'ahead' ? w.ahead : w.behind)} strong />
+          <Row k={w.status === 'ahead' ? 'Ahead of pace' : 'Behind pace'} v={pkr(w.status === 'ahead' ? w.ahead : w.behind)} strong={w.status === 'behind' ? 'warning' : 'success'} />
           <p className="mt-1 text-fg-muted">
             Net cash received by you since {w.startText}, GST left out. Shown to the nearest PKR 10,000: exact on pace {rupees(w.onPaceExact)}
             {w.status === 'ahead' ? `, ahead ${rupees(w.aheadExact)}` : `, behind ${rupees(w.behindExact)}`}.
@@ -119,24 +124,25 @@ export function TargetTile({ today, className }: { today: string; className?: st
 function Status({ w }: { w: TargetWorking }) {
   if (w.status === 'ahead') {
     return (
-      <span className="num inline-flex items-center gap-1 whitespace-nowrap text-xs text-tone-success-fg sm:text-sm">
-        <Icon icon={CircleCheck} size="sm" /> {pkr(w.ahead)} ahead of pace
+      <span className="inline-flex min-w-0 items-center gap-1 text-xs text-tone-success-fg sm:text-sm">
+        <Icon icon={CircleCheck} size="sm" /> <span className="num min-w-0">{pkr(w.ahead)} ahead of pace</span>
       </span>
     )
   }
   if (w.status === 'on_pace') return <span className="inline-flex items-center gap-1 text-sm text-tone-success-fg"><Icon icon={CircleCheck} size="sm" /> On pace</span>
   return (
-    <span className="num inline-flex items-center gap-1 whitespace-nowrap text-xs text-tone-warning-fg sm:text-sm">
-      <Icon icon={Clock} size="sm" /> {pkr(w.behind)} behind pace
+    <span className="inline-flex min-w-0 items-center gap-1 text-xs text-tone-warning-fg sm:text-sm">
+      <Icon icon={Clock} size="sm" /> <span className="num min-w-0">{pkr(w.behind)} behind pace</span>
     </span>
   )
 }
 
-function Row({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
+function Row({ k, v, strong }: { k: string; v: string; strong?: 'success' | 'warning' }) {
   return (
-    <div className={cn('flex justify-between gap-3', strong && 'font-medium text-tone-warning-fg')}>
-      <span>{k}</span>
-      <span className="num">{v}</span>
+    // The words wrap; the figure never does, so "PKR 8,000,000" stays one figure at 320 (audit polish).
+    <div className={cn('flex items-baseline justify-between gap-3', strong && 'font-medium', strong === 'success' && 'text-tone-success-fg', strong === 'warning' && 'text-tone-warning-fg')}>
+      <span className="min-w-0">{k}</span>
+      <span className="num shrink-0 whitespace-nowrap text-right">{v}</span>
     </div>
   )
 }

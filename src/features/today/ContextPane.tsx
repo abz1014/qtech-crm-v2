@@ -302,28 +302,32 @@ export function ContextPane({ item, data, today, copied, onCopied, onReleased, c
       ) : null}
 
       {facts.length > 0 ? (
-        <dl className={cn('grid grid-cols-2 overflow-hidden rounded-panel border bg-surface', !compact && (facts.length < 3 ? '' : facts.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'))}>
-          {facts.map(f => (
-            <div
-              key={f.label}
-              className={cn(
-                'grid content-start gap-1 border-b border-r p-3 [&:last-child:nth-child(odd)]:col-span-2 [&:last-child:nth-child(odd)]:border-r-0', // an odd last cell fills the row, no empty cell
-                compact || facts.length < 3
-                  ? '[&:nth-child(2n)]:border-r-0'
-                  : facts.length === 3
-                    ? '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(3n)]:border-r-0 lg:[&:last-child:nth-child(odd)]:col-span-1'
-                    : '[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:[&:nth-child(4n)]:border-r-0 lg:[&:last-child:nth-child(odd)]:col-span-1',
-              )}
-            >
-              <dt className={cn('flex items-center gap-2 text-xs', f.tone === 'warning' ? 'text-tone-warning-fg' : f.tone === 'success' ? 'text-tone-success-fg' : 'text-fg-muted')}>
-                {f.icon && !compact ? <Icon icon={f.icon} size="sm" /> : null}
-                {compact ? (f.short ?? f.label) : f.label}
-              </dt>
-              <dd className={cn('num text-base font-medium', f.tone === 'danger' && 'text-tone-danger-fg')}>{f.value}</dd>
-              {f.sub ? <dd className="text-xs text-fg-muted">{f.sub}</dd> : null}
-            </div>
-          ))}
-        </dl>
+        // The columns follow the card's own width, not the window's (audit 19): at 1024 and 1440 the pane is a ~26rem card, where four
+        // columns cut "Reminded / not yet". Two columns until the card holds three (27rem) or four (36rem) cells without cutting.
+        <div className="[container-type:inline-size]">
+          <dl className={cn('grid grid-cols-2 overflow-hidden rounded-panel border bg-surface', !compact && (facts.length < 3 ? '' : facts.length === 3 ? '[@container(min-width:27rem)]:grid-cols-3' : '[@container(min-width:36rem)]:grid-cols-4'))}>
+            {facts.map(f => (
+              <div
+                key={f.label}
+                className={cn(
+                  'grid content-start gap-1 border-b border-r p-3 [&:last-child:nth-child(odd)]:col-span-2 [&:last-child:nth-child(odd)]:border-r-0', // an odd last cell fills the row, no empty cell
+                  compact || facts.length < 3
+                    ? '[&:nth-child(2n)]:border-r-0'
+                    : facts.length === 3
+                      ? '[&:nth-child(2n)]:border-r-0 [@container(min-width:27rem)]:[&:nth-child(2n)]:border-r [@container(min-width:27rem)]:[&:nth-child(3n)]:border-r-0 [@container(min-width:27rem)]:[&:last-child:nth-child(odd)]:col-span-1'
+                      : '[&:nth-child(2n)]:border-r-0 [@container(min-width:36rem)]:[&:nth-child(2n)]:border-r [@container(min-width:36rem)]:[&:nth-child(4n)]:border-r-0 [@container(min-width:36rem)]:[&:last-child:nth-child(odd)]:col-span-1',
+                )}
+              >
+                <dt className={cn('flex items-center gap-2 text-xs', f.tone === 'warning' ? 'text-tone-warning-fg' : f.tone === 'success' ? 'text-tone-success-fg' : 'text-fg-muted')}>
+                  {f.icon && !compact ? <Icon icon={f.icon} size="sm" /> : null}
+                  {compact ? (f.short ?? f.label) : f.label}
+                </dt>
+                <dd className={cn('num text-base font-medium', f.tone === 'danger' && 'text-tone-danger-fg')}>{f.value}</dd>
+                {f.sub ? <dd className="text-xs text-fg-muted">{f.sub}</dd> : null}
+              </div>
+            ))}
+          </dl>
+        </div>
       ) : null}
 
       {item.escalation === 'close_no_reply' && !justChased ? <CloseNoReply item={item} today={today} /> : null}
