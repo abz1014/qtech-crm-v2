@@ -244,7 +244,8 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
   return (
     <RadixPopover.Root open={showList}>
       <RadixPopover.Anchor asChild>
-        <div className="relative min-w-0">
+        {/* a span (block): the picker often sits inside a <label>, where a div is not allowed (audit 1, item 24) */}
+        <span className="relative block min-w-0">
           <input
             ref={node => {
               inputRef.current = node
@@ -293,7 +294,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
           ) : chevron ? (
             <Icon icon={ChevronDown} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted" />
           ) : null}
-        </div>
+        </span>
       </RadixPopover.Anchor>
       <RadixPopover.Portal>
         <RadixPopover.Content

@@ -8,8 +8,7 @@ import { Button } from '@/ui/Button'
 import { buttonStyles } from '@/ui/buttonStyles'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
-import { cn } from '@/lib/utils'
-import { FIT_BOX, fitFigure } from '@/features/money/fit'
+import { Money } from '@/ui/Money'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { OwedToStaff } from '@/features/money/expenses/OwedToStaff'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
@@ -73,15 +72,15 @@ function Blocks({ f }: { f: MoneyHomeFigures }) {
         <Block
           to="/money/reports/in-out"
           label={`Received in ${f.monthName}`}
-          value={f.received ? rs(f.received.total) : null}
+          value={f.received ? f.received.total : null}
           sub={f.received ? `${countWord(f.received.count, 'payment')}, GST included` : null}
         />
-        <Block to="/money/expenses" label={`Paid out in ${f.monthName}`} value={f.paidOut ? rs(f.paidOut.total) : null} sub={f.paidOut ? 'by the day paid' : null} />
+        <Block to="/money/expenses" label={`Paid out in ${f.monthName}`} value={f.paidOut ? f.paidOut.total : null} sub={f.paidOut ? 'by the day paid' : null} />
         <Block
           to="/money/reports/owe"
           label="Payable to suppliers"
           prefix="about"
-          value={f.owed ? rs(f.owed.total) : null}
+          value={f.owed ? f.owed.total : null}
           sub={f.owed ? countWord(f.owed.count, 'supplier order') : null}
         />
       </div>
@@ -93,7 +92,7 @@ function Blocks({ f }: { f: MoneyHomeFigures }) {
 function Hero({ f }: { f: MoneyHomeFigures }) {
   const t = f.toCollect
   return (
-    <section data-surface="navy" aria-labelledby="money-hero-h" className={cn(FIT_BOX, 'grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2')}>
+    <section data-surface="navy" aria-labelledby="money-hero-h" className="grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="grid min-w-0 flex-[1_1_14rem] gap-1">
           <p className="text-sm font-card text-fg-2">To collect</p>
@@ -102,10 +101,10 @@ function Hero({ f }: { f: MoneyHomeFigures }) {
           </h2>
         </div>
         {t ? (
-          // The figure stays whole: it steps down from the hero size until it fits the card on one line (audit 1, blocker 2).
-          <p className="num text-hero font-heavy leading-tight text-lime-300" style={fitFigure(rs(t.total), 'var(--text-hero)', '3.5rem')}>
-            <span className="mr-2 text-lg font-card">PKR</span>
-            {rs(t.total)}
+          // The figure stays whole: Money's fit steps it down from the hero size until it fits its box (audit 1, blocker 2). The box has
+          // a basis of its own (a fitted figure gives none), so on a wide card it sits beside the title and on a phone under it.
+          <p className="flex min-w-0 flex-[1_1_18rem] md:justify-end">
+            <Money value={t.total} size="hero" paisa="never" fit className="text-lime-300 md:justify-end" />
           </p>
         ) : (
           <Skeleton className="h-[3rem] w-[14rem] max-w-full" />
@@ -135,23 +134,25 @@ function Hero({ f }: { f: MoneyHomeFigures }) {
   )
 }
 
-function Block({ to, label, value, prefix = 'PKR', sub }: { to: string; label: string; value: string | null; prefix?: string; sub: ReactNode }) {
+function Block({ to, label, value, prefix = 'PKR', sub }: { to: string; label: string; value: string | number | null; prefix?: 'PKR' | 'about'; sub: ReactNode }) {
   return (
     <Link
       to={to}
-      className={cn(
-        FIT_BOX,
-        'grid min-h-touch content-start gap-1 rounded-card border bg-surface p-card shadow-e1 transition-[box-shadow,border-color] duration-fast ease-out hover:border-line-strong hover:shadow-e2',
-      )}
+      className="grid min-h-touch min-w-0 content-start gap-1 rounded-card border bg-surface p-card shadow-e1 transition-[box-shadow,border-color] duration-fast ease-out hover:border-line-strong hover:shadow-e2"
     >
       <span className="text-base font-card text-fg-2">{label}</span>
       {value === null ? (
         <Skeleton className="h-[2.25rem] w-[10rem] max-w-full" />
       ) : (
-        <span className="num text-kpi font-heavy leading-tight tracking-snug" style={fitFigure(value, 'var(--text-kpi)', prefix === 'PKR' ? '3rem' : '3.75rem')}>
-          <span className="mr-2 text-base font-card">{prefix}</span>
-          {value}
-        </span>
+        // Money's fit: the tile is a grid cell (one per row under 480 px), the figure steps down from the kpi size to fit it whole.
+        prefix === 'PKR' ? (
+          <Money value={value} size="kpi" paisa="never" fit />
+        ) : (
+          <span className="flex min-w-0 items-baseline gap-2">
+            <span className="shrink-0 text-base font-card">{prefix}</span>
+            <Money value={value} size="kpi" paisa="never" prefix={false} fit />
+          </span>
+        )
       )}
       <span className="min-h-6 text-base text-fg-2">{sub}</span>
     </Link>

@@ -945,7 +945,7 @@ function PhoneCard({ row, index, categories, jobs, today, onPatch, onKey, onRemo
         <span aria-hidden="true" className="text-sm font-bold text-fg">Paid on</span>
         <label
           className={cn(
-            'relative inline-flex h-touch min-w-0 items-center gap-2 rounded-control border bg-surface px-3 text-base text-fg has-[:focus]:outline has-[:focus]:outline-2 has-[:focus]:outline-offset-2 has-[:focus]:outline-brand-green',
+            'relative inline-flex h-touch min-w-0 items-center gap-2 rounded-control border bg-surface px-3 text-base text-fg focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-green',
             'border-line-input',
             err && 'border-tone-danger-fg',
           )}
