@@ -380,6 +380,11 @@ export async function axe(page: Page, scope: string | null): Promise<Raw[]> {
   const res = await page.evaluate(
     async ({ tags, scope }) => {
       const ax = (window as unknown as { axe: { run: (ctx: unknown, opts: object) => Promise<{ violations: AxeResult[]; incomplete: AxeResult[] }> } }).axe
+      // Narrowed (audit 2, round 6): colours are measured at rest. A control that just became enabled (Team's Add person once the list
+      // settles) was read mid-way through its colour transition, still the disabled grey but no longer disabled. Running CSS
+      // transitions (not endless animations such as a skeleton's pulse) are let finish first, for at most a second.
+      const moving = document.getAnimations().filter(a => typeof CSSTransition !== 'undefined' && a instanceof CSSTransition && a.playState === 'running')
+      if (moving.length) await Promise.race([Promise.allSettled(moving.map(a => a.finished)), new Promise(r => setTimeout(r, 1000))])
       const ctx = scope && document.querySelector(scope) ? { include: [scope] } : document
       const r = await ax.run(ctx, { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations', 'incomplete'], elementRef: true, rules: { region: { enabled: !scope } } })
       const slim = (x: AxeResult[]) => x.map(v => ({ id: v.id, impact: v.impact, help: v.help, tags: v.tags, nodes: v.nodes.slice(0, 12).map(n => ({ target: n.target, failureSummary: n.failureSummary })) }))
