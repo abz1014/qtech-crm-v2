@@ -123,7 +123,7 @@ function AddQuestionsForm({ rfqId, inquiries, onDone }: { rfqId: string; inquiri
         <Button icon={MessageSquareText} disabled={lines.length === 0} busy={add.isPending} busyLabel="Adding" onClick={() => void submit()}>
           {lines.length > 1 ? `Add ${lines.length} questions` : 'Add question'}
         </Button>
-        <Button variant="quiet" onClick={onDone} disabled={add.isPending}>
+        <Button onClick={onDone} disabled={add.isPending}>
           Cancel
         </Button>
         {lines.length > 0 && inquiries.length > 0 ? <span className="min-w-0 basis-[10rem] text-sm text-fg-muted">Select the supplier who asked, or leave it as an own question.</span> : null}

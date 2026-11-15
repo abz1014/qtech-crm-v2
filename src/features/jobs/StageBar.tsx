@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Check, CircleAlert, Minus, X } from 'lucide-react'
+import { Building2, Check, CircleAlert, Minus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 import type { StepTone } from '@/lib/status'
@@ -22,10 +22,11 @@ const SEG: Record<StopState, string> = {
   future: 'bg-deep',
   none: 'bg-line',
   stopped: 'bg-line',
+  office: 'bg-line',
 }
 
 /** The state in words, for screen readers (the dot's mark and the label's weight carry it for the eye). */
-const STATE_WORD: Record<StopState, string> = { done: 'done', current: 'now', future: 'not yet', none: 'not part of this job', stopped: 'not reached' }
+const STATE_WORD: Record<StopState, string> = { done: 'done', current: 'now', future: 'not yet', none: 'not part of this job', stopped: 'not reached', office: 'with the office' }
 
 // Forest .qb-track: a filled forest dot with a tick (done), a ringed dot (now), an empty dot (not yet), dashed (not part of this job).
 const DOT: Record<StopState, string> = {
@@ -34,12 +35,14 @@ const DOT: Record<StopState, string> = {
   future: 'border-deep bg-surface text-fg-muted',
   none: 'border-dashed border-line-strong bg-deep text-fg-muted',
   stopped: 'border-tone-danger-fg bg-surface text-tone-danger-fg',
+  office: 'border-dashed border-line-strong bg-surface text-fg-muted',
 }
 
 function Mark({ s }: { s: StopView }) {
   // A heavy stroke (the mockup's 3): at 16 px the default 1.75 stroke is too faint to read as a tick on the forest dot.
   const Glyph = s.state === 'done' ? Check : s.state === 'none' ? Minus : s.state === 'stopped' ? X : null
   if (Glyph) return <Glyph aria-hidden="true" className="size-4 shrink-0" strokeWidth={3} />
+  if (s.state === 'office') return <Building2 aria-hidden="true" className="size-4 shrink-0" />
   if (s.state === 'current') return <span className="size-3 rounded-pill bg-brand-700" />
   return null
 }
@@ -70,6 +73,7 @@ export function StageTrack({ job }: { job: JobStanding }) {
             </span>
             {s.note ? <span className="min-w-0 text-sm text-tone-warning-fg [overflow-wrap:anywhere] max-md:hidden">{s.note}</span> : null}
             {s.state === 'none' ? <span className="text-sm text-fg-muted max-md:hidden">none</span> : null}
+            {s.state === 'office' ? <span className="text-sm text-fg-muted max-md:hidden">office</span> : null}
           </li>
         )
       })}
@@ -152,14 +156,17 @@ export function StageBlock({
 }) {
   const m = stageModel(job)
   const chip = CHIP[chipTone ?? tone]
-  const detail = m.ending ? null : sentences(m.detail)
   const title = text || (m.ending ?? m.label)
+  // a detail the title already says is not said again (audit 2: "Waiting for the customer to order" over "Waiting for the customer.")
+  const said = title.toLowerCase()
+  const detail = m.ending ? null : sentences((m.detail ?? '').split(', ').filter(p => !said.includes(p.trim().toLowerCase())).join(', ') || null)
   return (
     <>
       <section aria-label="Next step" data-stage-block data-surface="navy" className="mt-4 grid gap-4 rounded-card bg-hero p-card text-fg shadow-e2 md:mt-6">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <p className="text-base text-fg-2">{label}</p>
-          <span data-tone={tone} className="inline-flex min-h-chip items-center gap-1 rounded-pill border border-line-strong py-px pl-2 pr-3 text-xs font-card leading-none">
+          {/* the chip's colour follows its word: an imported job's "Needs action" is the same chip as any other (owner, audit 2) */}
+          <span data-tone={chipTone ?? tone} className="inline-flex min-h-chip items-center gap-1 rounded-pill border border-line-strong py-px pl-2 pr-3 text-xs font-card leading-none">
             <Icon icon={chip.icon} size="chip" className="size-icon-chip" />
             {chip.word}
           </span>

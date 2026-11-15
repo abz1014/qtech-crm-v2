@@ -260,7 +260,8 @@ function JobFirst() {
     <div className={COLUMN} data-testid="photo-or-note">
       <NoPrimary />
       <header className="grid gap-1">
-        <h1 className={TITLE}>
+        {/* the phone bar already says "Photo or note" (audit 2): the h1 is for screen readers there, as on every other page */}
+        <h1 className={cn(TITLE, 'max-md:sr-only')}>
           <TitleGlyph icon={Camera} />
           Photo or note
         </h1>

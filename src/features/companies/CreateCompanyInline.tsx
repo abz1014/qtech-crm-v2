@@ -91,7 +91,7 @@ export function CreateCompanyInline({
         <Button type="submit" form={sf.formId} variant={submitVariant} size="sm" icon={Check} busy={sf.pending} busyLabel="Creating">
           {sf.formError ? 'Try again' : 'Create and use'}
         </Button>
-        <Button variant="quiet" size="sm" onClick={onCancel} disabled={sf.pending}>
+        <Button size="sm" onClick={onCancel} disabled={sf.pending}>
           Cancel
         </Button>
         <span className="text-xs text-fg-muted">City and contact can wait. Add them from the company page later.</span>

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
+import { useScrollFade } from '@/ui/useScrollFade'
 import { MONEY_TABS, MORE_MONEY_PAGES, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PageHeader } from '@/ui/PageHeader'
@@ -46,7 +47,7 @@ export function MoneyFrame({
    * link above the h1 on a desktop ("< Lock a month"); on a phone the bar's own back arrow (one bar, UX audit 2026-10-19).
    */
   back?: { to: string; label: string }
-  /** What explains the title (an (i), a state chip), in the line under it. On a phone, where the h1 is the bar's, the title is drawn beside it so the (i) never points at nothing. */
+  /** What explains the title (an (i), a state chip): beside the h1 (PageHeader `meta`). On a phone, where the h1 is the bar's, the title is drawn beside it so the (i) never points at nothing. */
   titleMeta?: ReactNode
   /** The phone bar's title. Default "Money": on a phone the switcher row names the page, not the bar. */
   barTitle?: string
@@ -89,19 +90,8 @@ export function MoneyFrame({
         {/* The list-page head (spec 5.2): the page's own name as the one h1 on every Money page (audit 1, item 22), and its one green action. */}
         <PageHeader
           title={heading}
-          lede={
-            titleMeta ? (
-              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span aria-hidden="true" className="text-xl font-heavy tracking-snug text-fg md:hidden">
-                  {heading}
-                </span>
-                {lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
-                {titleMeta}
-              </span>
-            ) : (
-              (lede ?? <span className="max-md:hidden">All amounts in PKR</span>)
-            )
-          }
+          lede={lede ?? <span className="max-md:hidden">All amounts in PKR</span>}
+          meta={titleMeta}
           primary={actions}
           secondary={secondary}
         />
@@ -158,8 +148,16 @@ function DesktopTabs({ tabs, active, toOf }: { tabs: readonly MoneyTab[]; active
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   }, [active])
+  // where the strip is cut (768, 1024 beside the open rail), the cut edge fades
+  const fade = useScrollFade(ref, active)
   return (
-    <nav ref={ref} aria-label="Money views" className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden" data-testid="money-tabs">
+    <nav
+      ref={ref}
+      aria-label="Money views"
+      className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden"
+      style={fade}
+      data-testid="money-tabs"
+    >
       {tabs.map(t => (
         <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
       ))}
@@ -177,7 +175,7 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
         'inline-flex items-center transition-colors duration-fast ease-out',
         phone
           ? 'min-h-touch min-w-0 justify-center gap-1 rounded border px-1 text-center text-sm font-medium leading-tight'
-          : 'min-h-control shrink-0 gap-2 border-b-ring px-4 text-sm font-card',
+          : 'min-h-control shrink-0 gap-2 border-b-ring px-3 text-sm font-card xl:px-4',
         phone ? (on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg') : on ? 'border-primary font-heavy text-primary' : 'border-transparent text-fg-2 hover:text-fg',
       )}
     >

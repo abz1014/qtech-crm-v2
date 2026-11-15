@@ -116,7 +116,7 @@ export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved
   const sub = expense ? 'Edit expense' : [orderLabel, context?.legId ? context?.payeeName : null].filter(Boolean).join(' · ') || 'Money › Expenses'
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
-      <DialogContent icon={ReceiptText} title={expense ? 'Edit expense' : 'Add expense'} context={expense ? undefined : sub} size="md" className="md:w-[32.5rem]">
+      <DialogContent icon={ReceiptText} title={expense ? 'Edit expense' : 'Add expense'} context={expense ? undefined : sub} size="md" className={expense ? 'md:w-[36rem]' : 'md:w-[32.5rem]'}>
         {open ? (
           <ExpenseForm
             context={context}
@@ -607,11 +607,12 @@ function ExpenseFormReady({
           )
         ) : null}
         {expense && onHistory ? (
-          <Button variant="quiet" icon={HistoryIcon} onClick={onHistory}>
-            History
+          // from 768 the clock alone (its name is still read, and shown on hover), so the four actions keep one row (audit 2: Save wrapped)
+          <Button variant="quiet" icon={HistoryIcon} onClick={onHistory} title="History">
+            <span className="md:sr-only">History</span>
           </Button>
         ) : null}
-        <Button variant="quiet" onClick={onCancel} data-cancel>
+        <Button onClick={onCancel} data-cancel>
           Cancel
         </Button>
         <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">

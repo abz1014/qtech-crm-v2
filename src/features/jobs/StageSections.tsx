@@ -5,7 +5,7 @@ import { lazyWithReload } from '@/lib/importWithReload'
 import { Button } from '@/ui/Button'
 import { Skeleton } from '@/ui/Skeleton'
 import { useWonDialog } from '@/features/orders/useWonDialog'
-import { CircleCheck, CircleDashed, CircleDot, CircleX, Minus, type LucideIcon } from 'lucide-react'
+import { Building2, CircleCheck, CircleDashed, CircleDot, CircleX, Minus, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
@@ -269,11 +269,19 @@ const CHIP_TONE: Record<StepTone, FoldRowChipTone> = { now: 'warning', waiting: 
 function chipOf(state: StopState, current: StepTone, word: StepTone = current): FoldRowChip {
   if (state === 'done') return { icon: CircleCheck, word: 'Done', tone: 'success' }
   // the word follows the step (an imported job still "Needs action"); the colour follows the tone (grey for an imported job)
-  if (state === 'current') return { ...CHIP[word], tone: CHIP_TONE[current] }
+  // the colour follows the word too: an imported job's "Needs action" is the usual amber chip (owner, audit 2)
+  if (state === 'current') return { ...CHIP[word], tone: CHIP_TONE[word] }
   if (state === 'future') return { icon: CircleDashed, word: 'Not yet', tone: 'neutral' }
   if (state === 'stopped') return { icon: CircleX, word: 'Not reached', tone: 'neutral' }
+  if (state === 'office') return OFFICE_CHIP
   return { icon: Minus, word: 'None', tone: 'neutral' }
 }
+
+/** An engineer's Billing and Payment rows (audit 2): the office's steps, so neither the chip nor the heard state says Done or Not yet. */
+const OFFICE_CHIP: FoldRowChip = { icon: Building2, word: 'Office', tone: 'neutral' }
+/** The office's Payment row while an advance is in (the ruler's half-filled stop): not "Not yet" (audit 2: the row contradicted the ruler). */
+const ADVANCE_CHIP: FoldRowChip = { icon: CircleDot, word: 'Advance in', tone: 'info' }
+const OFFICE_STATE = { icon: Building2, word: WITH_OFFICE, className: 'text-fg-muted' }
 
 const STATE: Record<StopState, { icon: LucideIcon; word: string; className: string }> = {
   done: { icon: CircleCheck, word: 'Done', className: 'text-tone-success-fg' },
@@ -281,6 +289,7 @@ const STATE: Record<StopState, { icon: LucideIcon; word: string; className: stri
   future: { icon: CircleDashed, word: 'Not yet', className: 'text-fg-muted' },
   none: { icon: Minus, word: 'Not part of this job', className: 'text-fg-muted' },
   stopped: { icon: CircleX, word: 'Not reached', className: 'text-fg-muted' },
+  office: { icon: Building2, word: WITH_OFFICE, className: 'text-fg-muted' },
 }
 
 /**
@@ -310,8 +319,10 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
         const none = s.state === 'none'
         const isOpen = open === s.index && !none
         // The money steps are the office's: an engineer's rows say so, whatever their mark, and so does the quotation while the job waits at it.
+        // The quotation the job waits at is still heard as "Now" (the row the job is at), only its words say the office has it.
         const withOffice = !ctx.money && (s.stop === 'Invoice' || s.stop === 'Payment' || (s.state === 'current' && s.stop === 'Quotation'))
         const current = s.state === 'current'
+        const advance = !withOffice && s.state === 'future' && model.stops[s.index]?.half === true
         return (
           <FoldRow
             key={s.stop}
@@ -319,12 +330,12 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
             dataStage={s.stop}
             controlsId={`stage-body-${s.index}`}
             bodyLabel={`${s.shown} stage`}
-            state={STATE[s.state]}
+            state={withOffice && !current ? OFFICE_STATE : STATE[s.state]}
             title={s.shown}
-            summary={withOffice ? WITH_OFFICE : s.state === 'future' ? 'Not yet' : s.summary}
-            chip={chipOf(s.state, tone, chip)}
+            summary={withOffice ? WITH_OFFICE : advance ? s.summary : s.state === 'future' ? 'Not yet' : s.summary}
+            chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : chipOf(s.state, tone, chip)}
             className={cn(CARD, current && 'relative before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-brand-500 md:before:hidden md:ring-2 md:ring-inset md:ring-brand-500')}
-            muted={s.state === 'future' || none || s.state === 'stopped'}
+            muted={(s.state === 'future' && !advance) || none || s.state === 'stopped'}
             disabled={none}
             open={isOpen}
             onToggle={() => onToggle(s.index)}

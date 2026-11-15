@@ -222,7 +222,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
             {f => <Select {...f} placeholder="The oldest unpaid invoice" options={invoices.map(i => ({ value: i.id, label: `${i.number ?? 'Invoice'} · ${pkr(i.gross)}` }))} />}
           </FormField>
         ) : null}
-        <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
+        <p className="text-link-rows flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
           {invoices.length > 1 && !showTie ? (
             <span>
               Payments settle the oldest invoice first. <LinkButton onClick={() => setShowTie(true)}>This payment is for one invoice</LinkButton>
@@ -252,7 +252,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
         </div>
       ) : null}
       <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
-        <Button variant="quiet" onClick={onCancel} data-cancel>
+        <Button onClick={onCancel} data-cancel>
           Cancel
         </Button>
         <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">
@@ -265,7 +265,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
 
 function LinkButton({ children, onClick }: { children: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="rounded font-medium text-primary underline-offset-2 hover:underline">
+    <button type="button" onClick={onClick} className="text-link-btn rounded font-medium text-primary underline-offset-2 hover:underline">
       {children}
     </button>
   )

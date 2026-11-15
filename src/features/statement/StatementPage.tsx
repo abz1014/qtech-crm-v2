@@ -96,7 +96,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
       <Shell>
         <PageTitle />
         <EmptyState
-          mood="error"
+          mood="error" bordered
           icon={CloudOff}
           title="The statement could not be opened"
           actions={
@@ -200,8 +200,9 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
   const [sort, setSort] = useState<SortSpec>(DEFAULT_SORT)
   const [busy, setBusy] = useState(false)
   const phone = useMediaQuery('(max-width: 767px)')
-  // Below 1024 px (a phone, or a tablet beside the rail) six columns do not fit: each quote is a card instead (no sideways scroll).
-  const compact = useMediaQuery('(max-width: 1023px)')
+  // Below 1280 px (a phone, a tablet, or 1024 beside the open rail: about 700 px of page) six columns do not fit: each quote is a
+  // card instead (no sideways scroll; audit 2 saw headers and figures break mid-word at 1024).
+  const compact = useMediaQuery('(max-width: 1279px)')
 
   const statement = useMemo(() => buildStatement(items.data ?? [], inquiries.data ?? [], { showNoReply, sort }), [items.data, inquiries.data, showNoReply, sort])
   const back = `/jobs/${encodeURIComponent(jobKey)}`
@@ -212,7 +213,7 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
       <Shell>
         <PageTitle />
         <EmptyState
-          mood="error"
+          mood="error" bordered
           icon={CloudOff}
           title="The supplier prices did not load"
           actions={
@@ -265,7 +266,7 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
 
   return (
     <Shell>
-      <DetailHeader name="Comparative statement" back={{ label: jobLabel(jobKey), to: back }} meta={[jobLabel(jobKey), rfq.company.name, rfqRef(rfq.number)]} />
+      <DetailHeader name="Comparative statement" phoneSrOnly back={{ label: jobLabel(jobKey), to: back }} meta={[jobLabel(jobKey), rfq.company.name, rfqRef(rfq.number)]} />
 
       <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3" data-testid="statement-toolbar">
         <Checkbox

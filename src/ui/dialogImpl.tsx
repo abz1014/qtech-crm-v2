@@ -1,4 +1,4 @@
-import { useContext, useEffect, useRef, type ReactNode } from 'react'
+import { useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import * as RadixDialog from '@radix-ui/react-dialog'
 import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -111,6 +111,28 @@ export function DialogContentImpl({
   const dirty = guard?.dirty ?? false
   const contentRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
+  // a callback ref: the body is drawn only once the dialog opens, after this component's first effects ran
+  const [bodyEl, setBodyEl] = useState<HTMLDivElement | null>(null)
+  const [scrollStop, setScrollStop] = useState(false)
+  useEffect(() => {
+    const el = bodyEl
+    if (!el) return
+    const read = () => {
+      const scrolls = el.scrollHeight > el.clientHeight + 1
+      const tabbable = el.querySelector('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      setScrollStop(scrolls && !tabbable)
+    }
+    read()
+    if (typeof ResizeObserver === 'undefined' || typeof MutationObserver === 'undefined') return
+    const ro = new ResizeObserver(read)
+    ro.observe(el)
+    const mo = new MutationObserver(read)
+    mo.observe(el, { childList: true, subtree: true })
+    return () => {
+      ro.disconnect()
+      mo.disconnect()
+    }
+  }, [bodyEl])
   const hold = (e: Event) => {
     if (busy || dirty) e.preventDefault()
   }
@@ -208,10 +230,14 @@ export function DialogContentImpl({
             </RadixDialog.Close>
           </header>
           <div
+            ref={setBodyEl}
             data-dialog-body
+            // a body that scrolls but holds nothing to tab to (a long History) takes focus itself, so the keyboard can scroll it (axe
+            // scrollable-region-focusable, audit 2)
+            tabIndex={scrollStop ? 0 : undefined}
             className={cn(
               // Reading text is 16 px (text-base, owner decision 2026-10-19); controls inside set their own size.
-              'grid min-h-0 grid-cols-[minmax(0,1fr)] content-start gap-4 overflow-y-auto overscroll-contain px-card pb-5 pt-4 text-base text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch]',
+              'grid min-h-0 grid-cols-[minmax(0,1fr)] content-start gap-4 overflow-y-auto overscroll-contain px-card pb-5 pt-4 text-base text-fg-2 transition-opacity duration-fast [&>p]:max-w-[62ch] focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand-green',
               busy && 'opacity-80',
             )}
           >

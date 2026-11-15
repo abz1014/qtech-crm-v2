@@ -21,7 +21,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
 import { StickyActionBar } from '@/ui/StickyActionBar'
 import { Select } from '@/ui/form/Select'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
 import { TextField } from '@/ui/form/TextField'
@@ -194,7 +194,7 @@ export function GstRegisterPage() {
         sortable: true,
         value: r => r.number,
         // Audit 1 (item 10): the register fits its card from 1024 up, so nothing scrolls sideways. Below 1280 the number and day
-        // ride under the customer (this column is left out, so the month rows still span the right columns); a long number is cut
+        // ride under the customer (this column is left out rather than hidden, so the number is in the page once); a long number is cut
         // with the whole of it in the title.
         cell: r => (
           <span className="grid gap-px">
@@ -359,10 +359,11 @@ export function GstRegisterPage() {
   // pills), and Export in a More menu for the admin.
   const controls = (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap">
-      <TableFilter label="Search invoices" hint="Finds an invoice by invoice number, customer or order number." value={search} onChange={setSearch} className="max-sm:col-span-2" />
+      <TableFilter label="Search invoices" hint="Finds an invoice by invoice number, customer or order number." value={search} onChange={setSearch} className={isAdmin ? undefined : 'max-sm:col-span-2'} />
       <span className="flex-1 max-sm:hidden" />
-      {/* A phone gets the same three views as a select: a strip of three would run off a 320 px screen. */}
-      <div className={cn('grid min-w-0 sm:hidden', !isAdmin && 'col-span-2')}>
+      {/* A phone gets the same three views as a select: a strip of three would run off a 320 px screen. It has a row of its own
+          (the admin's More sits beside the search), so "Needs attention (5)" is never cut (audit 2). */}
+      <div className={cn('col-span-2 grid min-w-0 sm:hidden', isAdmin && 'order-last')}>
         <Select aria-label="Show" data-testid="register-view" value={view} onChange={e => setView(e.target.value as RegisterView)} options={viewOptions.map(o => ({ value: o.value, label: o.needs ? `${o.label} (${o.needs})` : o.label }))} />
       </div>
       <SegmentedControl aria-label="Show" value={view} onValueChange={v => setView(v as RegisterView)} options={viewOptions} className="max-sm:hidden" />
@@ -389,16 +390,17 @@ export function GstRegisterPage() {
     >
       {register.isPending ? (
         // Shaped like the figures it stands for: a tile each on a card from 640 (four for the admin, two for sales), a line each on a phone.
-        <div aria-hidden="true" data-testid="register-totals-loading" className={cn('grid gap-3 max-sm:px-1 sm:auto-cols-fr sm:grid-flow-col sm:gap-px sm:overflow-hidden sm:bg-line', !narrow && CARD)}>
+        // on a phone the lines sit in the same white card as the loaded lines (audit 2: they were bare on the canvas)
+        <div aria-hidden="true" data-testid="register-totals-loading" className={cn(CARD, 'grid gap-3 max-sm:p-card sm:auto-cols-fr sm:grid-flow-col sm:gap-px sm:overflow-hidden sm:bg-line')}>
           {(isAdmin ? [0, 1, 2, 3] : [0, 1]).map(i => (
-            <div key={i} className="grid gap-2 bg-surface max-sm:bg-transparent sm:px-5 sm:py-4">
+            <div key={i} className="flex items-center justify-between gap-4 bg-surface sm:grid sm:gap-2 sm:px-5 sm:py-4">
               <Skeleton className="h-4 w-[5rem]" />
-              <Skeleton className="h-6 w-[8rem] max-sm:hidden" />
+              <Skeleton className="h-4 w-[6rem] sm:h-6 sm:w-[8rem]" />
             </div>
           ))}
         </div>
       ) : register.isError ? null : (
-      <FitSumBar
+      <SumBar
         label="Totals for the invoices shown"
         phone="lines"
         // Forest (53-invoices #iv-totals): one card of tiles, each a label, the PKR figure and a line of context.
@@ -422,6 +424,7 @@ export function GstRegisterPage() {
 
       <DataTable
         label="GST register"
+        noun="invoices"
         toolbarCard
         groupStyle="big"
         sortParam="sort"

@@ -212,7 +212,7 @@ function QuotePhoneRow({ r, reply, prices }: { r: QuoteRow; reply: ReplyFact | u
   const replied = reply && !reply.legacy && reply.days !== null ? reply : undefined
   const hasMore = Boolean(r.brand || r.imported || r.itemNote || r.ago)
   return (
-    <li className="grid gap-1 border-t py-3 first:border-t-0">
+    <li className="grid gap-1 border-t px-5 py-3 first:border-t-0">
       <ItemName r={r} className="type-row" />
       <span className="type-body flex flex-wrap items-center gap-x-2 gap-y-1 text-fg-2">
         <Link to={`/rfqs/${r.rfqId}`} className="w-fit rounded hover:underline" aria-label={`Open ${r.rfqRef}`}>
@@ -334,7 +334,7 @@ export function RecentQuotes({
             )}
           </ul>
           {view.allQuotes.length > ENQUIRY_ROWS_FIRST ? (
-            <div className="border-t py-2">
+            <div className="border-t px-5 py-2">
               <Button variant="quiet" size="sm" className="max-md:h-touch" aria-expanded={all} onClick={() => setAll(a => !a)}>
                 {all ? 'Show the latest 5' : `Show all ${view.allQuotes.length}`}
               </Button>

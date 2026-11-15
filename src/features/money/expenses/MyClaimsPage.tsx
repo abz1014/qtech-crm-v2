@@ -112,7 +112,8 @@ function MyClaims() {
   const label = (words: string, optional = false) => (
     <span className="text-sm font-bold">
       {words}
-      {optional ? <span className="font-regular text-fg-muted"> optional</span> : null}
+      {/* the same "Optional" word and size as every other form (Field; audit 2) */}
+      {optional ? <span className="ml-2 text-xs font-regular text-fg-muted">Optional</span> : null}
     </span>
   )
   const amountField = (

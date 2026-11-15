@@ -140,7 +140,8 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     {s.name}
                     <span className="num font-regular text-fg-muted"> · {t?.count ?? 0}</span>
                   </span>
-                  <span className="num sm:hidden">{(t?.total ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
+                  {/* under the cards' amounts: clear of their More button column (48 px and its 8 px gap; audit 2) */}
+                  <span className="num mr-[calc(var(--hit-touch)+var(--sp-2))] sm:hidden">{(t?.total ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}</span>
                 </span>
               ),
             }
@@ -165,9 +166,9 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                 {list.isSuccess ? (
                   <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-base" data-testid="expenses-month-total" aria-live="polite">
                     <b className="num text-xl font-heavy tracking-snug">{pkr(totals.total)}</b>
-                    <span className="num text-sm text-fg-2">
-                      {` · ${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}
-                    </span>
+                    {/* the dot only beside the total: on a phone the count wraps under it, and a line never starts with "·" (audit 2) */}
+                    <span className="num text-sm text-fg-2 max-sm:hidden">{' · '}</span>
+                    <span className="num text-sm text-fg-2">{`${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}</span>
                     <InfoTip label="About this total" className="self-center">
                       What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or cash in hand). A monthly bill paid this month for last month is in this total. The Expenses report counts it in the month it is for.
                       {totals.inputTax > 0 ? ` GST paid on purchases, ${pkr(totals.inputTax)} of it, is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}

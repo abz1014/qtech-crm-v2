@@ -229,7 +229,7 @@ function PayFormReady({
         </p>
       ) : null}
       <div className="-mx-5 -mb-5 mt-1 flex items-center justify-end gap-2 border-t bg-sunken px-5 py-3 max-md:flex-col-reverse max-md:items-stretch">
-        <Button variant="quiet" onClick={onDone} data-cancel className="text-base">
+        <Button onClick={onDone} data-cancel className="text-base">
           Cancel
         </Button>
         <Button variant="primary" type="submit" icon={Check} busy={insert.isPending} busyLabel="Saving" className="text-base">

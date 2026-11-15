@@ -12,7 +12,7 @@ import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PAID_VIA_LABEL, monthKeyLabel, shiftMonth, type PaidVia } from '@/features/money/expenses/model'
@@ -97,7 +97,7 @@ export function PaymentsPage() {
         {isClosed ? <MonthStateChip closed /> : null}
       </div>
       {q.isSuccess && rows.length > 0 ? (
-        <FitSumBar
+        <SumBar
           label={`Received in ${name}, includes GST`}
           items={[
             { label: `Received in ${name}`, amount: sum.total, sub: `${plural(sum.count)}, GST included` },
@@ -179,7 +179,13 @@ function ViaCell({ r }: { r: ReceivedPayment }) {
   return (
     <span className="grid gap-px">
       <span>{viaWord(r.paidVia)}</span>
-      {r.reference ? <span className="num text-xs text-fg-muted [overflow-wrap:anywhere]">{r.reference}</span> : null}
+      {/* a long bank reference keeps two lines in a column wide enough to read (the whole of it in the title; audit 2: at 768 it
+          broke into a dozen lines a few letters wide) */}
+      {r.reference ? (
+        <span className="num line-clamp-2 min-w-[9rem] max-w-[16rem] text-xs text-fg-muted [overflow-wrap:anywhere]" title={r.reference}>
+          {r.reference}
+        </span>
+      ) : null}
     </span>
   )
 }

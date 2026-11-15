@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 import { EmptyState } from '@/ui/EmptyState'
 import { StatusText } from '@/ui/StatusText'
 import { Skeleton } from '@/ui/Skeleton'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { MonthPager } from '@/features/money/monthEnd/MonthEndFrame'
 import { monthKeyLabel, shiftMonth } from '@/features/money/expenses/model'
@@ -131,7 +131,7 @@ export function BankTickPage() {
             </Banner>
           ) : null}
           {/* 58-money-checks .qb-sumstrip: the three figures as one card of cells, on every width. */}
-          <FitSumBar
+          <SumBar
             className="rounded-card shadow-e1"
             label="Running ticked totals"
             items={[

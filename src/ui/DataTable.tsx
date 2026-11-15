@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Download, RefreshCw } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
@@ -328,6 +328,27 @@ function TableView<T>(props: DataTableProps<T>) {
     ro.observe(table)
     return () => ro.disconnect()
   }, [virtual])
+  // A table wider than its card scrolls sideways; the cut edge fades so it never reads as clipped (audit 2: To collect and Overdue
+  // by age at 768 looked cut off).
+  const [cut, setCut] = useState<{ start: boolean; end: boolean }>({ start: false, end: false })
+  const readCut = (el: HTMLElement) => {
+    const start = el.scrollLeft > 1
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+    setCut(prev => (prev.start === start && prev.end === end ? prev : { start, end }))
+  }
+  useLayoutEffect(() => {
+    const box = scrollRef.current
+    if (!box || virtual) return
+    if (!fit.wide) return setCut(prev => (prev.start || prev.end ? { start: false, end: false } : prev))
+    readCut(box)
+  }, [fit.wide, fit.width, virtual])
+  const cutMask =
+    fit.wide && (cut.start || cut.end)
+      ? (() => {
+          const g = `linear-gradient(to right, ${cut.start ? 'transparent, #000 2.5rem' : '#000'}, ${cut.end ? '#000 calc(100% - 2.5rem), transparent' : '#000'})`
+          return { maskImage: g, WebkitMaskImage: g }
+        })()
+      : undefined
   const [scrollTop, setScrollTop] = useState(0)
   const [viewH, setViewH] = useState(600)
   useLayoutEffect(() => {
@@ -517,6 +538,30 @@ function TableView<T>(props: DataTableProps<T>) {
   // ---- totals -------------------------------------------------------------
   const hasTotals = columns.some(c => c.total)
   const firstTotal = columns.findIndex(c => c.total)
+  // A group or footer label spans the columns before the first total. Columns hidden at this width (hideBelowMd, hideClass ...)
+  // are no cells at all, so a colSpan that counted them would reach into the totals and push every subtotal one column right
+  // (audit 2): the span counts only the header cells that are drawn now, read again whenever the window is resized.
+  const leadCols = firstTotal < 0 ? columns.length : firstTotal
+  const hasSelection = !!selection
+  const [shownLead, setShownLead] = useState(leadCols)
+  useLayoutEffect(() => {
+    const table = tableRef.current
+    if (!table || leadCols === 0) return setShownLead(leadCols)
+    const offset = hasSelection ? 1 : 0
+    const measure = () => {
+      const row = table.tHead?.rows[table.tHead.rows.length - 1]
+      if (!row) return setShownLead(leadCols)
+      let n = 0
+      for (let i = 0; i < leadCols; i++) {
+        const th = row.cells[i + offset]
+        if (th && getComputedStyle(th).display !== 'none') n++
+      }
+      setShownLead(Math.max(1, n))
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [columns, leadCols, hasSelection])
   const renderTotal = useCallback(
     (col: Column<T>, list: readonly T[]): ReactNode => {
       if (!col.total) return null
@@ -568,7 +613,7 @@ function TableView<T>(props: DataTableProps<T>) {
     </div>
   )
 
-  const labelCols = firstTotal < 0 ? columns.length : firstTotal
+  const labelCols = leadCols
   const summaryRow = (kind: 'group' | 'foot', labelNode: ReactNode, list: readonly T[], key: string, groupIds?: string[], groupKey?: string) =>
     cards && kind === 'group' && mobileGroup && groupKey !== undefined ? (
       <tr key={key} role="row" data-row-kind="group" className="block bg-canvas">
@@ -607,7 +652,7 @@ function TableView<T>(props: DataTableProps<T>) {
         </td>
       ) : null}
       <td
-        colSpan={labelCols}
+        colSpan={shownLead}
         // A long group or footer label wraps inside its cells instead of running past them (a windowed table keeps one line: its rows have fixed heights).
         className={cn('h-[2.25rem] border-b border-line px-[var(--cell-px)] first:pl-5 last:pr-5', virtual ? 'whitespace-nowrap' : 'py-2 [overflow-wrap:anywhere]', kind === 'foot' && 'border-t border-line-strong', kind === 'group' && groupStyle === 'big' && 'h-10 border-t border-line-strong')}
       >
@@ -764,7 +809,7 @@ function TableView<T>(props: DataTableProps<T>) {
             <EmptyState
               mood="error"
               title={error.title ?? `${what} could not be loaded`}
-              actions={error.onRetry ? <Button variant="primary" icon={RefreshCw} onClick={error.onRetry}>Try again</Button> : undefined}
+              actions={error.onRetry ? <Button onClick={error.onRetry}>Try again</Button> : undefined}
               meta={
                 <>
                   {`Request failed · ${formatStamp(error.at ?? errorAt ?? new Date())}`}
@@ -873,12 +918,8 @@ function TableView<T>(props: DataTableProps<T>) {
       </p>
       {toolbarNode || exportCsv ? (
         <div className={cn('flex flex-wrap items-center gap-3', flat ? 'pb-3' : ownToolbar ? 'rounded-card border bg-surface p-card shadow-e1' : 'border-b px-5 py-3')} data-table-toolbar>
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">{toolbarNode}</div>
-          {loading ? (
-            <span className="text-xs text-fg-muted" data-slow={slow || undefined}>
-              {slow ? SLOW_LOAD_TEXT : `Loading ${what}`}
-            </span>
-          ) : null}
+          {/* The toolbar's own controls take a whole row on a phone, so the loading line (or Export) goes under them instead of squeezing them (audit 2: Invoices at 375). */}
+          <div className={cn('flex min-w-0 flex-1 flex-wrap items-center gap-3', toolbarNode && 'max-sm:basis-full')}>{toolbarNode}</div>
           {densityOn ? (
             <SegmentedControl
               aria-label="Density"
@@ -903,9 +944,9 @@ function TableView<T>(props: DataTableProps<T>) {
       <div
         ref={scrollRef}
         data-virtual={virtual ? '' : undefined}
-        onScroll={virtual ? e => setScrollTop(e.currentTarget.scrollTop) : undefined}
+        onScroll={virtual ? e => setScrollTop(e.currentTarget.scrollTop) : fit.wide ? e => readCut(e.currentTarget) : undefined}
         className={virtual ? 'overflow-auto' : fit.wide ? 'overflow-x-auto' : undefined}
-        style={virtual ? { maxHeight } : undefined}
+        style={virtual ? { maxHeight } : cutMask}
       >
         <table
           ref={tableRef}
@@ -999,7 +1040,12 @@ function TableView<T>(props: DataTableProps<T>) {
         // when focus left, and a click on a control beside the table (Copy and mark reminded) lost its mouseup to that jump.
         // The toolbar, this band and the first and last cells share one inset (20 px; flush in a flat table), so the words line up down the card.
         <div className={cn('flex min-h-10 items-center justify-between gap-3 py-2 text-xs text-fg-muted', apart ? 'mt-3 px-1' : 'border-t', !apart && (flat ? 'px-0' : 'bg-surface px-5'))}>
-          {loading && !shown ? <Skeleton className="w-[8rem]" /> : <span>{shown}</span>}
+          {/* the loading line sits where the count will be, under the rows (audit 2: in the toolbar it floated beside the controls) */}
+          {loading && !shown ? (
+            <span data-slow={slow || undefined}>{slow ? SLOW_LOAD_TEXT : `Loading ${what}`}</span>
+          ) : (
+            <span>{shown}</span>
+          )}
           {hintsNode}
         </div>
       ) : hints ? (

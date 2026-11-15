@@ -20,7 +20,8 @@ describe('Jobs in the palette', () => {
 
   it('an engineer reads no money state and no Invoice word (it is Billing)', async () => {
     const meta = (await find(true))?.meta ?? ''
-    expect(meta).toMatch(/Billing/)
+    // the ruler stops at Delivery for an engineer (owner, audit 2): the money stops are the office's
+    expect(meta).toMatch(/Delivered · With the office/)
     expect(meta).not.toMatch(/nvoice|advance/)
   })
 
@@ -28,7 +29,7 @@ describe('Jobs in the palette', () => {
     job.stage = 'paid'
     job.stageDetail = null
     const meta = (await find(true))?.meta ?? ''
-    expect(meta).toMatch(/All 7 stages done/)
-    expect(meta).not.toMatch(/paid/i)
+    expect(meta).toMatch(/Delivered · With the office/)
+    expect(meta).not.toMatch(/paid|stages done/i)
   })
 })

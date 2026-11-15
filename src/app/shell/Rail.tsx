@@ -94,7 +94,9 @@ export function Rail({ user, counts, dots, collapsed, onToggle, links: given, cu
                     {/* While the words are hidden the number and the dot sit on the icon; the link's name still says them. */}
                     {/* On the icon's top-right corner, not over the glyph (audit 1 minor 26): its right edge is the link's (14 px past
                         the icon), so a short count sits on the corner and a "99+" grows leftwards, still inside the 72 px rail. */}
-                    <NeedsCount n={count} badge silent className={cn('left-auto -right-[14px]', collapsed ? undefined : 'lg:hidden')} />
+                    {/* On the dark rail the solid badge's own inks (surface text and ring) are the rail's green: the count is drawn as the
+                        expanded rail draws it (amber, dark figure), ringed in the rail's colour (audit 2: unreadable at 768). */}
+                    <NeedsCount n={count} badge silent className={cn('-right-[16px] left-auto bg-tone-warning-bg text-tone-warning-fg ring-chrome', collapsed ? undefined : 'lg:hidden')} />
                     {dot ? <LateDot badge silent className={collapsed ? undefined : 'lg:hidden'} /> : null}
                   </span>
                   <span data-nav-label="" className={cn(text, 'min-w-0 flex-1')}>

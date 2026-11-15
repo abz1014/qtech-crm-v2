@@ -254,7 +254,7 @@ function CorrectForm({ line, orderNumber, onClose }: { line: PaymentLine; orderN
       lead={<span className="text-xs">For a wrong order, void it here and record it on the right order.</span>}
       footer={
         <>
-          <Button variant="quiet" onClick={onClose} data-cancel>
+          <Button onClick={onClose} data-cancel>
             Cancel
           </Button>
           <Button variant="primary" icon={Check} busy={correct.isPending} busyLabel="Saving" disabled={changes.length === 0} onClick={submit}>

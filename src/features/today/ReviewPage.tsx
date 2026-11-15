@@ -148,7 +148,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
         <Link to="/todo" className="inline-flex min-h-touch items-center gap-1 justify-self-start rounded text-base font-medium text-primary underline-offset-2 hover:underline max-md:hidden">
           <Icon icon={ChevronLeft} size="sm" /> Home
         </Link>
-        <h1 className="text-2xl font-heavy tracking-tight">Weekly review</h1>
+        <h1 className="text-2xl font-heavy tracking-tight max-md:sr-only">Weekly review</h1>
         <p className="text-base text-fg-muted">
           {headerDate(today)}
           {review ? <> · <b className="num font-medium text-fg" data-review-count>{total}</b> to decide · about 10 minutes</> : null}
@@ -162,7 +162,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
           ))}
         </div>
       ) : query.isError || !review ? (
-        <EmptyState mood="error" title="The review could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="The review could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (

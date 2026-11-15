@@ -272,13 +272,14 @@ describe('Job page', () => {
     expect(screen.getAllByRole('heading', { level: 1 }).map(h => h.textContent)).toEqual(['Job 139'])
   })
 
-  it('an imported job that still has a step says who acts next in its chips (grey, never "Nothing to do" over a button)', async () => {
+  it('an imported job that still has a step says who acts next in its chips (the usual Needs action chip, never "Nothing to do" over a button)', async () => {
     const { container } = mount(job({ key: 'O-2', kind: 'direct', rfqId: null, stage: 'ordered', stageDetail: 'supplier order to place', imported: true }), 'admin')
     const hero = await waitFor(() => container.querySelector('[data-stage-block]') as HTMLElement)
-    expect(hero).toHaveTextContent('Imported · Place the supplier order')
+    expect(hero).toHaveTextContent('Next step · Job O-2 · Imported')
+    expect(hero.querySelector('[data-next-text]')).toHaveTextContent(/^Place the supplier order$/)
     const chip = hero.querySelector('[data-tone]') as HTMLElement
     expect(chip).toHaveTextContent('Needs action')
-    expect(chip).toHaveAttribute('data-tone', 'inert')
+    expect(chip).toHaveAttribute('data-tone', 'now')
     expect(container.textContent).not.toContain('Nothing to do')
   })
 })

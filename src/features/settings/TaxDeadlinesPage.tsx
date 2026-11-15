@@ -44,7 +44,7 @@ export function TaxDeadlinesPage() {
           <SectionSkeleton rows={2} />
         </div>
       ) : q.isError ? (
-        <EmptyState mood="error" title="Could not load the tax deadlines" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="Could not load the tax deadlines" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
           Nothing has changed. Check your connection, then try again.
         </EmptyState>
       ) : (

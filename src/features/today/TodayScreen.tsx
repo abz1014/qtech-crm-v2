@@ -258,7 +258,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
           <Skeleton className="h-row w-full rounded-card" />
         </div>
       ) : query.isError || !view || !model ? (
-        <EmptyState mood="error" title="Home could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="Home could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (
@@ -570,7 +570,9 @@ function Row({ item, today, role, names, waiting = false, faded = false, actions
           <span className="type-row inline-flex min-h-chip items-center rounded-round bg-tone-success-bg px-3 text-tone-success-fg">Copied</span>
         ) : (
           // half the row on a phone, so "15 days overdue" stays on one line and the buttons drop under it, to the right
-          <span className={cn('type-row min-w-0 flex-1 basis-1/2 md:basis-1/4', tone)}>{item.badge.text}</span>
+          // a roll-up's badge is only its count, which the title already says ("2 invoices not posted"): a bare "2" on its own
+          // line read as a stray number (audit 2), so the place stays, empty
+          <span className={cn('type-row min-w-0 flex-1 basis-1/2 md:basis-1/4', tone)}>{/^\d+$/.test(item.badge.text) ? null : item.badge.text}</span>
         )}
         {own ? (
           <div className="ml-auto flex items-center gap-2">

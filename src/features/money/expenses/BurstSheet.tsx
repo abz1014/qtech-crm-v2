@@ -505,7 +505,7 @@ function BurstContent({ onClose }: { onClose: () => void }) {
                 <span className="num font-bold text-fg">{totals.count}</span> {totals.count === 1 ? 'row' : 'rows'} · PKR <span className="num font-bold text-fg">{fmt(totals.total)}</span>
               </span>
               <RadixDialog.Close asChild>
-                <Button variant="quiet" disabled={pending} data-cancel>
+                <Button disabled={pending} data-cancel>
                   Cancel
                 </Button>
               </RadixDialog.Close>

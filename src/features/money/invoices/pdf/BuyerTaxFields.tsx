@@ -86,7 +86,7 @@ function BuyerTaxForm({ companyId, buyer, onSaved, onCancel }: { companyId: stri
       {failed ? <Banner tone="danger" title="The tax details were not saved">{failed}</Banner> : null}
       <div className="flex flex-wrap justify-end gap-2">
         {onCancel ? (
-          <Button variant="quiet" onClick={onCancel}>
+          <Button onClick={onCancel}>
             Cancel
           </Button>
         ) : null}

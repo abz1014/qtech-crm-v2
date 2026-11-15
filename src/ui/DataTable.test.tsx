@@ -382,10 +382,10 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
     }
   })
 
-  it('loading says what is loading and keeps a skeleton footer; the error has a default sentence and a stamp', () => {
+  it('loading says what is loading in the footer band (where the count will be); the error has a default sentence and a stamp', () => {
     mount(<DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} loading toolbar={toolbar} />)
-    expect(el.textContent).toContain('Loading RFQs')
-    expect(el.querySelector('.border-t .skeleton')).not.toBeNull()
+    expect(el.querySelector('.border-t')?.textContent).toContain('Loading RFQs')
+    expect(el.querySelector('[data-table-toolbar]')?.textContent).not.toContain('Loading')
     act(() =>
       root!.render(
         <DataTable label="x" noun="RFQs" columns={columns} rows={[]} getRowId={r => r.id} error={{ reference: '4f1c9a', at: new Date('2026-11-27T09:41:00+05:00') }} />,

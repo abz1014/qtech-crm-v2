@@ -91,7 +91,7 @@ export function SignInPage() {
 
   return (
     <AuthFrame>
-      <BrandImage name="logo-wordmark" alt="Q Tech Solutions" width={181} height={44} className="h-[44px] w-auto justify-self-start" />
+      <BrandImage name="logo-wordmark" alt="Q Tech Solutions" width={181} height={44} className="h-16 w-auto justify-self-start" />
       <AuthHead title={kept ? 'Sign in to continue' : 'Sign in'}>
         {kept ? 'You were signed out.' : 'Use the email and password your admin gave you.'}
       </AuthHead>

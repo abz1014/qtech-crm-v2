@@ -40,7 +40,8 @@ interface EmptyStateProps {
 
 export function EmptyState({ mood = 'neutral', icon, title, children, actions, meta, bordered, className }: EmptyStateProps) {
   const m = MOOD[mood]
-  const edge = bordered === true ? (mood === 'goal' ? 'solid' : 'dashed') : bordered
+  // a page that could not load stands as a white card, as every Money page draws it (audit 2: some errors were bare on the canvas)
+  const edge = bordered === true ? (mood === 'goal' || mood === 'error' ? 'solid' : 'dashed') : bordered
   return (
     <div
       role={mood === 'error' ? 'alert' : undefined}

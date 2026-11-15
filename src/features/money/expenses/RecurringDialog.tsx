@@ -91,7 +91,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
                 Delete recurring expense
               </Button>
             ) : null}
-            <Button data-cancel variant="quiet" onClick={onClose} disabled={sf.pending}>
+            <Button data-cancel onClick={onClose} disabled={sf.pending}>
               Cancel
             </Button>
             <Button variant="primary" type="submit" form={sf.formId} icon={Check} busy={sf.pending} busyLabel="Saving">

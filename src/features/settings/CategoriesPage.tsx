@@ -34,7 +34,7 @@ import { businessToday } from '@/lib/dates'
 import { mapPgError } from '@/lib/pgErrors'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
-import { Banner } from '@/ui/Banner'
+import { EmptyState } from '@/ui/EmptyState'
 import { Button } from '@/ui/Button'
 import { CARD } from '@/ui/card'
 import { InfoTip } from '@/ui/InfoTip'
@@ -174,12 +174,13 @@ export function CategoriesPage() {
       </p>
 
       {failed ? (
-        <Banner
-          tone="danger"
+        // the same error card as every page that could not load (audit 2)
+        <EmptyState
+          mood="error"
+          bordered
           title="Could not load the categories"
-          action={
+          actions={
             <Button
-              size="sm"
               onClick={() => {
                 void q.refetch()
                 void groupsQ.refetch()
@@ -190,7 +191,7 @@ export function CategoriesPage() {
           }
         >
           Check your connection, then try again.
-        </Banner>
+        </EmptyState>
       ) : loading ? (
         <div role="status" className="grid gap-card-gap" aria-busy="true" aria-label="Loading categories">
           {/* shaped like the page: a group card, its heading row and three category rows */}

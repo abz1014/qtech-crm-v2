@@ -75,6 +75,8 @@ export function SegmentedControl({
     'inline-flex max-w-full flex-wrap gap-1 rounded-card bg-deep p-1 sm:rounded-pill',
     oneRow && 'max-sm:inline-grid max-sm:grid-flow-col',
     oneRow && (fit === 'equal' ? 'max-sm:auto-cols-fr' : 'max-sm:auto-cols-[minmax(min-content,1fr)]'),
+    // Four options that cannot share one row (320 px): a tidy two-by-two grid of equal cells, never a ragged wrap (audit 2).
+    canRow && fit === 'wrap' && options.length === 4 && 'max-sm:grid max-sm:grid-cols-2',
     !/(^|\s)flex-wrap(\s|$)/.test(className ?? '') && 'sm:flex-nowrap sm:overflow-x-auto',
     fill && (oneRow ? 'flex w-full max-sm:grid' : 'flex w-full'),
     className,
@@ -106,7 +108,7 @@ export function SegmentedControl({
     // on a touch screen its own width never drops under the touch size either ("All" with tight padding was 47 px).
     '[@media(pointer:coarse)]:min-w-touch',
     // One row on a phone: tighter side padding so three or four options fit 320 px.
-    oneRow && 'max-sm:px-2',
+    oneRow && (fit === 'words' ? 'max-sm:px-1' : 'max-sm:px-2'),
   )
 
   if (mode === 'tabs') {

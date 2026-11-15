@@ -36,6 +36,15 @@ export interface NextInput {
 
 const has = (d: string | null, word: string) => (d ?? '').includes(word)
 
+/**
+ * An engineer once the goods are delivered: delivered, invoiced and paid read the same (owner, audit 2: an engineer must never infer
+ * the payment state), only the installation still speaks.
+ */
+function officeAfterDelivery(d: string | null): JobNext {
+  if (has(d, 'installation to plan')) return { text: 'Installation needs a date', tone: 'now', button: 'Plan installation', on: 'order', stop: 4 }
+  return { text: has(d, 'installation planned') ? 'Installation is planned' : 'Delivered. The office takes it from here', tone: 'inert', button: null, on: null }
+}
+
 export interface NextOptions {
   /** How an imported job says so: with an "Imported · " prefix (the default, for the table) or not at all, where the row already carries an "Imported" tag. */
   imported?: 'prefix' | 'tag'
@@ -74,14 +83,14 @@ function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
       if (has(d, 'arrived')) return { text: 'The goods are here: deliver them', tone: 'now', button: 'Deliver the goods', on: 'order', stop: 4 }
       return { text: 'Waiting for the goods', tone: 'waiting', button: 'See the deliveries', on: 'order', stop: 4 }
     case 'delivered':
-      if (office) return has(d, 'installation to plan') ? { text: 'Installation needs a date', tone: 'now', button: 'Plan installation', on: 'order', stop: 4 } : { text: has(d, 'installation planned') ? 'Installation is planned' : 'Delivered. The office takes it from here', tone: 'inert', button: null, on: null }
+      if (office) return officeAfterDelivery(d)
       return { text: has(d, 'not invoiced') ? 'Delivered: send the invoice' : 'Invoice the rest', tone: 'now', button: 'Create invoice', on: 'order', stop: 5 }
     case 'invoiced':
-      if (office) return { text: 'Handled by the office', tone: 'inert', button: null, on: null }
+      if (office) return officeAfterDelivery(d)
       return { text: has(d, 'part paid') ? 'Part paid: send a reminder for the balance' : 'Invoiced: send a payment reminder', tone: 'waiting', button: 'Send payment reminder', on: 'order', stop: 5 }
     case 'paid':
       // An engineer's words never say paid or invoiced.
-      if (office) return has(d, 'installation to plan') ? { text: 'Installation still needs a date', tone: 'now', button: 'Plan installation', on: 'order', stop: 4 } : { text: has(d, 'installation planned') ? 'Installation is planned' : 'Done', tone: has(d, 'installation planned') ? 'inert' : 'done', button: null, on: null }
+      if (office) return officeAfterDelivery(d)
       return has(d, 'installation to plan')
         ? { text: 'Paid. Installation still needs a date', tone: 'now', button: 'Plan installation', on: 'order', stop: 4 }
         : { text: has(d, 'installation planned') ? 'Paid. Installation is planned' : 'Done', tone: 'done', button: null, on: null }

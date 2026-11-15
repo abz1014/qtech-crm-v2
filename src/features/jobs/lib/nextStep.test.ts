@@ -17,7 +17,9 @@ describe('next step in words', () => {
   })
 
   it('an engineer is never sent to invoices, payments or quotations', () => {
-    expect(jobNext({ stage: 'invoiced', stageDetail: 'not paid yet', role: 'engineer' })).toMatchObject({ text: 'Handled by the office', button: null })
+    // after delivery an engineer reads the same words whether the job is delivered, invoiced or paid (owner, audit 2)
+    for (const [stage, d] of [['delivered', 'not invoiced yet'], ['invoiced', 'not paid yet'], ['paid', null]] as const)
+      expect(jobNext({ stage, stageDetail: d, role: 'engineer' })).toMatchObject({ text: 'Delivered. The office takes it from here', tone: 'inert', button: null })
     expect(jobNext({ stage: 'prices_in', stageDetail: null, role: 'engineer' }).button).toBeNull()
     expect(jobNext({ stage: 'quoted', stageDetail: 'waiting for the customer', role: 'engineer' }).button).toBeNull()
     expect(jobNext({ stage: 'delivered', stageDetail: 'not invoiced yet', role: 'engineer' }).text).not.toMatch(/invoice/i)

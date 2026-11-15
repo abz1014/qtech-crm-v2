@@ -68,7 +68,7 @@ function Blocks({ f }: { f: MoneyHomeFigures }) {
   return (
     <section aria-label={`Money, ${f.monthName} so far`} className="grid grid-cols-[minmax(0,1fr)] gap-card-gap" data-testid="money-blocks">
       <Hero f={f} />
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-card-gap min-[480px]:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-card-gap xl:grid-cols-3">
         <Block
           to="/money/reports/in-out"
           label={`Received in ${f.monthName}`}
@@ -148,9 +148,12 @@ function Block({ to, label, value, prefix = 'PKR', sub }: { to: string; label: s
         prefix === 'PKR' ? (
           <Money value={value} size="kpi" paisa="never" fit />
         ) : (
+          // "about PKR 15,642,112": the estimate word, then the figure with its PKR like its sister tiles (audit 2)
           <span className="flex min-w-0 items-baseline gap-2">
-            <span className="shrink-0 text-base font-card">{prefix}</span>
-            <Money value={value} size="kpi" paisa="never" prefix={false} fit />
+            <span className="shrink-0 text-sm text-fg-muted">{prefix}</span>
+            <span className="min-w-0 flex-1">
+              <Money value={value} size="kpi" paisa="never" fit />
+            </span>
           </span>
         )
       )}
@@ -207,9 +210,10 @@ function Accounts() {
         </h2>
         <span className="text-base text-fg-2">monthly work</span>
       </header>
-      <ul className="grid divide-y md:grid-cols-2 md:divide-y-0">
+      {/* a hairline between every row (two per row from 768, with one down the middle); audit 2: only the first row had one */}
+      <ul className="grid md:grid-cols-2">
         {ACCOUNTS_LINKS.map(a => (
-          <li key={a.to + a.label} className="md:border-b md:odd:border-r">
+          <li key={a.to + a.label} className="border-t first:border-t-0 md:odd:border-r md:[&:nth-child(2)]:border-t-0">
             <Link to={a.to} className="flex min-h-row-tall items-center gap-3 px-5 py-3 hover:bg-sunken">
               <span className="grid min-w-0 flex-1">
                 <span className="text-base font-card">{a.label}</span>

@@ -9,7 +9,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { CARD } from '@/ui/card'
 import { Money } from '@/ui/Money'
-import { FitSumBar } from '@/features/money/FitSumBar'
+import { SumBar } from '@/ui/SumBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Select } from '@/ui/form/Select'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -143,7 +143,7 @@ function PeriodPager({ period, atNow, go }: { period: Period; atNow: boolean; go
 /** One figure line: label, its basis in small words, this period, the previous one and the change. */
 function Row({ label, sub, now, before, strong, testId }: { label: string; sub?: ReactNode; now: Amount; before: Amount; strong?: boolean; testId?: string }) {
   return (
-    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-px border-b px-card py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem]', strong && 'bg-brand-100 font-heavy')}>
+    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-px border-b px-card py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_9.5rem_9.5rem_9.5rem]', strong && 'bg-brand-100 font-heavy')}>
       <span role="rowheader" className={cn('type-body', strong && 'font-semibold')}>
         {label}
         {sub ? <span className="type-body block text-fg-muted">{sub}</span> : null}
@@ -164,7 +164,7 @@ function Row({ label, sub, now, before, strong, testId }: { label: string; sub?:
 
 function Head({ prev }: { prev: string }) {
   return (
-    <div role="row" className="hidden min-h-head grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem] items-center gap-x-4 border-b px-card text-sm font-medium text-fg-2 md:grid">
+    <div role="row" className="hidden min-h-head grid-cols-[minmax(0,1fr)_9.5rem_9.5rem_9.5rem] items-center gap-x-4 border-b px-card text-sm font-medium text-fg-2 md:grid">
       <span role="columnheader">Line</span>
       <span role="columnheader" className="text-right">
         PKR
@@ -201,7 +201,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       {narrow ? (
         // Phone: a line per figure (SumBar lines), cash first and profit second; the period before is in the last-months table below.
         <>
-          <FitSumBar
+          <SumBar
             phone="lines"
             label="Cash in and out"
             caption={
@@ -216,7 +216,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               { label: 'Cash in minus cash out', amount: v.cash.net },
             ]}
           />
-          <FitSumBar
+          <SumBar
             phone="lines"
             label="Profit on invoices"
             caption={
@@ -236,7 +236,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       ) : (
         <>
           {/* Desktop: the sum card with the headline figures (59-reports .qb-sum), then the two tables, each a card, with the period before and the change. */}
-          <FitSumBar
+          <SumBar
             label={`Cash and profit, ${v.label}`}
             caption={
               <span>
