@@ -102,6 +102,9 @@ export function SegmentedControl({
     'max-sm:whitespace-normal max-sm:text-center',
     // Wrapping rows: a segment is never wider than the track. One row: the grid column sizes it.
     !oneRow && 'max-sm:max-w-full',
+    // A segment is a role=radio button, which the global touch floor leaves out (it is for the small checkbox and radio boxes):
+    // on a touch screen its own width never drops under the touch size either ("All" with tight padding was 47 px).
+    '[@media(pointer:coarse)]:min-w-touch',
     // One row on a phone: tighter side padding so three or four options fit 320 px.
     oneRow && 'max-sm:px-2',
   )
