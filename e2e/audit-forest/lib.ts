@@ -149,6 +149,11 @@ export async function spaGo(page: Page, path: string): Promise<void> {
 }
 
 const REST = /\/rest\/v1\//
+/**
+ * Every data read: the database (REST) and the edge functions (the Team list comes from admin-users). Audit 2: with only REST
+ * refused, the Team screen still drew its list from the function and the error state was never really made.
+ */
+export const DATA = /\/(rest|functions)\/v1\//
 
 /** Empty state: every list read answers no rows; a single-row read answers "no row" (PGRST116). RPCs pass (their shapes vary). */
 export async function makeEmpty(page: Page): Promise<void> {
@@ -164,7 +169,7 @@ export async function makeEmpty(page: Page): Promise<void> {
 /** Loading state: every data request is held (released when the page closes). */
 export async function makeLoading(page: Page): Promise<() => void> {
   const held: Route[] = []
-  await page.route(REST, r => {
+  await page.route(DATA, r => {
     held.push(r)
   })
   return () => {
@@ -174,9 +179,11 @@ export async function makeLoading(page: Page): Promise<() => void> {
 
 /** Error state: every data request fails as if the connection dropped. */
 export async function makeError(page: Page): Promise<void> {
-  await page.route(REST, r => r.abort('failed'))
+  await page.route(DATA, r => r.abort('failed'))
 }
 
+/** RPCs that read, though their names start like a write. */
+const READ_RPC = /\/rpc\/(record_history)(\?|$)/i
 const MUTATING_RPC = /\/rpc\/(issue|close|reopen|stamp|merge|delete|mark|record|create|set|update|insert|add|remove|lock|cancel|approve|reject|send|save|upsert|import|undo|tick|untick|move|convert|split|repeat|restore|archive|deactivate|reactivate|copy|apply|clear|post|book|pay|link|unlink|assign)/i
 
 /** While openers are clicked: no write reaches the database (a one-tap action is refused, not done), so every page stays as seeded. */
@@ -185,7 +192,9 @@ export async function writeFirewall(page: Page): Promise<void> {
     const req = r.request()
     const m = req.method()
     if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') return r.continue()
-    if (/\/rest\/v1\/rpc\//.test(req.url()) && !MUTATING_RPC.test(req.url())) return r.continue()
+    // record_history is a read (the History panel) that only starts like a write ("record"): audit 2 saw every History panel
+    // say "Could not load the history" because the firewall refused it
+    if (/\/rest\/v1\/rpc\//.test(req.url()) && (READ_RPC.test(req.url()) || !MUTATING_RPC.test(req.url()))) return r.continue()
     return r.abort('blockedbyclient')
   })
 }

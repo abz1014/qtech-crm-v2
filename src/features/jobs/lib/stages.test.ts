@@ -96,6 +96,9 @@ describe('an engineer\'s ruler', () => {
   it('an engineer never reads a payment word in the label, even at stage 7 or part paid', () => {
     const paid = stageModel({ stage: 'paid', stageDetail: null, kind: 'enquiry', office: true })
     expect(paid.label).toBe('All 7 stages done')
+    // a job that began as an order never had its RFQ and Quotation stops: it ends with five stages done
+    expect(stageModel({ stage: 'paid', stageDetail: null, kind: 'direct', office: true }).label).toBe('All 5 stages done')
+    expect(stageModel({ stage: 'paid', stageDetail: null, kind: 'direct' }).phoneLabel).toBe('All 5 stages done')
     const part = stageModel({ stage: 'invoiced', stageDetail: 'part paid', kind: 'enquiry', office: true })
     expect(part.label).not.toMatch(/paid/i)
     expect(stageModel({ stage: 'paid', stageDetail: null, kind: 'enquiry' }).label).toBe('Paid')

@@ -71,7 +71,8 @@ function Line({ item, grey = false }: { item: TodayItem; grey?: boolean }) {
       <span className="min-w-0 text-base text-fg-muted [overflow-wrap:anywhere]">
         <span className="num">{item.ref}</span> · {item.party}
       </span>
-      <span className={cn('text-base font-semibold', tone, grey && 'font-regular')}>{item.badge.text}</span>
+      {/* a roll-up's bare count repeats its title (audit 2): left out */}
+      {/^\d+$/.test(item.badge.text) ? null : <span className={cn('text-base font-semibold', tone, grey && 'font-regular')}>{item.badge.text}</span>}
     </li>
   )
 }

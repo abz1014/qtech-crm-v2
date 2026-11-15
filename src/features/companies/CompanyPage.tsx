@@ -363,42 +363,46 @@ function Loaded({ company }: { company: CompanyDetail }) {
           // the role is identity, not state: a Tag on its own row above the meta line (so no "·" follows it), never a chip in the h1
           chips={company.role ? <RoleChip role={company.role} /> : undefined}
           meta={meta.map((m, i) => (i === 0 ? m : <span key={m} className="text-fg-muted">{m}</span>))}
-        >
-          {supplierRecordLine && facts ? (
-            // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
-            // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
-            // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
-            <p className="mt-1 overflow-x-clip text-base text-fg-2 md:mt-2" data-testid="supplier-record-line">
-              <span className="-ml-5 flex flex-wrap items-center">
-                {recordUnits(supplierRecordLine).map((unit, i) => (
-                  <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
-                    {i > 0 ? (
-                      <>
-                        {' '}
-                        <span aria-hidden="true" className="w-5 shrink-0 text-center text-fg-muted">
-                          ·
-                        </span>{' '}
-                      </>
-                    ) : null}
-                    {unit.map((part, j) => (
-                      <span key={part}>
-                        {j > 0 ? <span className="mx-2 text-fg-muted">{' · '}</span> : null}
-                        <CountText text={part} />
+          line={
+            <>
+              {supplierRecordLine && facts ? (
+                // the supplier's counts, said once (round 3: the "What we know" panel repeated them); the rules behind the (i)
+                // Each part of the line is one unit with its own dot (a 20px cell), and the row is pulled left into a clipped edge, so a
+                // part that starts a wrapped line hides its dot: no line starts or ends with a dangling "·", and the (i) stays on the last line.
+                <p className="mt-1 overflow-x-clip text-base text-fg-2 md:mt-2" data-testid="supplier-record-line">
+                  <span className="-ml-5 flex flex-wrap items-center">
+                    {recordUnits(supplierRecordLine).map((unit, i) => (
+                      <span key={unit.join('|')} className={cn('inline-flex min-w-0 items-center whitespace-nowrap', i === 0 && 'pl-5')}>
+                        {i > 0 ? (
+                          <>
+                            {' '}
+                            <span aria-hidden="true" className="w-5 shrink-0 text-center text-fg-muted">
+                              ·
+                            </span>{' '}
+                          </>
+                        ) : null}
+                        {unit.map((part, j) => (
+                          <span key={part}>
+                            {j > 0 ? <span className="mx-2 text-fg-muted">{' · '}</span> : null}
+                            <CountText text={part} />
+                          </span>
+                        ))}
                       </span>
                     ))}
+                    <InfoTip label="About these numbers" className="ml-1">
+                      <span className="grid gap-2">
+                        {factNotes(facts, record.view?.span ?? null).map(n => (
+                          <span key={n}>{n}</span>
+                        ))}
+                      </span>
+                    </InfoTip>
                   </span>
-                ))}
-                <InfoTip label="About these numbers" className="ml-1">
-                  <span className="grid gap-2">
-                    {factNotes(facts, record.view?.span ?? null).map(n => (
-                      <span key={n}>{n}</span>
-                    ))}
-                  </span>
-                </InfoTip>
-              </span>
-            </p>
-          ) : null}
-          <LastChanged table="companies" id={company.id} className="mt-2 text-base text-fg-2" />
+                </p>
+              ) : null}
+              <LastChanged table="companies" id={company.id} className="mt-2 text-base text-fg-2" />
+            </>
+          }
+        >
           {isEngineer ? (
             <NoPrimary />
           ) : (
@@ -610,10 +614,13 @@ function PhoneLinks({ name, phone }: { name: string; phone: string }) {
 function MoreAbout({ children, defaultOpen = false }: { children: ReactNode; defaultOpen?: boolean }) {
   return (
     <details className="group border-t" open={defaultOpen || undefined}>
-      <summary className="flex min-h-touch cursor-pointer list-none items-center gap-2 rounded py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
-        <Icon icon={ChevronRight} size="sm" className="text-fg-muted transition-transform duration-fast group-open:rotate-90" />
-        More about this supplier
-        <span className="text-sm font-regular text-fg-muted">Sites, brands, details</span>
+      {/* the title and its note wrap as two phrases beside the chevron, never word by word (audit 2, supplier at 375) */}
+      <summary className="-mx-2 flex min-h-touch cursor-pointer list-none items-center gap-2 rounded-control px-2 py-3 text-base font-semibold hover:bg-sunken [&::-webkit-details-marker]:hidden">
+        <Icon icon={ChevronRight} size="sm" className="shrink-0 text-fg-muted transition-transform duration-fast group-open:rotate-90" />
+        <span className="flex min-w-0 flex-wrap items-baseline gap-x-2">
+          <span>More about this supplier</span>
+          <span className="text-sm font-regular text-fg-muted">Sites, brands, details</span>
+        </span>
       </summary>
       <div className="grid gap-card-gap pb-2 pt-4">{children}</div>
     </details>

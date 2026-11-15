@@ -255,9 +255,19 @@ test('a pasted reply that gives a weight and a country of origin saves them with
   ])
 })
 
-test('at 1024 px wide the quotes table fits the page: no sideways scroll inside the item or the totals', async ({ page }) => {
+test('at 1024 px beside the open rail each quote is a card (six columns break mid-word there, audit 2); no sideways scroll', async ({ page }) => {
   const s = await seed()
   await page.setViewportSize({ width: 1024, height: 800 })
+  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
+  const first = page.locator('[data-statement-item="1"]')
+  await expect(first.locator(`li[data-statement-row="${s.names.zeta}"]`)).toContainText('400.00')
+  await expect(first.getByRole('table')).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+})
+
+test('at 1280 px wide the quotes table fits the page: no sideways scroll inside the item or the totals', async ({ page }) => {
+  const s = await seed()
+  await page.setViewportSize({ width: 1280, height: 800 })
   await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
   await expect(page.locator('[data-statement-item="1"]')).toBeVisible()
   await expect(page.locator('[data-statement-item="1"]').getByRole('table')).toBeVisible()

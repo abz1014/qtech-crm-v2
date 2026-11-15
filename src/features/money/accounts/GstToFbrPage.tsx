@@ -65,7 +65,7 @@ export function GstToFbrPage() {
         // shaped like the month cards: the month, the three figures, the status
         <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the GST months">
           {[0, 1, 2].map(i => (
-            <div key={i} className={cn(CARD, 'grid gap-4 p-card md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,15rem)] md:items-center md:gap-6')}>
+            <div key={i} className={cn(CARD, 'grid gap-4 p-card md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,15rem)] xl:items-center xl:gap-6')}>
               <span className="grid gap-2">
                 <Skeleton className="h-5 w-[8rem]" />
                 <Skeleton className="h-3 w-[5rem]" />
@@ -118,12 +118,12 @@ const STATUS_INK: Record<GstLine['tone'], string> = {
 
 function MonthCard({ l }: { l: GstLine }) {
   return (
-    <li className={cn(CARD, 'grid gap-4 p-card md:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,15rem)] md:items-center md:gap-6')} data-testid={`gst-${l.month}`} data-tone={l.tone}>
+    <li className={cn(CARD, 'grid gap-4 p-card md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] xl:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_minmax(0,15rem)] xl:items-center xl:gap-6')} data-testid={`gst-${l.month}`} data-tone={l.tone}>
       <div className="grid gap-1">
         <h2 className="text-lg font-heavy">{monthKeyLabel(l.month)}</h2>
         <span className="text-sm text-fg-2">{l.invoiceCount === 1 ? '1 invoice' : `${l.invoiceCount} invoices`}</span>
       </div>
-      <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 text-base">
+      <dl className="grid grid-cols-[minmax(9rem,1fr)_auto] gap-y-1 text-base [&>dd]:pl-4">
         <dt className="text-fg-2">GST charged</dt>
         <dd className="num text-right">{rs(l.charged)}</dd>
         <dt className="text-fg-2">GST paid on purchases</dt>
@@ -139,7 +139,9 @@ function MonthCard({ l }: { l: GstLine }) {
           </>
         ) : null}
       </dl>
-      <Status l={l} />
+      <div className="md:col-span-2 xl:col-span-1">
+        <Status l={l} />
+      </div>
     </li>
   )
 }

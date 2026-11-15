@@ -99,8 +99,9 @@ export function TargetTile({ today, className }: { today: string; className?: st
         className="inline-flex items-center gap-1 justify-self-start rounded text-xs text-fg-muted hover:text-fg"
       >
         <span className="num">Day {w.dayOfQuarter} of {w.daysInQuarter}</span>
-        <Icon icon={ChevronDown} size="chip" className={cn('transition-transform duration-fast', open && 'rotate-180')} />
         <span>· {w.daysLeft} days left</span>
+        {/* the chevron ends the line it opens (audit 2: between the two parts it read as a stray caret) */}
+        <Icon icon={ChevronDown} size="chip" className={cn('transition-transform duration-fast', open && 'rotate-180')} />
       </button>
       {open ? (
         <div id={panel} className="grid gap-1 rounded bg-sunken p-3 text-xs">

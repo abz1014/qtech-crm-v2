@@ -79,8 +79,9 @@ export function FoldRow({ state, title, summary, open, onToggle, controlsId, chi
     <>
       <span className={cn('col-start-1 row-start-1 min-w-0 [overflow-wrap:anywhere]', muted && 'font-medium text-fg-2')}>{title}</span>
       {chip.word === state.word ? null : <span className="sr-only">{state.word}</span>}
-      <span className={cn('col-start-2 row-span-2 row-start-1 inline-flex min-h-chip items-center gap-1 self-center whitespace-nowrap rounded-pill border py-px pl-2 pr-3 text-xs font-card leading-none', CHIP_TONE[chip.tone])}>
-        <Icon icon={chip.icon} size="chip" className="size-icon-chip" />
+      {/* On a phone the chip drops its icon (the word says it) and sits closer, so a two-word title ("Supplier order") keeps one line (audit 2). */}
+      <span className={cn('col-start-2 row-span-2 row-start-1 inline-flex min-h-chip items-center gap-1 self-center whitespace-nowrap rounded-pill border py-px pl-2 pr-3 text-xs font-card leading-none max-sm:px-2', CHIP_TONE[chip.tone])}>
+        <Icon icon={chip.icon} size="chip" className="size-icon-chip max-sm:hidden" />
         {chip.word}
       </span>
       <span className={cn('col-start-1 row-start-2 min-w-0 text-sm font-regular [overflow-wrap:anywhere]', tone ? summaryTone : 'text-fg-muted')}>{summary}</span>
@@ -106,7 +107,7 @@ export function FoldRow({ state, title, summary, open, onToggle, controlsId, chi
   )
   // With a chip: a grid of [words | chip | chevron] over two lines; a figure: a grid of [icon | words | chevron]; else the one line.
   const line = chip
-    ? 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-px py-3'
+    ? 'grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-px py-3 max-sm:gap-x-2'
     : figure
       ? 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 py-2'
       : 'flex items-center gap-3 py-2'

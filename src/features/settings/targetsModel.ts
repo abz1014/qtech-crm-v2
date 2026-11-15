@@ -172,7 +172,8 @@ const grouped = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 })
 export function compactPkr(n: number): string {
   const a = Math.abs(n)
   if (a < 1_000_000) return grouped.format(a)
-  return `${(a / 1_000_000).toFixed(2).replace(/\.?0+$/, '')} M`
+  // grouped like every other figure: "10,446.78 M", never "10446.78 M" (audit 2)
+  return `${new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number((a / 1_000_000).toFixed(2)))} M`
 }
 
 /**

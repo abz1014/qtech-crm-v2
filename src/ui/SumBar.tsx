@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from 'react'
+import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { CircleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -6,6 +6,7 @@ import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
 import { CARD } from '@/ui/card'
 import { fitEms } from '@/ui/moneyFit'
+import { evenColumns } from '@/ui/sumColumns'
 import { formatAmount, formatPaisa, paisaToFixed, toPaisa, type Amount, type PaisaMode } from '@/lib/money'
 
 const abs = (p: bigint) => (p < 0n ? -p : p)
@@ -49,11 +50,82 @@ function FigureList({ parts }: { parts: string[] }) {
     <>
       {parts.map((p, i) => (
         <Fragment key={`${i}-${p}`}>
-          {i > 0 ? ' · ' : null}
-          <span className="whitespace-nowrap">{p}</span>
+          {i > 0 ? ' ' : null}
+          {/* the dot leads the amount after it, so a wrapped line never ends on a dangling "·" (audit 2, report-owe) */}
+          <span className="whitespace-nowrap">{i > 0 ? `· ${p}` : p}</span>
         </Fragment>
       ))}
     </>
+  )
+}
+
+/**
+ * The tiles never cut a figure (audit 1 blocker 2, audit 2): a tile is at least as wide as the widest figure needs at the tile
+ * size (plus "PKR" and the padding; a probe of that width is measured), the count per row comes from evenColumns, a
+ * short last row's tiles share it evenly, and the figure itself fits (Money `fit`) if even one tile per row is too narrow.
+ */
+/** The least width of a tile: the widest figure at the tile size, "PKR" and the padding (text-lg and tighter padding on a phone). */
+const PROBE =
+  'pointer-events-none invisible absolute left-0 top-0 h-0 w-[calc(var(--sum-em)*var(--text-xl)+2.5rem+2*var(--card-pad))] max-sm:w-[calc(var(--sum-em)*var(--text-lg)+2.5rem+2rem)]'
+
+function SumTiles({ items, label, className }: { items: SumBarItem[]; label: string; className?: string }) {
+  const em = Math.max(
+    4,
+    ...items.map(i => {
+      const t = figureText(i)
+      return t ? fitEms(t) : 0
+    }),
+  )
+  const n = items.length
+  const box = useRef<HTMLElement>(null)
+  const [cols, setCols] = useState(n)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const measure = () => {
+      const w = el.clientWidth
+      // a probe of the tile's least width (the CSS works it out from the tokens and the text size), there only while measured
+      const p = document.createElement('div')
+      p.className = PROBE
+      el.appendChild(p)
+      const t = p.offsetWidth
+      p.remove()
+      if (w > 0 && t > 0) setCols(evenColumns(n, w, t))
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [n, em])
+  return (
+    <section
+      ref={box}
+      aria-label={label}
+      data-work=""
+      data-cols={cols}
+      style={{ ['--sum-em' as string]: String(em), ['--sum-cols' as string]: String(cols) }}
+      className={cn('relative flex flex-wrap gap-px overflow-hidden rounded-card border bg-line shadow-e1', className)}
+    >
+      {items.map(item => (
+        <div
+          key={item.label}
+          className={cn(
+            'grid min-w-0 flex-[1_1_calc((100%-(var(--sum-cols)-1)*1px)/var(--sum-cols))] content-start gap-1 bg-surface px-card py-4 max-sm:px-4',
+            item.tone === 'danger' && 'text-tone-danger-fg',
+            item.tone === 'muted' && 'bg-sunken text-fg-2',
+          )}
+        >
+          <span className={cn('text-sm font-medium', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg-2')}>{item.label}</span>
+          {item.count !== undefined || item.figure !== undefined ? (
+            <span className="num text-xl font-heavy tracking-snug max-sm:text-lg">{Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)}</span>
+          ) : (
+            <Money value={item.amount} size="xl" fit provisional={item.provisional} paisa={item.paisa ?? 'never'} className="[&>span]:font-heavy max-sm:[&>.num]:[--fit-max:var(--text-lg)]" />
+          )}
+          {item.sub ? <span className="text-sm text-fg-muted">{item.sub}</span> : null}
+        </div>
+      ))}
+    </section>
   )
 }
 
@@ -123,8 +195,8 @@ export function SumBar({
         <dl className="grid gap-1">
           {items.map(item => (
             <div key={item.label} className="flex items-baseline justify-between gap-4">
-              <dt className={cn('type-body', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg')}>{item.label}</dt>
-              <dd className={cn('num type-row', item.tone === 'danger' && 'text-tone-danger-fg')}>
+              <dt className={cn('type-body min-w-[7rem]', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg')}>{item.label}</dt>
+              <dd className={cn('num type-row min-w-0 text-right', item.tone === 'danger' && 'text-tone-danger-fg')}>
                 {item.count !== undefined || item.figure !== undefined ? (
                   Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)
                 ) : (
@@ -137,40 +209,7 @@ export function SumBar({
       </section>
     )
   }
-  // The tiles never cut a figure (audit 1 blocker 2, audit 2): each tile is at least as wide as the widest figure needs at the
-  // tile size (plus "PKR" and the padding), the tiles wrap onto more rows (the last row's tiles grow to fill it, one per row at
-  // the narrowest), and the figure itself fits (Money `fit`) if even one tile per row is too narrow.
-  const em = Math.max(4, ...items.map(i => {
-    const t = figureText(i)
-    return t ? fitEms(t) : 0
-  }))
-  const tiles = (
-    <section
-      aria-label={label}
-      data-work=""
-      style={{ ['--sum-em' as string]: String(em) }}
-      className={cn('flex flex-wrap gap-px overflow-hidden rounded-card border bg-line shadow-e1', className)}
-    >
-      {items.map(item => (
-        <div
-          key={item.label}
-          className={cn(
-            'grid min-w-0 flex-[1_1_calc(var(--sum-em)*var(--text-xl)+2.5rem+2*var(--card-pad))] content-start gap-1 bg-surface px-card py-4 max-sm:flex-[1_1_calc(var(--sum-em)*var(--text-lg)+2.5rem+2rem)] max-sm:px-4',
-            item.tone === 'danger' && 'text-tone-danger-fg',
-            item.tone === 'muted' && 'bg-sunken text-fg-2',
-          )}
-        >
-          <span className={cn('text-sm font-medium', item.tone === 'danger' ? 'text-tone-danger-fg' : 'text-fg-2')}>{item.label}</span>
-          {item.count !== undefined || item.figure !== undefined ? (
-            <span className="num text-xl font-heavy tracking-snug max-sm:text-lg">{Array.isArray(item.figure) ? <FigureList parts={item.figure} /> : (item.figure ?? item.count)}</span>
-          ) : (
-            <Money value={item.amount} size="xl" fit provisional={item.provisional} paisa={item.paisa ?? 'never'} className="[&>span]:font-heavy max-sm:[&>.num]:[--fit-max:var(--text-lg)]" />
-          )}
-          {item.sub ? <span className="text-sm text-fg-muted">{item.sub}</span> : null}
-        </div>
-      ))}
-    </section>
-  )
+  const tiles = <SumTiles items={items} label={label} className={className} />
   if (!caption) return tiles
   // The caption (the period, the basis, "as of") says once what every figure is: above the card, never lost with the strip.
   return (

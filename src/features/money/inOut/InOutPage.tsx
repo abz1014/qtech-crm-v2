@@ -143,7 +143,7 @@ function PeriodPager({ period, atNow, go }: { period: Period; atNow: boolean; go
 /** One figure line: label, its basis in small words, this period, the previous one and the change. */
 function Row({ label, sub, now, before, strong, testId }: { label: string; sub?: ReactNode; now: Amount; before: Amount; strong?: boolean; testId?: string }) {
   return (
-    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-px border-b px-card py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem]', strong && 'bg-brand-100 font-heavy')}>
+    <div role="row" data-testid={testId} className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 gap-y-px border-b px-card py-3 last:border-b-0 md:grid-cols-[minmax(0,1fr)_9.5rem_9.5rem_9.5rem]', strong && 'bg-brand-100 font-heavy')}>
       <span role="rowheader" className={cn('type-body', strong && 'font-semibold')}>
         {label}
         {sub ? <span className="type-body block text-fg-muted">{sub}</span> : null}
@@ -164,7 +164,7 @@ function Row({ label, sub, now, before, strong, testId }: { label: string; sub?:
 
 function Head({ prev }: { prev: string }) {
   return (
-    <div role="row" className="hidden min-h-head grid-cols-[minmax(0,1fr)_9rem_9rem_7.5rem] items-center gap-x-4 border-b px-card text-sm font-medium text-fg-2 md:grid">
+    <div role="row" className="hidden min-h-head grid-cols-[minmax(0,1fr)_9.5rem_9.5rem_9.5rem] items-center gap-x-4 border-b px-card text-sm font-medium text-fg-2 md:grid">
       <span role="columnheader">Line</span>
       <span role="columnheader" className="text-right">
         PKR

@@ -296,7 +296,8 @@ function JobsList() {
     <EmptyState title="Nothing in history yet">A job moves here once it is paid and installed, lost, or cancelled with no money open.</EmptyState>
   ) : (
     <EmptyState mood="goal" title="No open jobs">
-      Every job is done. A new RFQ starts one.
+      {/* an engineer cannot start an RFQ (audit 2): the office puts them on jobs */}
+      {role === 'engineer' ? 'Every job is done. A job appears here once you are put on it.' : 'Every job is done. A new RFQ starts one.'}
     </EmptyState>
   )
 

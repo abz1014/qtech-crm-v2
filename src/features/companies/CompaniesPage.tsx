@@ -99,15 +99,15 @@ export function CompaniesPage() {
         // Table cells do not wrap (DataTable), but a long company name must: unwrapped, it ran under the Role badge on a
         // 768 px tablet (HE-16). It wraps inside its own column instead.
         cell: r => (
-          <div className="grid min-w-0 gap-px whitespace-normal">
+          <div className="grid min-w-[11rem] gap-px whitespace-normal">
             <NameLink row={r} clamp />
             <PlaceLine row={r} clamp />
           </div>
         ),
       },
-      { id: 'role', header: 'Role', value: r => r.role, sortable: true, width: 216, cell: r => <Role row={r} /> },
-      { id: 'rfqs', header: 'RFQs', kind: 'num', value: r => r.rfqCount, sortable: true, width: 96, hideBelowMd: true },
-      { id: 'orders', header: 'Orders', kind: 'num', value: r => r.orderCount, sortable: true, width: 96, hideBelowMd: true },
+      { id: 'role', header: 'Role', value: r => r.role, sortable: true, width: 152, cell: r => <Role row={r} /> },
+      { id: 'rfqs', header: 'RFQs', kind: 'num', value: r => r.rfqCount, sortable: true, width: 80, hideBelowLg: true },
+      { id: 'orders', header: 'Orders', kind: 'num', value: r => r.orderCount, sortable: true, width: 80, hideBelowLg: true },
       {
         id: 'activity',
         header: 'Last activity',

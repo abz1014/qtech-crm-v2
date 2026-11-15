@@ -1,6 +1,6 @@
 import { test, type Page } from '@playwright/test'
 import { axe, engineerMoney, focusSweep, inspect, type Raw } from './checks'
-import { bounded, coarse, combo, contextAs, fullShot, isPhone, makeEmpty, makeError, makeLoading, record, rel, settle, shotPath, spaGo, waitAnimations, writeFirewall, type State, type TextSize, type Where } from './lib'
+import { bounded, coarse, combo, contextAs, DATA, fullShot, isPhone, makeEmpty, makeError, makeLoading, record, rel, settle, shotPath, spaGo, waitAnimations, writeFirewall, type State, type TextSize, type Where } from './lib'
 import { AUDIT_ROUTES, at, WIDE, WIDTHS, type AuditRoute, type Role, type Width } from './routes'
 import { ensureSeed, fillPath, type AuditSeed } from './seed'
 
@@ -180,7 +180,20 @@ async function discoverOpeners(page: Page, path: string, base: Where, con: Conso
     await markOpeners(page, shell)
   }
   const click = async (name: string) => {
-    await page.locator(`[data-audit-opener="${name.replace(/"/g, '\\"')}"]`).first().click({ timeout: 4_000 })
+    const target = () => page.locator(`[data-audit-opener="${name.replace(/"/g, '\\"')}"]`).first()
+    try {
+      await target().click({ timeout: 4_000 })
+    } catch (e) {
+      // The job page draws its More again once its data settles (inline, then the sticky bar's), and the new button has no mark:
+      // mark once more and click again. A second failure is reported with Playwright's reason (covered, not stable ...).
+      await markOpeners(page, shell)
+      try {
+        await target().click({ timeout: 4_000 })
+      } catch (e2) {
+        const why = (e2 instanceof Error ? e2.message : String(e2)).split('\n').filter(l => /intercepts|not stable|not visible|detached|outside of the viewport|waiting for/.test(l)).slice(-2).join(' | ')
+        throw new Error(`${(e instanceof Error ? e.message : String(e)).split('\n')[0]} (again after re-marking: ${why.slice(0, 160)})`)
+      }
+    }
     await page.waitForTimeout(500)
     await settle(page)
   }
@@ -214,7 +227,7 @@ async function discoverOpeners(page: Page, path: string, base: Where, con: Conso
         }
       })
     } catch (e) {
-      record({ ...base, state: `dialog-${slug(name)}`, rule: 'harness', selector: name, detail: `opener: ${(e instanceof Error ? e.message : String(e)).split('\n')[0].slice(0, 200)}` })
+      record({ ...base, state: `dialog-${slug(name)}`, rule: 'harness', selector: name, detail: `opener: ${(e instanceof Error ? e.message : String(e)).split('\n')[0].slice(0, 360)}` })
     } finally {
       await page.keyboard.press('Escape').catch(() => undefined)
     }
@@ -304,7 +317,7 @@ for (const r of AUDIT_ROUTES) {
                 if (state === 'error') {
                   await makeError(page)
                   page.on('requestfailed', q => {
-                    if (/\/rest\/v1\//.test(q.url())) failedReads++
+                    if (DATA.test(q.url())) failedReads++
                   })
                 }
                 // Home and Weekly review show the Today read the shell's nav counts made a moment ago (features/today/hooks.ts
@@ -322,7 +335,7 @@ for (const r of AUDIT_ROUTES) {
                     .then(() => true)
                     .catch(() => false)
                   // Narrowed (audit 2): a screen that made no data request at all has nothing that failed to report. Proven by
-                  // counting the refused /rest/v1/ requests made after the screen was opened; one or more and silence is a finding.
+                  // counting the refused /rest/v1/ and /functions/v1/ requests made after the screen was opened; one or more and silence is a finding.
                   if (!said && failedReads > 0)
                     record({ ...where, rule: 'error-state-silent', selector: '#main', detail: `${failedReads} data request(s) failed and after 10 s the screen says nothing about it (no "could not", "try again"): a skeleton, a blank page or stale words` })
                 }

@@ -179,7 +179,13 @@ function ViaCell({ r }: { r: ReceivedPayment }) {
   return (
     <span className="grid gap-px">
       <span>{viaWord(r.paidVia)}</span>
-      {r.reference ? <span className="num text-xs text-fg-muted [overflow-wrap:anywhere]">{r.reference}</span> : null}
+      {/* a long bank reference keeps two lines in a column wide enough to read (the whole of it in the title; audit 2: at 768 it
+          broke into a dozen lines a few letters wide) */}
+      {r.reference ? (
+        <span className="num line-clamp-2 min-w-[9rem] max-w-[16rem] text-xs text-fg-muted [overflow-wrap:anywhere]" title={r.reference}>
+          {r.reference}
+        </span>
+      ) : null}
     </span>
   )
 }

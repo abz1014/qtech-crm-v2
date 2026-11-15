@@ -328,6 +328,27 @@ function TableView<T>(props: DataTableProps<T>) {
     ro.observe(table)
     return () => ro.disconnect()
   }, [virtual])
+  // A table wider than its card scrolls sideways; the cut edge fades so it never reads as clipped (audit 2: To collect and Overdue
+  // by age at 768 looked cut off).
+  const [cut, setCut] = useState<{ start: boolean; end: boolean }>({ start: false, end: false })
+  const readCut = (el: HTMLElement) => {
+    const start = el.scrollLeft > 1
+    const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+    setCut(prev => (prev.start === start && prev.end === end ? prev : { start, end }))
+  }
+  useLayoutEffect(() => {
+    const box = scrollRef.current
+    if (!box || virtual) return
+    if (!fit.wide) return setCut(prev => (prev.start || prev.end ? { start: false, end: false } : prev))
+    readCut(box)
+  }, [fit.wide, fit.width, virtual])
+  const cutMask =
+    fit.wide && (cut.start || cut.end)
+      ? (() => {
+          const g = `linear-gradient(to right, ${cut.start ? 'transparent, #000 2.5rem' : '#000'}, ${cut.end ? '#000 calc(100% - 2.5rem), transparent' : '#000'})`
+          return { maskImage: g, WebkitMaskImage: g }
+        })()
+      : undefined
   const [scrollTop, setScrollTop] = useState(0)
   const [viewH, setViewH] = useState(600)
   useLayoutEffect(() => {
@@ -928,9 +949,9 @@ function TableView<T>(props: DataTableProps<T>) {
       <div
         ref={scrollRef}
         data-virtual={virtual ? '' : undefined}
-        onScroll={virtual ? e => setScrollTop(e.currentTarget.scrollTop) : undefined}
+        onScroll={virtual ? e => setScrollTop(e.currentTarget.scrollTop) : fit.wide ? e => readCut(e.currentTarget) : undefined}
         className={virtual ? 'overflow-auto' : fit.wide ? 'overflow-x-auto' : undefined}
-        style={virtual ? { maxHeight } : undefined}
+        style={virtual ? { maxHeight } : cutMask}
       >
         <table
           ref={tableRef}

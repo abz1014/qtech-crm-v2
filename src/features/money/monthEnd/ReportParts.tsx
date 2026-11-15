@@ -143,10 +143,11 @@ export function ReportLoading({ label }: { label: string }) {
     <div role="status" aria-busy="true" aria-label={label} className="grid gap-4">
       <div className={cn(CARD, 'grid grid-cols-2 gap-px overflow-hidden bg-line md:grid-cols-4')}>
         {[0, 1, 2, 3].map(i => (
-          <div key={i} className="grid gap-2 bg-surface px-card py-4">
-            <Skeleton className="h-3 w-[6rem]" />
-            <Skeleton className="h-5 w-[8rem]" />
-            <Skeleton className="h-3 w-[10rem]" />
+          // bars as shares of the tile, so none runs into the next tile on a phone (audit 2)
+          <div key={i} className="grid min-w-0 gap-2 bg-surface px-card py-4 max-sm:px-4">
+            <Skeleton className="h-3 w-1/2 max-w-[6rem]" />
+            <Skeleton className="h-5 w-3/4 max-w-[8rem]" />
+            <Skeleton className="h-3 w-full max-w-[10rem]" />
           </div>
         ))}
       </div>

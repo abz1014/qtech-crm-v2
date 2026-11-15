@@ -128,7 +128,7 @@ export function ProductCategoriesPage() {
             <ul aria-label="Product categories" className={cn(CARD, 'overflow-hidden')}>
               {shown.slice(0, SHOWN_MAX).map((c, i) => (
                 <li key={c.id} className="flex min-h-row items-center gap-3 border-t py-1 pl-card pr-2 first:border-t-0" data-curated={c.curated || undefined} data-work={i === 0 ? '' : undefined}>
-                  <p className="min-w-0 flex-1 text-base font-card [overflow-wrap:anywhere]">
+                  <p className="min-w-0 flex-1 text-base font-card break-words">
                     {c.name}
                     {view === 'all' && !c.curated ? <span className="ml-2 font-regular text-fg-muted">Not curated</span> : null}
                   </p>

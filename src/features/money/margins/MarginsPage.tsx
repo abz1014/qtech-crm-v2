@@ -34,7 +34,7 @@ import { cashTotals, isPaidProvisional, marginPct, marginTotals, noCostsYet, sor
  * rule and saying the unit once ("Margin (PKR)"), the rows flush with the card's words, the state as an icon and a word, and the total
  * on the sunken band. The cash view and every state (loading, error, empty) sit in the same card.
  */
-const COLS = 'md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_90px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
+const COLS = 'xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_90px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
 
 type View = 'all' | 'not-final' | 'final'
 
@@ -86,7 +86,7 @@ function MarginRowView({ r }: { r: MarginRow }) {
       {/* Phone: two lines (round 3: each card was about 230 px). */}
       {/* The customer on its own line (two at most, the whole name in the title), then the order and the margin: a long name never
           squeezes beside a big figure (audit 1, item 11). */}
-      <div className="grid min-w-0 gap-1 py-3 md:hidden">
+      <div className="grid min-w-0 gap-1 py-3 xl:hidden">
         <span className="line-clamp-2 font-medium [overflow-wrap:anywhere]" title={r.companyName}>
           {r.companyName}
         </span>
@@ -104,7 +104,7 @@ function MarginRowView({ r }: { r: MarginRow }) {
         </span>
       </div>
       {/* Desktop: one row, six columns. */}
-      <div className={`hidden gap-4 py-3 md:grid ${COLS}`}>
+      <div className={`hidden gap-4 py-3 xl:grid ${COLS}`}>
         <div className="grid min-w-0 content-start gap-[2px]">
           <span className="line-clamp-2 min-w-0 text-sm font-semibold [overflow-wrap:anywhere]" title={r.companyName}>
             {r.companyName}
@@ -247,7 +247,7 @@ export function MarginsPage() {
           <CashBody rows={cashRows} totals={cash} />
         ) : (
           <div>
-            <div className={`hidden border-b-2 border-fg pb-2 text-sm font-semibold text-fg md:grid md:gap-4 ${COLS}`} aria-hidden="true">
+            <div className={`hidden border-b-2 border-fg pb-2 text-sm font-semibold text-fg xl:grid xl:gap-4 ${COLS}`} aria-hidden="true">
               <span>Customer and order</span>
               <span className="text-right">Margin (PKR)</span>
               <span className="text-right">Margin %</span>
@@ -261,21 +261,21 @@ export function MarginsPage() {
               ))}
             </ul>
             {rows.length === 0 ? <p className="py-6 text-sm text-fg-2">{view === 'final' ? 'No order has its costs marked complete yet.' : 'Every order has its costs marked complete.'}</p> : null}
-            <div className={`-mx-3 grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 rounded-control bg-sunken px-3 py-3 text-sm font-semibold md:gap-4 ${COLS}`} data-testid="margin-totals">
+            <div className={`-mx-3 grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 rounded-control bg-sunken px-3 py-3 text-sm font-semibold xl:gap-4 ${COLS}`} data-testid="margin-totals">
               <span>
                 Total of <span className="num">{totals.orders}</span> final {totals.orders === 1 ? 'order' : 'orders'}
               </span>
               <span className="num text-right">
                 <Money value={totals.orders > 0 ? totals.margin : null} prefix={false} size="lg" />
               </span>
-              <span className="num text-right max-md:hidden">{totals.orders > 0 ? marginPct({ margin: totals.margin, netSale: totals.netSale }) ?? '—' : '—'}</span>
-              <span className="num text-right max-md:hidden">
+              <span className="num text-right max-xl:hidden">{totals.orders > 0 ? marginPct({ margin: totals.margin, netSale: totals.netSale }) ?? '—' : '—'}</span>
+              <span className="num text-right max-xl:hidden">
                 <Money value={totals.orders > 0 ? totals.netSale : null} prefix={false} />
               </span>
-              <span className="num text-right max-md:hidden">
+              <span className="num text-right max-xl:hidden">
                 <Money value={totals.orders > 0 ? totals.actualCost : null} prefix={false} />
               </span>
-              <span className="max-md:hidden" />
+              <span className="max-xl:hidden" />
             </div>
             {notFinal > 0 ? (
               <p className="pt-3 text-sm text-fg-2" data-testid="margin-left-out">

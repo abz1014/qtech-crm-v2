@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, type ReactNode } from 'react'
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -144,11 +144,34 @@ const FrameBar = memo(function FrameBar({ title, back }: { title: string; back?:
 /** The desktop strip: it scrolls sideways only when the tabs are wider than the page, and the lit tab is brought into view. */
 function DesktopTabs({ tabs, active, toOf }: { tabs: readonly MoneyTab[]; active: string | null; toOf: (t: MoneyTab) => string }) {
   const ref = useRef<HTMLElement>(null)
+  // Where the strip is cut (audit 2: at 768 and 1024 the end tab was cut with nothing to say more lies beyond): the cut edge fades.
+  const [cut, setCut] = useState<{ start: boolean; end: boolean }>({ start: false, end: false })
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    const el = ref.current
+    el?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+    if (!el) return
+    const read = () => {
+      const start = el.scrollLeft > 1
+      const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
+      setCut(prev => (prev.start === start && prev.end === end ? prev : { start, end }))
+    }
+    read()
+    el.addEventListener('scroll', read, { passive: true })
+    window.addEventListener('resize', read)
+    return () => {
+      el.removeEventListener('scroll', read)
+      window.removeEventListener('resize', read)
+    }
   }, [active])
+  const fade = cut.start || cut.end ? `linear-gradient(to right, ${cut.start ? 'transparent, #000 3rem' : '#000'}, ${cut.end ? '#000 calc(100% - 3rem), transparent' : '#000'})` : undefined
   return (
-    <nav ref={ref} aria-label="Money views" className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden" data-testid="money-tabs">
+    <nav
+      ref={ref}
+      aria-label="Money views"
+      className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden"
+      style={fade ? { maskImage: fade, WebkitMaskImage: fade } : undefined}
+      data-testid="money-tabs"
+    >
       {tabs.map(t => (
         <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
       ))}
@@ -166,7 +189,7 @@ function TabLink({ tab, to, on, phone }: { tab: MoneyTab; to: string; on: boolea
         'inline-flex items-center transition-colors duration-fast ease-out',
         phone
           ? 'min-h-touch min-w-0 justify-center gap-1 rounded border px-1 text-center text-sm font-medium leading-tight'
-          : 'min-h-control shrink-0 gap-2 border-b-ring px-4 text-sm font-card',
+          : 'min-h-control shrink-0 gap-2 border-b-ring px-3 text-sm font-card xl:px-4',
         phone ? (on ? 'border-chrome bg-chrome text-chrome-fg' : 'border-transparent text-fg-muted hover:text-fg') : on ? 'border-primary font-heavy text-primary' : 'border-transparent text-fg-2 hover:text-fg',
       )}
     >

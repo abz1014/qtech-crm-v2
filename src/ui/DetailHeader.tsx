@@ -42,6 +42,9 @@ export interface DetailHeaderProps {
   chips?: ReactNode
   /** At most 5 short items, joined with "·". Falsy items are skipped. */
   meta?: readonly ReactNode[]
+  /** One more line in the title's column, under the meta (a supplier's record line, "Last changed"): it lines up with the h1,
+   *  never with the back button (audit 2). */
+  line?: ReactNode
   /** Under the header lines: the page's NextStepBox, then at most one facts strip. */
   children?: ReactNode
   className?: string
@@ -61,7 +64,7 @@ function count(node: ReactNode): number {
   )
 }
 
-export function DetailHeader({ name, nameHref, code, breadcrumb, back, sub, more, chips, meta, children, className, phoneSrOnly = false }: DetailHeaderProps) {
+export function DetailHeader({ name, nameHref, code, breadcrumb, back, sub, more, chips, meta, line, children, className, phoneSrOnly = false }: DetailHeaderProps) {
   const items = (meta ?? []).filter(m => m !== null && m !== undefined && m !== false && m !== '')
   if (import.meta.env.DEV) {
     if (count(chips) > 2) throw new Error(`DetailHeader: at most 2 status chips (got ${count(chips)}).`)
@@ -118,6 +121,7 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, back, sub, more
           </span>
         </p>
       ) : null}
+      {line ? <div className={cn('grid min-w-0 grid-cols-[minmax(0,1fr)]', back && 'md:col-start-2')}>{line}</div> : null}
       {back && children ? <div className="grid grid-cols-[minmax(0,1fr)] md:col-span-2">{children}</div> : children}
     </header>
   )
