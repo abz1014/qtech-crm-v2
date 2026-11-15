@@ -33,6 +33,7 @@ import { mapPgError } from '@/lib/pgErrors'
 import { cn } from '@/lib/utils'
 import { Avatar } from '@/ui/Avatar'
 import { Banner } from '@/ui/Banner'
+import { EmptyState } from '@/ui/EmptyState'
 import { Button } from '@/ui/Button'
 import { CARD } from '@/ui/card'
 import { InfoTip } from '@/ui/InfoTip'
@@ -202,9 +203,9 @@ export function TargetsPage() {
       ) : null}
 
       {failed ? (
-        <Banner tone="danger" title="Could not load targets" action={<Button size="sm" onClick={retry}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="Could not load targets" actions={<Button onClick={retry}>Try again</Button>}>
           {(targetsA.error ?? targetsB.error ?? team.error) instanceof Error ? ((targetsA.error ?? targetsB.error ?? team.error) as Error).message : 'Check your connection, then try again.'}
-        </Banner>
+        </EmptyState>
       ) : loading ? (
         <div role="status" className={cn(CARD, 'overflow-hidden')} aria-busy="true" aria-label="Loading targets">
           {[0, 1, 2].map(i => (

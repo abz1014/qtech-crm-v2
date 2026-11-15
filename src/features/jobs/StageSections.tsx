@@ -269,9 +269,11 @@ const CHIP_TONE: Record<StepTone, FoldRowChipTone> = { now: 'warning', waiting: 
 function chipOf(state: StopState, current: StepTone, word: StepTone = current): FoldRowChip {
   if (state === 'done') return { icon: CircleCheck, word: 'Done', tone: 'success' }
   // the word follows the step (an imported job still "Needs action"); the colour follows the tone (grey for an imported job)
-  if (state === 'current') return { ...CHIP[word], tone: CHIP_TONE[current] }
+  // the colour follows the word too: an imported job's "Needs action" is the usual amber chip (owner, audit 2)
+  if (state === 'current') return { ...CHIP[word], tone: CHIP_TONE[word] }
   if (state === 'future') return { icon: CircleDashed, word: 'Not yet', tone: 'neutral' }
   if (state === 'stopped') return { icon: CircleX, word: 'Not reached', tone: 'neutral' }
+  if (state === 'office') return OFFICE_CHIP
   return { icon: Minus, word: 'None', tone: 'neutral' }
 }
 
@@ -287,6 +289,7 @@ const STATE: Record<StopState, { icon: LucideIcon; word: string; className: stri
   future: { icon: CircleDashed, word: 'Not yet', className: 'text-fg-muted' },
   none: { icon: Minus, word: 'Not part of this job', className: 'text-fg-muted' },
   stopped: { icon: CircleX, word: 'Not reached', className: 'text-fg-muted' },
+  office: { icon: Building2, word: WITH_OFFICE, className: 'text-fg-muted' },
 }
 
 /**

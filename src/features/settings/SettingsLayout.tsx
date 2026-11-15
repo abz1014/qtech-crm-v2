@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { NoPrimary } from '@/ui/NoPrimary'
+import { useScrollFade } from '@/ui/useScrollFade'
 
 // The Settings home (its rates table, DataTable and the RFQ rate queries) is a lazy chunk: none of it is on the first screen (perf/trim).
 const SettingsHomePage = lazyWithReload(() => import('@/features/settings/SettingsHomePage').then(m => ({ default: m.SettingsHomePage })))
@@ -42,16 +43,19 @@ export function SettingsLayout() {
   const atHome = pathname.replace(/\/+$/, '') === '/settings'
   const groups = SETTINGS_GROUPS.map(g => ({ ...g, links: g.links.filter(l => canOpenSettingsLink(l, role)) }))
   const current = groups.flatMap(g => g.links).find(l => pathname.startsWith(l.to))
+  const tablet = useMediaQuery('(min-width: 768px) and (max-width: 1279.98px)')
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-card-gap px-4 pb-12 pt-4 xl:grid-cols-[20rem_minmax(0,1fr)] md:px-8 md:pt-6">
       <NoPrimary />
       {/* Team sets its own phone bar; every other page under Settings gets the back arrow to the list. */}
       {!atHome && current && current.to !== '/settings/team' ? <BackToSettings title={current.label} /> : null}
       {/*
-        * Mockup 75: the list is a Forest card on the canvas, beside the page from 1280. On a tablet or a small laptop (768 to 1279) it sits above the
-        * page with its links in two columns: beside it, the page had 288 px at 768 and 376 at 1024 (Team broke names and emails into 3-letter lines).
+        * Mockup 75: the list is a Forest card on the canvas, beside the page from 1280. On a tablet or a small laptop (768 to 1279) the
+        * page needs the width (beside the list it had 288 px at 768), and the whole list above it pushed the page below the fold (audit 2):
+        * there the sections are one underlined strip, as the Money tabs are, the page right under it.
         */}
-      <nav aria-label="Settings" className={cn(CARD, 'min-w-0 self-start px-3 py-3 md:py-4', !atHome && 'max-md:hidden')}>
+      {tablet ? <SettingsStrip links={groups.flatMap(g => g.links)} pathname={pathname} /> : null}
+      <nav aria-label="Settings" className={cn(CARD, 'min-w-0 self-start px-3 py-3 md:py-4', !atHome && 'max-md:hidden', tablet && 'hidden')}>
         <p className="hidden px-3 pb-1 type-section md:block">Settings</p>
         {groups.map(g =>
           g.links.length ? (
@@ -98,6 +102,33 @@ export function SettingsLayout() {
         <Outlet />
       </div>
     </div>
+  )
+}
+
+/** 768 to 1279: the Settings sections as one underlined strip (the Money tabs' look), the lit one brought into view, the cut edge faded. */
+function SettingsStrip({ links, pathname }: { links: ReadonlyArray<{ to: string; label: string }>; pathname: string }) {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [pathname])
+  const fade = useScrollFade(ref, pathname)
+  return (
+    <nav ref={ref} aria-label="Settings" className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden" style={fade} data-testid="settings-strip">
+      {links.map(l => (
+        <NavLink
+          key={l.to}
+          to={l.to}
+          className={({ isActive }) =>
+            cn(
+              'inline-flex min-h-control shrink-0 items-center whitespace-nowrap border-b-ring px-3 text-sm font-card transition-colors duration-fast ease-out',
+              isActive ? 'border-primary font-heavy text-primary' : 'border-transparent text-fg-2 hover:text-fg',
+            )
+          }
+        >
+          {l.label}
+        </NavLink>
+      ))}
+    </nav>
   )
 }
 

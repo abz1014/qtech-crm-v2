@@ -95,7 +95,7 @@ export default function JobPage() {
       <Shell>
         <PageTitle jobKey={key} />
         <EmptyState
-          mood="error"
+          mood="error" bordered
           icon={CloudOff}
           title="Could not open this job"
           actions={
@@ -132,7 +132,8 @@ function JobView({ facts }: { facts: JobFacts }) {
   const model = useMemo(() => stageModel({ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }), [job.stage, job.stageDetail, job.kind, role])
   const ctx = useMemo<JobContext>(() => ({ job, role, money: role !== 'engineer' }), [job, role])
   const imported = Boolean(job.imported || data.order.data?.imported)
-  const next = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role, imported })
+  // The hero says the step plainly; "Imported" rides in its label (audit 2: "Imported · Place the supplier order" read oddly).
+  const next = jobNext({ stage: job.stage, stageDetail: job.stageDetail, role, imported }, { imported: 'tag' })
 
   // Every step starts closed (clarity redesign): the step the job is at is marked in the list, not opened.
   const [open, setOpen] = useState<number | null>(null)
@@ -238,7 +239,7 @@ function JobView({ facts }: { facts: JobFacts }) {
 
       <StageBlock
         job={{ stage: job.stage, stageDetail: job.stageDetail, kind: job.kind, office: role === 'engineer' }}
-        label={role === 'engineer' ? 'Where it stands' : `Next step · ${jobLabel(job.key)}`}
+        label={role === 'engineer' ? 'Where it stands' : `Next step · ${jobLabel(job.key)}${imported ? ' · Imported' : ''}`}
         text={next.text}
         tone={next.tone}
         chip={next.chip}

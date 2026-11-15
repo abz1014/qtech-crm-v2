@@ -162,7 +162,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
           ))}
         </div>
       ) : query.isError || !review ? (
-        <EmptyState mood="error" title="The review could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="The review could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (

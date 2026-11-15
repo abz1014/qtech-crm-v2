@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useEffect, useRef, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { Icon } from '@/ui/Icon'
+import { useScrollFade } from '@/ui/useScrollFade'
 import { MONEY_TABS, MORE_MONEY_PAGES, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PageHeader } from '@/ui/PageHeader'
@@ -144,32 +145,17 @@ const FrameBar = memo(function FrameBar({ title, back }: { title: string; back?:
 /** The desktop strip: it scrolls sideways only when the tabs are wider than the page, and the lit tab is brought into view. */
 function DesktopTabs({ tabs, active, toOf }: { tabs: readonly MoneyTab[]; active: string | null; toOf: (t: MoneyTab) => string }) {
   const ref = useRef<HTMLElement>(null)
-  // Where the strip is cut (audit 2: at 768 and 1024 the end tab was cut with nothing to say more lies beyond): the cut edge fades.
-  const [cut, setCut] = useState<{ start: boolean; end: boolean }>({ start: false, end: false })
   useEffect(() => {
-    const el = ref.current
-    el?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-    if (!el) return
-    const read = () => {
-      const start = el.scrollLeft > 1
-      const end = el.scrollLeft + el.clientWidth < el.scrollWidth - 1
-      setCut(prev => (prev.start === start && prev.end === end ? prev : { start, end }))
-    }
-    read()
-    el.addEventListener('scroll', read, { passive: true })
-    window.addEventListener('resize', read)
-    return () => {
-      el.removeEventListener('scroll', read)
-      window.removeEventListener('resize', read)
-    }
+    ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   }, [active])
-  const fade = cut.start || cut.end ? `linear-gradient(to right, ${cut.start ? 'transparent, #000 3rem' : '#000'}, ${cut.end ? '#000 calc(100% - 3rem), transparent' : '#000'})` : undefined
+  // where the strip is cut (768, 1024 beside the open rail), the cut edge fades
+  const fade = useScrollFade(ref, active)
   return (
     <nav
       ref={ref}
       aria-label="Money views"
       className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden"
-      style={fade ? { maskImage: fade, WebkitMaskImage: fade } : undefined}
+      style={fade}
       data-testid="money-tabs"
     >
       {tabs.map(t => (

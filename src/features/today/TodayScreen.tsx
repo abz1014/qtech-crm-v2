@@ -258,7 +258,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
           <Skeleton className="h-row w-full rounded-card" />
         </div>
       ) : query.isError || !view || !model ? (
-        <EmptyState mood="error" title="Home could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="Home could not load" actions={<Button onClick={() => void query.refetch()}>Try again</Button>}>
           Nothing was changed. Check your connection and try again.
         </EmptyState>
       ) : (

@@ -4,6 +4,7 @@ import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Banner } from '@/ui/Banner'
+import { EmptyState } from '@/ui/EmptyState'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { CARD } from '@/ui/card'
@@ -86,16 +87,16 @@ export function ProductCategoriesPage() {
           </>
         }
         primary={
-          <Button variant="primary" icon={Sparkles} onClick={() => setOpen({ kind: 'fill' })} disabled={!isAdmin || q.isPending}>
+          <Button variant="primary" icon={Sparkles} onClick={() => setOpen({ kind: 'fill' })} disabled={!isAdmin || q.isPending || q.isError}>
             Fill missing categories
           </Button>
         }
       />
 
       {q.isError ? (
-        <Banner tone="danger" title="Could not load the categories" action={<Button size="sm" onClick={() => void q.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="Could not load the categories" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
           Check your connection, then try again.
-        </Banner>
+        </EmptyState>
       ) : q.isPending ? (
         <div role="status" className="grid gap-card-gap" aria-busy="true" aria-label="Loading product categories">
           {/* shaped like the page: the toolbar card, then the list card's rows */}

@@ -40,7 +40,7 @@ export function MyDetailsPage() {
           <SectionSkeleton rows={2} />
         </div>
       ) : q.isError || !q.data ? (
-        <EmptyState mood="error" title="Could not load your details" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
+        <EmptyState mood="error" bordered title="Could not load your details" actions={<Button onClick={() => void q.refetch()}>Try again</Button>}>
           Nothing has changed. Check your connection, then try again.
         </EmptyState>
       ) : (

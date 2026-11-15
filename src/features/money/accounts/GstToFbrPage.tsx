@@ -123,7 +123,7 @@ function MonthCard({ l }: { l: GstLine }) {
         <h2 className="text-lg font-heavy">{monthKeyLabel(l.month)}</h2>
         <span className="text-sm text-fg-2">{l.invoiceCount === 1 ? '1 invoice' : `${l.invoiceCount} invoices`}</span>
       </div>
-      <dl className="grid grid-cols-[minmax(9rem,1fr)_auto] gap-y-1 text-base [&>dd]:pl-4">
+      <dl className="grid grid-cols-[minmax(5rem,1fr)_auto] gap-y-1 text-base sm:grid-cols-[minmax(9rem,1fr)_auto] [&>dd]:pl-4">
         <dt className="text-fg-2">GST charged</dt>
         <dd className="num text-right">{rs(l.charged)}</dd>
         <dt className="text-fg-2">GST paid on purchases</dt>

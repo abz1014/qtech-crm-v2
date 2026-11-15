@@ -85,19 +85,26 @@ describe('what an engineer reads', () => {
 })
 
 describe('an engineer\'s ruler', () => {
-  it('calls the Invoice stop Billing and drops the money states', () => {
+  it('calls the Invoice stop Billing, drops the money states and stops at Delivery (owner, audit 2)', () => {
     const m = stageModel({ stage: 'delivered', stageDetail: 'partly invoiced, advance received, installation planned 28 Oct', kind: 'enquiry', office: true })
     expect(m.stops[5].shown).toBe('Billing')
-    expect(m.phoneLabel).toBe('Stage 6 of 7 · Billing')
+    expect(m.stops.slice(5).map(s => s.state)).toEqual(['office', 'office'])
+    expect(m.stops[4].state).toBe('done')
+    expect(m.phoneLabel).toBe('Delivered · With the office')
+    expect(m.label).toBe('Delivered · installation planned 28 Oct · With the office')
     expect(m.detail).toBe('installation planned 28 Oct')
     expect(JSON.stringify([m.stops.map(s => [s.shown, s.note]), m.label, m.phoneLabel, m.detail])).not.toMatch(/nvoice|advance/)
   })
 
-  it('an engineer never reads a payment word in the label, even at stage 7 or part paid', () => {
-    const paid = stageModel({ stage: 'paid', stageDetail: null, kind: 'enquiry', office: true })
-    expect(paid.label).toBe('All 7 stages done')
-    // a job that began as an order never had its RFQ and Quotation stops: it ends with five stages done
-    expect(stageModel({ stage: 'paid', stageDetail: null, kind: 'direct', office: true }).label).toBe('All 5 stages done')
+  it('an engineer cannot tell delivered, invoiced and paid apart: the ruler and its words are the same (owner, audit 2)', () => {
+    const view = (stage: string, stageDetail: string | null) => {
+      const m = stageModel({ stage, stageDetail, kind: 'enquiry', office: true })
+      return JSON.stringify([m.stops.map(s => [s.state, s.note, s.half]), m.label, m.phoneLabel, m.current, m.finished])
+    }
+    expect(view('paid', null)).toBe(view('delivered', 'not invoiced yet'))
+    expect(view('invoiced', 'part paid')).toBe(view('delivered', null))
+    expect(stageModel({ stage: 'paid', stageDetail: null, kind: 'enquiry', office: true }).label).toBe('Delivered · With the office')
+    // a job that began as an order never had its RFQ and Quotation stops: for the office it ends with five stages done
     expect(stageModel({ stage: 'paid', stageDetail: null, kind: 'direct' }).phoneLabel).toBe('All 5 stages done')
     const part = stageModel({ stage: 'invoiced', stageDetail: 'part paid', kind: 'enquiry', office: true })
     expect(part.label).not.toMatch(/paid/i)

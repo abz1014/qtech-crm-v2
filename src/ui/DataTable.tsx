@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronsUpDown, Download, RefreshCw } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronsUpDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
@@ -809,7 +809,7 @@ function TableView<T>(props: DataTableProps<T>) {
             <EmptyState
               mood="error"
               title={error.title ?? `${what} could not be loaded`}
-              actions={error.onRetry ? <Button variant="primary" icon={RefreshCw} onClick={error.onRetry}>Try again</Button> : undefined}
+              actions={error.onRetry ? <Button onClick={error.onRetry}>Try again</Button> : undefined}
               meta={
                 <>
                   {`Request failed · ${formatStamp(error.at ?? errorAt ?? new Date())}`}

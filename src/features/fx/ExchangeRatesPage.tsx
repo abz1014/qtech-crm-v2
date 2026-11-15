@@ -80,10 +80,10 @@ export function ExchangeRatesPage() {
         </div>
       ) : latest.isError ? (
         <EmptyState
-          mood="error"
+          mood="error" bordered
           title="Could not load the exchange rates"
           actions={
-            <Button variant="primary" onClick={() => void latest.refetch()}>
+            <Button onClick={() => void latest.refetch()}>
               Try again
             </Button>
           }

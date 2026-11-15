@@ -67,7 +67,7 @@ export function CompanyProfilePage() {
         </div>
       ) : q.isError || !q.data ? (
         <EmptyState
-          mood="error"
+          mood="error" bordered
           title="Could not load the company profile"
           actions={<Button onClick={() => void q.refetch()}>Try again</Button>}
         >

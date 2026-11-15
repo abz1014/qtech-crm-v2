@@ -177,6 +177,14 @@ async function discoverOpeners(page: Page, path: string, base: Where, con: Conso
   const reset = async () => {
     const overlay = await page.locator('[role="dialog"], [role="alertdialog"], [role="menu"]').filter({ visible: true }).count()
     if (overlay || page.url().replace(/^https?:\/\/[^/]+/, '') !== path) await open(page, path)
+    // Narrowed (audit 2): a one-tap menu item the write firewall refused ("Mark quotation sent") leaves its "Could not ..." toast over
+    // the phone's sticky bar for a few seconds, and the next item's More click landed on the toast. That toast exists only because the
+    // harness refuses writes, so the toast layer is set aside (not removed) before the next opener is clicked.
+    await page.evaluate(() => document.querySelectorAll<HTMLElement>('[data-toast-live]').forEach(t => {
+      const box = t.parentElement ?? t
+      box.style.visibility = 'hidden'
+      box.style.pointerEvents = 'none'
+    })).catch(() => undefined)
     await markOpeners(page, shell)
   }
   const click = async (name: string) => {

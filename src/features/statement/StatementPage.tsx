@@ -96,7 +96,7 @@ function StatementLoader({ jobKey }: { jobKey: string }) {
       <Shell>
         <PageTitle />
         <EmptyState
-          mood="error"
+          mood="error" bordered
           icon={CloudOff}
           title="The statement could not be opened"
           actions={
@@ -213,7 +213,7 @@ function Statement({ jobKey, rfqId }: { jobKey: string; rfqId: string }) {
       <Shell>
         <PageTitle />
         <EmptyState
-          mood="error"
+          mood="error" bordered
           icon={CloudOff}
           title="The supplier prices did not load"
           actions={

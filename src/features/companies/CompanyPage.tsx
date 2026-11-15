@@ -93,7 +93,7 @@ export function CompanyPage() {
       <Shell>
         <PageName />
         <EmptyState
-          mood="error"
+          mood="error" bordered
           title="Could not load this company"
           actions={
             <Button onClick={() => void company.refetch()} variant="primary">
