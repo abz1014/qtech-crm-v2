@@ -21,7 +21,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { StatusText } from '@/ui/StatusText'
 import { StickyActionBar } from '@/ui/StickyActionBar'
 import { Select } from '@/ui/form/Select'
-import { SumBar } from '@/ui/SumBar'
+import { FitSumBar } from '@/features/money/FitSumBar'
 import { TableFilter } from '@/ui/TableFilter'
 import { useToast } from '@/ui/useToast'
 import { TextField } from '@/ui/form/TextField'
@@ -128,6 +128,10 @@ export function GstRegisterPage() {
   const phone = useMediaQuery('(max-width: 767px)')
   // Below 640 the table is cards and the totals are lines (DataTable and SumBar switch there).
   const narrow = useMediaQuery('(max-width: 639px)')
+  // Below 1280 the number column hides and the number rides under the customer; below 1536 the GST rides under the gross. Drawn
+  // only at those widths, so the register never holds a second copy of either.
+  const belowXl = useMediaQuery('(max-width: 1279px)')
+  const below2xl = useMediaQuery('(max-width: 1535px)')
   useTabsHeight(phone)
 
   const all = useMemo(() => register.data ?? [], [register.data])
@@ -189,10 +193,19 @@ export function GstRegisterPage() {
         kind: 'date',
         sortable: true,
         value: r => r.number,
+        // Audit 1 (item 10): the register fits its card from 1024 up, so nothing scrolls sideways. Below 1280 the number and day
+        // ride under the customer (this column is left out, so the month rows still span the right columns); a long number is cut
+        // with the whole of it in the title.
         cell: r => (
           <span className="grid gap-px">
-            <span className="flex items-center gap-2">
-              {r.number ? <span className="num whitespace-nowrap font-heavy text-primary">{r.number}</span> : <span className="text-fg-muted">No number</span>}
+            <span className="flex min-w-0 items-center gap-2">
+              {r.number ? (
+                <span className="num block max-w-[10rem] truncate font-heavy text-primary" title={r.number}>
+                  {r.number}
+                </span>
+              ) : (
+                <span className="text-fg-muted">No number</span>
+              )}
               <KindTag r={r} />
             </span>
             {r.invoiceDate ? <span className="num text-sm text-fg-2">{shortDay(r.invoiceDate)}</span> : null}
@@ -204,19 +217,53 @@ export function GstRegisterPage() {
         header: 'Customer and order',
         sortable: true,
         value: r => r.companyName,
+        // A long name keeps two lines (the whole name in the title), so the money columns are never pushed off the card.
         cell: r => (
-          <span className="grid gap-px">
-            <span className="min-w-[12ch] font-semibold text-fg [overflow-wrap:anywhere]">{r.companyName ?? 'No customer'}</span>
+          <span className="grid min-w-[10rem] max-w-[15rem] gap-px">
+            <span className="line-clamp-2 font-semibold text-fg [overflow-wrap:anywhere]" title={r.companyName ?? undefined}>
+              {r.companyName ?? 'No customer'}
+            </span>
+            {belowXl ? (
+              <span className="flex min-w-0 flex-wrap items-center gap-x-1 text-sm text-fg-2">
+                {r.number ? (
+                  <span className="num block max-w-[9rem] truncate font-heavy text-primary" title={r.number}>
+                    {r.number}
+                  </span>
+                ) : (
+                  <span className="text-fg-muted">No number</span>
+                )}
+                <KindTag r={r} />
+                {r.invoiceDate ? <span className="num whitespace-nowrap">· {shortDay(r.invoiceDate)}</span> : null}
+              </span>
+            ) : null}
             {r.orderNumber !== null ? <span className="num text-sm text-fg-2">{orderRef(r.orderNumber)}</span> : null}
           </span>
         ),
       },
-      { id: 'net', header: 'Net, PKR', kind: 'money', sortable: true, value: r => String(r.net), total: true },
-      { id: 'gst', header: 'GST, PKR', kind: 'money', sortable: true, value: r => String(r.gst), total: true },
-      { id: 'gross', header: 'Gross, PKR', kind: 'money', sortable: true, value: r => String(r.gross), total: true },
+      { id: 'net', header: 'Net, PKR', kind: 'money', sortable: true, value: r => String(r.net), total: true, hideClass: 'hidden 2xl:table-cell' },
+      { id: 'gst', header: 'GST, PKR', kind: 'money', sortable: true, value: r => String(r.gst), total: true, hideClass: 'hidden 2xl:table-cell' },
+      {
+        id: 'gross',
+        header: 'Gross, PKR',
+        kind: 'money',
+        sortable: true,
+        value: r => String(r.gross),
+        total: true,
+        // Below 1536 the Net and GST columns hide (the totals card above keeps both); the admin's GST rides under the gross.
+        cell: r => (
+          <span className="grid justify-items-end gap-px">
+            <Money value={String(r.gross)} prefix={false} />
+            {isAdmin && below2xl ? (
+              <span className="num whitespace-nowrap text-sm text-fg-2">
+                GST <Money value={String(r.gst)} prefix={false} />
+              </span>
+            ) : null}
+          </span>
+        ),
+      },
       // ONE Next step (round 3) in place of the two chip columns, sent to customer and tax deposited.
       // The reason under the step wraps: held on one line, a long one pushed the PDF column off the card at 1440.
-      { id: 'next', header: 'Next step', sortable: false, cell: r => <InvoiceStep r={r} className="min-w-[11rem] max-w-[17rem] [overflow-wrap:break-word]" /> },
+      { id: 'next', header: 'Next step', sortable: false, cell: r => <InvoiceStep r={r} className="min-w-[10rem] max-w-[15rem] [overflow-wrap:break-word]" /> },
       {
         id: 'pdf',
         header: 'PDF',
@@ -236,9 +283,10 @@ export function GstRegisterPage() {
     ]
     // Sales stamp too (M08 sends them the TCS and FBR items; the 0020 RPCs allow it): they keep the ticks, the toggles and the
     // stamps, and only lose the Net and GST columns, which are the admin's filing figures.
-    return isAdmin ? cols : cols.filter(c => c.id !== 'net' && c.id !== 'gst')
+    const shown = belowXl ? cols.filter(c => c.id !== 'number') : cols
+    return isAdmin ? shown : shown.filter(c => c.id !== 'net' && c.id !== 'gst')
     // a ticked row has the selected background, where the amber text is below 4.5:1, so it reads in the body colour there
-  }, [isAdmin])
+  }, [isAdmin, belowXl, below2xl])
 
   const stamp = async (kind: StampKind) => {
     if (busy || tickedRows.length === 0) return
@@ -314,10 +362,9 @@ export function GstRegisterPage() {
       <TableFilter label="Search invoices" hint="Finds an invoice by invoice number, customer or order number." value={search} onChange={setSearch} className="max-sm:col-span-2" />
       <span className="flex-1 max-sm:hidden" />
       {/* A phone gets the same three views as a select: a strip of three would run off a 320 px screen. */}
-      <label className={cn('grid min-w-0 sm:hidden', !isAdmin && 'col-span-2')}>
-        <span className="sr-only">Show</span>
-        <Select data-testid="register-view" value={view} onChange={e => setView(e.target.value as RegisterView)} options={viewOptions.map(o => ({ value: o.value, label: o.needs ? `${o.label} (${o.needs})` : o.label }))} />
-      </label>
+      <div className={cn('grid min-w-0 sm:hidden', !isAdmin && 'col-span-2')}>
+        <Select aria-label="Show" data-testid="register-view" value={view} onChange={e => setView(e.target.value as RegisterView)} options={viewOptions.map(o => ({ value: o.value, label: o.needs ? `${o.label} (${o.needs})` : o.label }))} />
+      </div>
       <SegmentedControl aria-label="Show" value={view} onValueChange={v => setView(v as RegisterView)} options={viewOptions} className="max-sm:hidden" />
       {isAdmin ? (
         <MoreMenu label="More for the register">
@@ -351,7 +398,7 @@ export function GstRegisterPage() {
           ))}
         </div>
       ) : register.isError ? null : (
-      <SumBar
+      <FitSumBar
         label="Totals for the invoices shown"
         phone="lines"
         // Forest (53-invoices #iv-totals): one card of tiles, each a label, the PKR figure and a line of context.
@@ -485,16 +532,21 @@ export function GstRegisterPage() {
         // GST, Open invoice and PDF; sales have no Net or GST, so their tap opens the invoice as before.
         mobileRow={r => (
           <div className="grid gap-1">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                <span className="num type-row font-heavy text-primary">{r.number ?? 'No number'}</span>
+            {/* A long number or a big gross never pushes the card wider than the phone: the gross drops under the number. */}
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+              <span className="flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="num type-row block min-w-0 max-w-full truncate font-heavy text-primary" title={r.number ?? undefined}>
+                  {r.number ?? 'No number'}
+                </span>
                 <KindTag r={r} />
               </span>
-              <span className="num type-row shrink-0">
+              <span className="num type-row ml-auto shrink-0">
                 <Money value={r.gross} paisa="never" strong />
               </span>
             </div>
-            <span className="type-row min-w-0 [overflow-wrap:anywhere]">{r.companyName ?? 'No customer'}</span>
+            <span className="type-row line-clamp-2 min-w-0 [overflow-wrap:anywhere]" title={r.companyName ?? undefined}>
+              {r.companyName ?? 'No customer'}
+            </span>
             <span className="num text-sm text-fg-2">
               {[r.invoiceDate ? shortDay(r.invoiceDate) : null, r.orderNumber !== null ? orderRef(r.orderNumber) : null].filter(Boolean).join(' · ')}
             </span>

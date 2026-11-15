@@ -78,7 +78,7 @@ function OrderList({ onPick }: { onPick: (orderId: string) => void }) {
     )
   if (q.isPending)
     return (
-      <div className="grid gap-3" aria-busy="true" aria-label="Loading the open orders">
+      <div role="status" className="grid gap-3" aria-busy="true" aria-label="Loading the open orders">
         <Skeleton className="h-control w-full" />
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-16 w-full" />

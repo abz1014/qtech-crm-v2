@@ -12,7 +12,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { SegmentedControl } from '@/ui/SegmentedControl'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { useToast } from '@/ui/useToast'
@@ -84,15 +84,17 @@ function MarginRowView({ r }: { r: MarginRow }) {
   return (
     <li className="border-t first:border-t-0" data-margin-state={r.state}>
       {/* Phone: two lines (round 3: each card was about 230 px). */}
-      <div className="grid gap-1 py-3 md:hidden">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="min-w-0">
-            <span className="block break-words font-medium">{r.companyName}</span>
-            <Link to={`/orders/${r.orderId}`} className="num whitespace-nowrap rounded font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg">
-              {orderRef(r.orderNumber)}
-            </Link>
-          </span>
-          <span className={cn('shrink-0', loss && 'text-tone-danger-fg')}>
+      {/* The customer on its own line (two at most, the whole name in the title), then the order and the margin: a long name never
+          squeezes beside a big figure (audit 1, item 11). */}
+      <div className="grid min-w-0 gap-1 py-3 md:hidden">
+        <span className="line-clamp-2 font-medium [overflow-wrap:anywhere]" title={r.companyName}>
+          {r.companyName}
+        </span>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <Link to={`/orders/${r.orderId}`} className="num whitespace-nowrap rounded font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg">
+            {orderRef(r.orderNumber)}
+          </Link>
+          <span className={cn('ml-auto', loss && 'text-tone-danger-fg')}>
             <MarginFigure r={r} />
           </span>
         </div>
@@ -103,8 +105,10 @@ function MarginRowView({ r }: { r: MarginRow }) {
       </div>
       {/* Desktop: one row, six columns. */}
       <div className={`hidden gap-4 py-3 md:grid ${COLS}`}>
-        <div className="grid content-start gap-[2px]">
-          <span className="min-w-0 break-words text-sm font-semibold">{r.companyName}</span>
+        <div className="grid min-w-0 content-start gap-[2px]">
+          <span className="line-clamp-2 min-w-0 text-sm font-semibold [overflow-wrap:anywhere]" title={r.companyName}>
+            {r.companyName}
+          </span>
           <Link to={`/orders/${r.orderId}`} className="num w-fit rounded text-sm font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg" aria-label={`Open ${orderRef(r.orderNumber)}`}>
             {orderRef(r.orderNumber)}
           </Link>
@@ -162,12 +166,11 @@ export function MarginsPage() {
   const rows = useMemo(() => (view === 'all' ? all : view === 'final' ? all.filter(r => r.state === 'final') : all.filter(r => r.state !== 'final')), [all, view])
   const [confirming, setConfirming] = useState(false)
   return (
-    <MoneyFrame active={fromReports ? 'reports' : null}>
-      <NoPrimary />
-      <MoneySubHeader
-        back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Lock a month' }}
-        title="Order margins"
-        meta={
+    <MoneyFrame
+      active={fromReports ? 'reports' : null}
+      title="Order margins"
+      back={fromReports ? { to: '/money/reports', label: 'Reports' } : { to: '/money/month-end', label: 'Lock a month' }}
+      titleMeta={
           <InfoTip label="About margins">
             Margin is the net sale less the expenses tagged to the order, over the whole life of the order. GST is outside both sides.
             Only orders whose costs are marked complete are added up. A margin that is not final is an estimate: costs may still come in.
@@ -181,12 +184,13 @@ export function MarginsPage() {
             </Button>
           ) : null
         }
-      />
+    >
+      <NoPrimary />
       <section aria-labelledby="margins-h" className={cn('min-w-0 p-card', CARD)}>
         <header className="flex flex-wrap items-center gap-x-3 gap-y-3 pb-4">
-          <h3 id="margins-h" className="text-lg font-heavy">
+          <h2 id="margins-h" className="text-lg font-heavy">
             Every order
-          </h3>
+          </h2>
           <span className="flex-1" />
           <SegmentedControl
             aria-label="Income measure"
@@ -303,8 +307,10 @@ function CashBody({ rows, totals }: { rows: readonly MarginRow[]; totals: CashTo
       <ul>
         {rows.map(r => (
           <li key={r.orderId} className={`grid gap-1 border-t py-3 first:border-t-0 md:gap-4 ${CASH_COLS}`} data-testid="cash-row">
-            <div className="grid content-start gap-px">
-              <span className="min-w-0 break-words text-sm font-semibold">{r.companyName}</span>
+            <div className="grid min-w-0 content-start gap-px">
+              <span className="line-clamp-2 min-w-0 text-sm font-semibold [overflow-wrap:anywhere]" title={r.companyName}>
+                {r.companyName}
+              </span>
               <Link to={`/orders/${r.orderId}`} className="num w-fit rounded text-sm font-semibold text-primary underline decoration-1 underline-offset-2 hover:text-fg" aria-label={`Open ${orderRef(r.orderNumber)}`}>
                 {orderRef(r.orderNumber)}
               </Link>

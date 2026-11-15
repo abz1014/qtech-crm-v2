@@ -8,6 +8,7 @@ import { Button } from '@/ui/Button'
 import { buttonStyles } from '@/ui/buttonStyles'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
+import { Money } from '@/ui/Money'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { OwedToStaff } from '@/features/money/expenses/OwedToStaff'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
@@ -71,15 +72,15 @@ function Blocks({ f }: { f: MoneyHomeFigures }) {
         <Block
           to="/money/reports/in-out"
           label={`Received in ${f.monthName}`}
-          value={f.received ? rs(f.received.total) : null}
+          value={f.received ? f.received.total : null}
           sub={f.received ? `${countWord(f.received.count, 'payment')}, GST included` : null}
         />
-        <Block to="/money/expenses" label={`Paid out in ${f.monthName}`} value={f.paidOut ? rs(f.paidOut.total) : null} sub={f.paidOut ? 'by the day paid' : null} />
+        <Block to="/money/expenses" label={`Paid out in ${f.monthName}`} value={f.paidOut ? f.paidOut.total : null} sub={f.paidOut ? 'by the day paid' : null} />
         <Block
           to="/money/reports/owe"
           label="Payable to suppliers"
           prefix="about"
-          value={f.owed ? rs(f.owed.total) : null}
+          value={f.owed ? f.owed.total : null}
           sub={f.owed ? countWord(f.owed.count, 'supplier order') : null}
         />
       </div>
@@ -100,9 +101,10 @@ function Hero({ f }: { f: MoneyHomeFigures }) {
           </h2>
         </div>
         {t ? (
-          <p className="num min-w-0 text-hero font-heavy text-lime-300 [overflow-wrap:anywhere]">
-            <span className="mr-2 text-lg font-card">PKR</span>
-            {rs(t.total)}
+          // The figure stays whole: Money's fit steps it down from the hero size until it fits its box (audit 1, blocker 2). The box has
+          // a basis of its own (a fitted figure gives none), so on a wide card it sits beside the title and on a phone under it.
+          <p className="flex min-w-0 flex-[1_1_18rem] md:justify-end">
+            <Money value={t.total} size="hero" paisa="never" fit className="text-lime-300 md:justify-end" />
           </p>
         ) : (
           <Skeleton className="h-[3rem] w-[14rem] max-w-full" />
@@ -132,20 +134,25 @@ function Hero({ f }: { f: MoneyHomeFigures }) {
   )
 }
 
-function Block({ to, label, value, prefix = 'PKR', sub }: { to: string; label: string; value: string | null; prefix?: string; sub: ReactNode }) {
+function Block({ to, label, value, prefix = 'PKR', sub }: { to: string; label: string; value: string | number | null; prefix?: 'PKR' | 'about'; sub: ReactNode }) {
   return (
     <Link
       to={to}
-      className="grid min-h-touch content-start gap-1 rounded-card border bg-surface p-card shadow-e1 transition-[box-shadow,border-color] duration-fast ease-out hover:border-line-strong hover:shadow-e2"
+      className="grid min-h-touch min-w-0 content-start gap-1 rounded-card border bg-surface p-card shadow-e1 transition-[box-shadow,border-color] duration-fast ease-out hover:border-line-strong hover:shadow-e2"
     >
       <span className="text-base font-card text-fg-2">{label}</span>
       {value === null ? (
         <Skeleton className="h-[2.25rem] w-[10rem] max-w-full" />
       ) : (
-        <span className="num text-kpi font-heavy tracking-snug [overflow-wrap:anywhere]">
-          <span className="mr-2 text-base font-card">{prefix}</span>
-          {value}
-        </span>
+        // Money's fit: the tile is a grid cell (one per row under 480 px), the figure steps down from the kpi size to fit it whole.
+        prefix === 'PKR' ? (
+          <Money value={value} size="kpi" paisa="never" fit />
+        ) : (
+          <span className="flex min-w-0 items-baseline gap-2">
+            <span className="shrink-0 text-base font-card">{prefix}</span>
+            <Money value={value} size="kpi" paisa="never" prefix={false} fit />
+          </span>
+        )
       )}
       <span className="min-h-6 text-base text-fg-2">{sub}</span>
     </Link>

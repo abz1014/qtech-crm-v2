@@ -53,16 +53,23 @@ export const PHONE_FOLD = cn(FOLD_CARD, 'shadow-e1')
 export const FIELD = cn(controlClass, 'text-base max-md:h-touch')
 
 /**
+ * A native date box's focus ring (audit 1, item 13): Chromium does not match :focus-visible on a date input reached by Tab (its
+ * focus sits in the inner day / month / year fields), so the control look's ring is drawn on :focus-within, which matches it.
+ */
+export const DATE_FOCUS = 'focus-within:border-primary focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-green'
+
+/**
  * A native <select> (the best list on a phone, and it keeps the optgroups) drawn like the app's Select: the control look, a chevron,
  * 40 with a mouse and 44 on a phone, 16 px text.
  */
 export function NativeSelect({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <div className="relative min-w-0">
+    // a span (block), so the select can sit inside a <label> (no div in a label: audit 1, item 24)
+    <span className="relative block min-w-0">
       <select {...rest} className={cn(FIELD, 'appearance-none pr-10 read-only:border-line-input read-only:bg-surface read-only:text-fg', className)}>
         {children}
       </select>
       <Icon icon={ChevronDown} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-fg-muted" />
-    </div>
+    </span>
   )
 }

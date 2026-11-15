@@ -235,7 +235,7 @@ test.describe('bank tick (M12)', () => {
     await addDeposit(order.id, `PSID ${Math.floor(Math.random() * 1e8)}`, 12000)
     await openAs(page, 'admin', '/money/month-end/bank')
     await expect(page.getByTestId('bank-state')).toContainText(/\d+ to match/)
-    await expect(page.getByRole('heading', { name: 'Bank check', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bank check', level: 1 })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Back to Lock a month' })).toBeVisible()
     await expect(page.getByRole('navigation', { name: 'Month-end views' })).toHaveCount(0)
     await page.waitForLoadState('networkidle')

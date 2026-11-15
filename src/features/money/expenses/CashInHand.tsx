@@ -13,7 +13,7 @@ import { InfoTip } from '@/ui/InfoTip'
 import { CARD } from '@/ui/card'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
-import { FIELD, PanelCard, PHONE_FOLD } from '@/features/money/expenses/Panel'
+import { DATE_FOCUS, FIELD, PanelCard, PHONE_FOLD } from '@/features/money/expenses/Panel'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { useAddCashTopup, useCashInHand, useRecordCashCount } from '@/features/money/expenses/hooks'
 import { pkr } from '@/features/money/expenses/model'
@@ -236,7 +236,7 @@ function CountDialog({ state, onClose }: { state: CashState; onClose: () => void
           {opening ? (
             <label className="grid gap-2">
               <span className="text-sm font-bold">At the start of</span>
-              <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num')} />
+              <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num', DATE_FOCUS)} />
             </label>
           ) : null}
           {diff !== null ? (
@@ -319,7 +319,7 @@ function TopupDialog({ onClose }: { onClose: () => void }) {
           </label>
           <label className="grid gap-2">
             <span className="text-sm font-bold">Date</span>
-            <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num')} />
+            <input type="date" value={on} max={today} onChange={e => e.target.value && setOn(e.target.value)} className={cn(FIELD, 'num', DATE_FOCUS)} />
           </label>
           <label className="grid gap-2">
             <span className="text-sm font-bold">

@@ -93,7 +93,7 @@ test.describe('month-end (M10)', () => {
     await startCounting(page)
     await card.getByRole('link').click()
     await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${STMT.key}`))
-    await expect(page.getByRole('heading', { name: 'Bank check', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bank check', level: 1 })).toBeVisible()
     expect(await mouse(page)).toBe(1)
   })
 
@@ -104,7 +104,7 @@ test.describe('month-end (M10)', () => {
     // the bank check's own row when it has items, else the link on the clear line: one place, never two (round 3)
     await page.getByTestId('check-bank_unticked').getByRole('link').or(page.getByTestId('month-bank-link')).first().click()
     await expect(page).toHaveURL(new RegExp(`/money/month-end/bank\\?month=${OLDER.key}`))
-    await expect(page.getByRole('heading', { name: 'Bank check', level: 2 })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Bank check', level: 1 })).toBeVisible()
     expect(await mouse(page)).toBe(1)
   })
 

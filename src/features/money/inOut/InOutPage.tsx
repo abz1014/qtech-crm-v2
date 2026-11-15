@@ -9,7 +9,7 @@ import { EmptyState } from '@/ui/EmptyState'
 import { FoldRow } from '@/ui/FoldRow'
 import { CARD } from '@/ui/card'
 import { Money } from '@/ui/Money'
-import { SumBar } from '@/ui/SumBar'
+import { FitSumBar } from '@/features/money/FitSumBar'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { Select } from '@/ui/form/Select'
 import { SegmentedControl } from '@/ui/SegmentedControl'
@@ -91,7 +91,7 @@ export function InOutPage() {
       report="in-out"
       csv={v ? () => downloadReport(inOutCsv(v), `money-in-and-out-${period.key}.csv`) : null}
       period={
-        <span className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {phone ? (
             // Phone: one picker instead of two buttons (the same choice, fewer controls on the first screen).
             <Select
@@ -122,7 +122,7 @@ export function InOutPage() {
             included. Profit on invoices counts sales on their invoice date without GST, and each order&apos;s supplier costs with its sales.
             Quarters are calendar quarters (Q1 is January to March).
           </InfoTip>
-        </span>
+        </div>
       }
     >
       {q.isError ? (
@@ -201,7 +201,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       {narrow ? (
         // Phone: a line per figure (SumBar lines), cash first and profit second; the period before is in the last-months table below.
         <>
-          <SumBar
+          <FitSumBar
             phone="lines"
             label="Cash in and out"
             caption={
@@ -216,7 +216,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               { label: 'Cash in minus cash out', amount: v.cash.net },
             ]}
           />
-          <SumBar
+          <FitSumBar
             phone="lines"
             label="Profit on invoices"
             caption={
@@ -236,7 +236,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       ) : (
         <>
           {/* Desktop: the sum card with the headline figures (59-reports .qb-sum), then the two tables, each a card, with the period before and the change. */}
-          <SumBar
+          <FitSumBar
             label={`Cash and profit, ${v.label}`}
             caption={
               <span>
@@ -371,7 +371,13 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
   if (toPaisa(v.unexplainedOut) !== 0n) rows.push({ id: 'unexplained', categoryId: '', detail: 'Changed after the month was locked', count: 0, amount: v.unexplainedOut })
   const byId = new Map(v.categories.map(c => [c.categoryId, c]))
   const columns: Column<DetailLine>[] = [
-    { id: 'detail', header: 'Detail', value: r => r.detail ?? 'No detail', cell: r => <span className={cn(r.detail ? 'text-fg' : 'text-fg-muted')}>{r.detail ?? 'No detail'}</span> },
+    { id: 'detail', header: 'Detail', value: r => r.detail ?? 'No detail', cell: r => (
+        // A long detail (a supplier's full name and the order) wraps to two lines, the whole of it in the title: it pushed the figures
+        // into a sideways scroll at 1440 (audit 1, item 10).
+        <span className={cn('line-clamp-2 min-w-[12rem] whitespace-normal [overflow-wrap:anywhere]', r.detail ? 'text-fg' : 'text-fg-muted')} title={r.detail ?? undefined}>
+          {r.detail ?? 'No detail'}
+        </span>
+      ) },
     { id: 'count', header: 'Count', kind: 'num', width: 90, value: r => r.count, total: true, hideBelowMd: true },
     { id: 'amount', header: 'Paid (PKR)', kind: 'money', width: 160, value: r => r.amount, total: true, paisa: 'never' },
   ]
@@ -437,7 +443,8 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
     { id: 'period', header: v.period.kind === 'month' ? 'Month' : 'Quarter', value: t => t.label, cell: t => <span className={cn(t.period.key === v.period.key && 'font-semibold')}>{t.label}</span> },
     { id: 'in', header: 'Money in (PKR)', kind: 'money', value: t => t.in, paisa: 'never' },
     { id: 'out', header: 'Money out (PKR)', kind: 'money', value: t => t.out, paisa: 'never' },
-    { id: 'net', header: 'Cash in minus out (PKR)', kind: 'money', value: t => t.net, paisa: 'never' },
+    // Below 1280 in minus out is left to the two figures beside it, so the table fits its card (audit 1, item 10).
+    { id: 'net', header: 'Cash in minus out (PKR)', kind: 'money', value: t => t.net, paisa: 'never', hideClass: 'hidden xl:table-cell' },
     { id: 'profit', header: 'Profit on invoices (PKR)', kind: 'money', value: t => t.profit, paisa: 'never' },
   ]
   return (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { FilePlus2, Plus } from 'lucide-react'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { effectiveTerms } from '@/features/settings/companyProfile'
@@ -78,12 +78,16 @@ const cancelButton = (onCancel: () => void) => (
 
 function OrderPicker({ onPick, onCancel }: { onPick: (id: string) => void; onCancel: () => void }) {
   const orders = useInvoiceableOrders()
+  const orderField = useId()
   return (
     <Frame footer={cancelButton(onCancel)}>
       <p>Choose the order this invoice is for. Its lines give the amounts.</p>
-      <label className="grid gap-2 text-sm font-medium text-fg">
-        Order
+      <div className="grid gap-2">
+        <label htmlFor={orderField} className="text-sm font-medium text-fg">
+          Order
+        </label>
         <Combobox
+          id={orderField}
           data-autofocus
           options={(orders.data ?? []).map(o => ({ value: o.id, label: o.ref, meta: o.company }))}
           value={null}
@@ -91,7 +95,7 @@ function OrderPicker({ onPick, onCancel }: { onPick: (id: string) => void; onCan
           placeholder="ORD-0038"
           onChange={v => v && onPick(v)}
         />
-      </label>
+      </div>
       {orders.isError ? <Banner tone="danger" title="The orders could not be loaded">Close this and try again.</Banner> : null}
     </Frame>
   )

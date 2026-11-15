@@ -184,7 +184,7 @@ export function VoidPaymentDialog({ open, onOpenChange, line, orderNumber }: { o
           <Field label="Reason" requirement="required" error={tried && !reason.trim() ? 'Say why it is voided' : undefined}>
             <TextArea value={reason} onChange={e => setReason(e.target.value)} rows={2} data-autofocus />
           </Field>
-          <div className="flex flex-wrap gap-2" aria-label="Quick reasons">
+          <div role="group" className="flex flex-wrap gap-2" aria-label="Quick reasons">
             {VOID_QUICK_REASONS.map(r => (
               <Button key={r} size="sm" variant="secondary" onClick={() => setReason(r)}>
                 {r}

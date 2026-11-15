@@ -150,7 +150,7 @@ test.describe('payment-reminder panel (M09)', () => {
     await expect(page.locator('li[data-rule="payment_overdue"]:not([data-waiting])').filter({ hasText: s.company.name })).toHaveCount(0)
   })
 
-  test('Receivables has no sideways scroll at 1536 (all columns beside the panel), 1440 and 1360 (Gross and Settled folded) or 1280 (panel under the table)', async ({ page }) => {
+  test('Receivables has no sideways scroll at 1536, 1440 and 1360 (panel beside: Gross and Settled folded) or 1280 (panel under the table)', async ({ page }) => {
     await seedOverdue()
     await openAs(page, 'admin', '/money/receivables')
     await expect(page.getByTestId('reminder-text')).toBeVisible()
@@ -161,7 +161,9 @@ test.describe('payment-reminder panel (M09)', () => {
         return { scroll: w?.scrollWidth ?? 0, client: w?.clientWidth ?? 0, columns: Array.from(document.querySelectorAll('table thead th')).filter(th => (th as HTMLElement).offsetParent !== null).length, page: document.documentElement.scrollWidth, view: window.innerWidth }
       })
     // round 3: no Actions column (Record payment lives in the panel)
-    for (const [width, columns] of [[1536, 6], [1440, 4], [1360, 4], [1280, 6]] as const) {
+    // audit 1 (item 10): beside the panel the table is 830 px at every width from 1360 (the page stops at 1280 px), too narrow for
+    // six columns of 11-digit figures, so Gross and Settled stay folded there
+    for (const [width, columns] of [[1536, 4], [1440, 4], [1360, 4], [1280, 6]] as const) {
       // Payment + Last reminder are one Next step column (R2-06)
       await page.setViewportSize({ width, height: 900 })
       await page.waitForTimeout(300)

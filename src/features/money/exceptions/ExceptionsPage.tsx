@@ -14,7 +14,7 @@ import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { NeedsCount } from '@/ui/Tag'
 import { StatusText } from '@/ui/StatusText'
-import { MoneyFrame, MoneySubHeader } from '@/features/money/MoneyFrame'
+import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { InfoTip } from '@/ui/InfoTip'
 import { useOrderMargins, useReconciliationInput } from '@/features/money/hooks'
 import { useCarryOverLocalTicks, useUnchecked } from '@/features/money/exceptions/checked'
@@ -79,17 +79,17 @@ export function ExceptionsPage() {
   }
 
   return (
-    <MoneyFrame active={null}>
-      <MoneySubHeader
-        back={{ to: '/money/month-end', label: 'Lock a month' }}
-        title="Mistakes to fix"
-        meta={
+    <MoneyFrame
+      active={null}
+      title="Mistakes to fix"
+      back={{ to: '/money/month-end', label: 'Lock a month' }}
+      titleMeta={
           <InfoTip label="About mistakes to fix">
             Checked, in every month: customer payments against the order total, invoices against the order, costs against the expected cost
             and the POs, dates in sequence, the GST on each invoice, sending to the customer and the tax deposit, and orders where it is not recorded whether GST is included in the price. Mark as checked hides a finding for all users until its figures change.
           </InfoTip>
         }
-        actions={
+        secondary={
           <button
             type="button"
             onClick={exportCsv}
@@ -100,13 +100,13 @@ export function ExceptionsPage() {
             Export CSV
           </button>
         }
-      />
+    >
       {/* 58-money-checks .mx-card: one card, the counts in its head, a finding per row. */}
       <section aria-labelledby="exceptions-h" className={cn(CARD, 'min-w-0 overflow-hidden')}>
         <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-card py-4">
-          <h3 id="exceptions-h" className="text-lg font-heavy">
+          <h2 id="exceptions-h" className="text-lg font-heavy">
             What does not add up
-          </h3>
+          </h2>
           {/* The needs-you counts as NeedsCount pills (spec 2.2 #22: danger for critical), the word beside each; "All clear" as text. */}
           <div className="ml-auto flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" aria-live="polite">
             {counts.critical > 0 ? (
