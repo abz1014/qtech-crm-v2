@@ -319,6 +319,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
         const none = s.state === 'none'
         const isOpen = open === s.index && !none
         // The money steps are the office's: an engineer's rows say so, whatever their mark, and so does the quotation while the job waits at it.
+        // The quotation the job waits at is still heard as "Now" (the row the job is at), only its words say the office has it.
         const withOffice = !ctx.money && (s.stop === 'Invoice' || s.stop === 'Payment' || (s.state === 'current' && s.stop === 'Quotation'))
         const current = s.state === 'current'
         const advance = !withOffice && s.state === 'future' && model.stops[s.index]?.half === true
@@ -329,7 +330,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
             dataStage={s.stop}
             controlsId={`stage-body-${s.index}`}
             bodyLabel={`${s.shown} stage`}
-            state={withOffice ? OFFICE_STATE : STATE[s.state]}
+            state={withOffice && !current ? OFFICE_STATE : STATE[s.state]}
             title={s.shown}
             summary={withOffice ? WITH_OFFICE : advance ? s.summary : s.state === 'future' ? 'Not yet' : s.summary}
             chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : chipOf(s.state, tone, chip)}

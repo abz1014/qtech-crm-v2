@@ -55,17 +55,19 @@ export function PageHeader({ title, lede, primary, secondary, meta, className }:
   return (
     <header className={cn('flex flex-wrap items-end justify-between gap-x-4 gap-y-3', className)}>
       <div className="grid min-w-0 gap-1">
-        {meta ? (
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <h1 className="text-2xl font-heavy tracking-tight text-pretty max-md:sr-only">{title}</h1>
-            <span aria-hidden="true" className="text-xl font-heavy tracking-snug text-fg md:hidden">
-              {title}
-            </span>
-            {meta}
-          </div>
-        ) : (
-          <h1 className="text-2xl font-heavy tracking-tight text-pretty max-md:sr-only">{title}</h1>
-        )}
+        {/* One shape with or without meta: a meta that arrives with the data (Bank check's "Everything matched") must not remount
+            the h1, or the route focus on it is lost (e2e more-money-pages, audit 2). */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <h1 className="min-w-0 text-2xl font-heavy tracking-tight text-pretty max-md:sr-only">{title}</h1>
+          {meta ? (
+            <>
+              <span aria-hidden="true" className="text-xl font-heavy tracking-snug text-fg md:hidden">
+                {title}
+              </span>
+              {meta}
+            </>
+          ) : null}
+        </div>
         {lede ? <p className="text-sm text-fg-muted text-pretty">{lede}</p> : null}
       </div>
       {hasActions ? (
