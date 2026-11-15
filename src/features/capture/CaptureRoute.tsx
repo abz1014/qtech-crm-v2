@@ -290,7 +290,7 @@ function JobFirst() {
 function LoadFailed({ children, onRetry }: { children: string; onRetry: () => void }) {
   return (
     <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-sunken px-3 py-3 text-base text-fg-2">
-      <Icon icon={CircleAlert} className="shrink-0 text-tone-danger-fg" />
+      <Icon icon={CircleAlert} className="mt-[calc((var(--lh-base)-16px)/2)] shrink-0 self-start text-tone-danger-fg" />
       <span className="min-w-0 flex-1 basis-[12rem]">{children}</span>
       <Button size="sm" onClick={onRetry}>
         Try again
