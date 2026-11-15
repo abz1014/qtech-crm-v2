@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Link } from 'react-router-dom'
 import { CircleAlert, Receipt, TriangleAlert, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
 import { Money } from '@/ui/Money'
@@ -374,6 +375,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
   useCsv(setCsv, v, v ? () => downloadReport(agingCsv(v), csvFile('overdue-by-age', ctx.month)) : null)
   // the "Imported, no order" column is all dashes unless an imported invoice has no order: then it is left out (9 columns at 1440 scrolled sideways)
   const hasImported = v?.rows.some(r => r.importedUnlinked) ?? false
+  const belowXl = useMediaQuery('(max-width: 1279px)')
   const columns = useMemo<Column<AgingRow>[]>(
     () => [
       {
@@ -393,8 +395,21 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           </span>
         ),
       },
-      { id: 'date', header: 'Invoice date', kind: 'date', value: r => r.invoiceDate, cell: r => <span className="num">{formatShortDate(r.invoiceDate, asOf)}</span> },
-      { id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays },
+      {
+        // Below 1280 the age in days rides under the date (its column hides, so the table fits its card).
+        id: 'date',
+        header: 'Invoice date',
+        kind: 'date',
+        value: r => r.invoiceDate,
+        cell: r => (
+          <span className="grid gap-px">
+            <span className="num">{formatShortDate(r.invoiceDate, asOf)}</span>
+            {belowXl ? <span className="num text-xs text-fg-muted">{plural(r.ageDays, 'day')}</span> : null}
+          </span>
+        ),
+      },
+      // left out below 1280 rather than hidden: the footer's label spans the columns before the first total
+      ...(belowXl ? [] : [{ id: 'days', header: 'Days', kind: 'num', value: r => r.ageDays } satisfies Column<AgingRow>]),
       {
         // What was paid by the date rides under the gross (it was its own column from 1440, which did not fit beside the four ages).
         id: 'gross',
@@ -479,7 +494,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
           ]
         : []),
     ],
-    [asOf, hasImported],
+    [asOf, hasImported, belowXl],
   )
   if (q.isError) return <ReportError title="Overdue by age did not load" onRetry={q.refetch} />
   if (q.isPending || !v) return <ReportLoading label="Loading overdue by age" />
@@ -956,10 +971,24 @@ function TeamBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
       },
       { id: 'payments', header: 'Payments', kind: 'num', value: r => r.payments, total: true, hideClass: 'hidden xl:table-cell' },
       { id: 'net', header: `Net credited, ${monthName(ctx.month)}`, kind: 'money', value: r => r.net, ...whole<TeamRow>(r => r.net), cell: r => (r.net === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.net} prefix={false} paisa="never" />) },
-      { id: 'qtd', header: 'Quarter to date', kind: 'money', value: r => r.quarterNet, ...whole<TeamRow>(r => r.quarterNet), cell: r => (r.quarterNet === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.quarterNet} prefix={false} paisa="never" />) },
+      {
+        id: 'qtd',
+        header: 'Quarter to date',
+        kind: 'money',
+        value: r => r.quarterNet,
+        ...whole<TeamRow>(r => r.quarterNet),
+        // Below 1280 the target rides under the quarter's figure (its bar column hides, so the table fits: audit 1, item 10).
+        cell: r => (
+          <span className="grid justify-items-end gap-px">
+            {r.quarterNet === null ? <span className="text-fg-muted">{'—'}</span> : <Money value={r.quarterNet} prefix={false} paisa="never" />}
+            <span className="num whitespace-nowrap text-xs text-fg-muted xl:hidden">{r.quarterTarget === null ? 'No target set' : `of ${rupees(r.quarterTarget)} target`}</span>
+          </span>
+        ),
+      },
       {
         id: 'target',
         header: v ? `Against the Q${v.quarter} target` : 'Against the target',
+        hideClass: 'hidden xl:table-cell',
         sortable: false,
         cell: r =>
           r.quarterTarget === null ? (
