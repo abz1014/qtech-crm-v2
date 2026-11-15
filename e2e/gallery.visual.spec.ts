@@ -166,7 +166,7 @@ test.describe('touch targets at Smaller text', () => {
           }
         })
         expect(m.coarse, 'the context is a touch screen').toBe(true)
-        expect([m.control, m.controlLg, m.controlSm, m.segment, m.row, m.touch], `${text} text`).toEqual([48, 56, 48, 48, 64, 44])
+        expect([m.control, m.controlLg, m.controlSm, m.segment, m.row, m.touch], `${text} text`).toEqual([48, 56, 48, 48, 64, 48])
         expect(m.bar.filter(h => h < 44), `phone bar targets under 44 px, ${text} text`).toEqual([])
         expect(m.tabs.filter(h => h < 44), `tabs under 44 px, ${text} text`).toEqual([])
       }

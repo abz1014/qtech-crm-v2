@@ -756,7 +756,7 @@ test.describe('O03: role views', () => {
   test('an order that is not there says so', async ({ page }) => {
     await openAs(page, 'sales', `/orders/${crypto.randomUUID()}`)
     await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Go to Today' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Go to Home' })).toBeVisible()
   })
 })
 

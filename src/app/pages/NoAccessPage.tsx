@@ -46,7 +46,7 @@ export function NoAccessPage({ area, roles, adminNote }: { area?: string; roles?
           actions={
             known ? (
               <Button icon={ArrowLeft} onClick={() => navigate(home)}>
-                Go to Today
+                Go to Home
               </Button>
             ) : undefined
           }

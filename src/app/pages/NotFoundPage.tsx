@@ -9,7 +9,7 @@ export function NotFoundPage() {
     <PageFrame title="Page not found" lede="This address does not match a page. The link may be old or mistyped.">
       <div>
         <Button icon={ArrowLeft} onClick={() => navigate('/')}>
-          Go to Today
+          Go to Home
         </Button>
       </div>
     </PageFrame>

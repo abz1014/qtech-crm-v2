@@ -18,11 +18,14 @@ export function Adorned({ prefix, suffix, children, className }: Adornment & { c
   if (!prefix && !suffix) return <>{children}</>
   const cap = 'inline-flex shrink-0 items-center border-line-input bg-sunken px-3 text-sm text-fg-muted'
   return (
-    <div className={cn('flex min-w-0 items-stretch [&_input]:min-w-0 [&_input]:flex-1', className)}>
+    // a span, not a div: callers wrap a control in a <label>, which takes phrasing content only (audit 1 minor 24). The input keeps
+    // its w-full (a percentage width): with w-auto its natural ~20-character width was the box's minimum and pushed a short
+    // field ("days") past a 320 px screen.
+    <span className={cn('flex min-w-0 items-stretch [&_input]:min-w-0 [&_input]:flex-1', className)}>
       {prefix ? <span className={cn(cap, 'rounded-l border border-r-0')}>{prefix}</span> : null}
       {children}
       {suffix ? <span className={cn(cap, 'rounded-r border border-l-0')}>{suffix}</span> : null}
-    </div>
+    </span>
   )
 }
 
@@ -31,7 +34,6 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   ref,
 ) {
   const a11y = useControlProps(rest)
-  const hasAdorn = Boolean(prefix || suffix)
   return (
     <Adorned prefix={prefix} suffix={suffix}>
       <input
@@ -39,7 +41,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
         type={type}
         {...rest}
         {...a11y}
-        className={cn(controlClass, prefix && 'rounded-l-none', suffix && 'rounded-r-none', hasAdorn && 'w-auto', className)}
+        className={cn(controlClass, prefix && 'rounded-l-none', suffix && 'rounded-r-none', className)}
       />
     </Adorned>
   )

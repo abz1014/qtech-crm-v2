@@ -92,8 +92,9 @@ export function Rail({ user, counts, dots, collapsed, onToggle, links: given, cu
                   <span className="relative grid shrink-0 place-items-center">
                     <Icon icon={link.icon} size="lg" />
                     {/* While the words are hidden the number and the dot sit on the icon; the link's name still says them. */}
-                    {/* Pulled in over the icon (left-1), so a "99+" stays inside the 72 px rail. */}
-                    <NeedsCount n={count} badge silent className={cn('left-1', collapsed ? undefined : 'lg:hidden')} />
+                    {/* On the icon's top-right corner, not over the glyph (audit 1 minor 26): its right edge is the link's (14 px past
+                        the icon), so a short count sits on the corner and a "99+" grows leftwards, still inside the 72 px rail. */}
+                    <NeedsCount n={count} badge silent className={cn('left-auto -right-[14px]', collapsed ? undefined : 'lg:hidden')} />
                     {dot ? <LateDot badge silent className={collapsed ? undefined : 'lg:hidden'} /> : null}
                   </span>
                   <span data-nav-label="" className={cn(text, 'min-w-0 flex-1')}>

@@ -27,7 +27,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
 ) {
   const a11y = useControlProps(rest)
   return (
-    <div className="relative min-w-0">
+    // a span (block), not a div: callers wrap a control in a <label>, which takes phrasing content only (audit 1 minor 24)
+    <span className="relative block min-w-0">
       <select ref={ref} {...rest} {...a11y} className={cn(controlClass, 'appearance-none pr-8 invalid:text-fg-muted',
           // a <select> always matches :read-only; that is not the read-only look
           'read-only:border-line-input read-only:bg-surface read-only:text-fg read-only:hover:border-fg-muted',
@@ -46,6 +47,6 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
         ))}
       </select>
       <Icon icon={ChevronDown} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-fg-muted" />
-    </div>
+    </span>
   )
 })

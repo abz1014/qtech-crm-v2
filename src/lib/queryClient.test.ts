@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { qk } from '@/features/queryKeys'
 import { holdNetwork } from '@/lib/connection'
 import { mapPgError } from '@/lib/pgErrors'
-import { FOCUS_REFETCH_MIN_AGE_MS, queryClient, REFERENCE_STALE_MS, refetchOnReturn } from '@/lib/queryClient'
+import { FOCUS_REFETCH_MIN_AGE_MS, queryClient, REFERENCE_STALE_MS, refetchOnReturn, retryRead, TRANSIENT_RETRIES } from '@/lib/queryClient'
 
 const aged = (ms: number) => ({ state: { dataUpdatedAt: Date.now() - ms } }) as unknown as Query
 
@@ -73,5 +73,22 @@ describe('a save never pauses silently offline (BUG-RES-1, U07)', () => {
   it('online: the save runs, and never pauses (networkMode always)', async () => {
     expect(queryClient.getDefaultOptions().mutations?.networkMode).toBe('always')
     await expect(save(async () => 'saved')).resolves.toBe('saved')
+  })
+})
+
+describe('a failed read says so quickly (audit 1 major 5)', () => {
+  it('is the only retry layer: once for no signal or an unexpected answer', () => {
+    expect(queryClient.getDefaultOptions().queries?.retry).toBe(retryRead)
+    const noSignal = new TypeError('Failed to fetch')
+    expect(retryRead(0, noSignal)).toBe(true)
+    expect(retryRead(1, noSignal)).toBe(false)
+    expect(retryRead(0, { code: '42501', message: 'permission denied' })).toBe(true)
+    expect(retryRead(1, { code: '42501', message: 'permission denied' })).toBe(false)
+  })
+
+  it('a few more times while PostgREST is still loading its schema', () => {
+    expect(TRANSIENT_RETRIES).toBe(3)
+    expect(retryRead(2, { code: 'PGRST002', message: 'Could not query the database for the schema cache. Retrying.' })).toBe(true)
+    expect(retryRead(3, { code: 'PGRST002', message: '' })).toBe(false)
   })
 })
