@@ -704,6 +704,11 @@
     min-height: var(--hit-touch);
     min-width: var(--hit-touch);
   }
+  /* A link-look button inside a sentence (`text-link-btn`) keeps its full target but takes only one line of the sentence: the
+     negative margins give the line box back what the floor added, so a wrapped hint keeps its own line spacing (audit 2). Its
+     sentences (`text-link-rows`) sit a target's height apart, so two such targets never overlap. */
+  .text-link-btn { margin-block: calc((1lh - var(--hit-touch)) / 2); }
+  .text-link-rows { row-gap: calc(var(--hit-touch) - 1lh); }
   /* A block link or summary grown to 44 keeps its line in the middle of the target. */
   :is(:is(.flex, .inline-flex, .grid, .inline-grid) > a[href], a[href]:is(.block, .inline-block), summary):not(.sr-only) {
     align-content: center;
