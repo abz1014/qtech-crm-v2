@@ -66,9 +66,8 @@
   "git": {
     "deploymentEnabled": {
       "**": false,
-      "main": true,
-      "forest/integ": true
+      "main": true
     }
   },
-  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ] && [ \"$VERCEL_GIT_COMMIT_REF\" != \"forest/integ\" ]"
+  "ignoreCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]"
 }
