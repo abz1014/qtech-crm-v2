@@ -111,10 +111,11 @@ export function DialogContentImpl({
   const dirty = guard?.dirty ?? false
   const contentRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLElement | null>(null)
-  const bodyRef = useRef<HTMLDivElement>(null)
+  // a callback ref: the body is drawn only once the dialog opens, after this component's first effects ran
+  const [bodyEl, setBodyEl] = useState<HTMLDivElement | null>(null)
   const [scrollStop, setScrollStop] = useState(false)
   useEffect(() => {
-    const el = bodyRef.current
+    const el = bodyEl
     if (!el) return
     const read = () => {
       const scrolls = el.scrollHeight > el.clientHeight + 1
@@ -131,7 +132,7 @@ export function DialogContentImpl({
       ro.disconnect()
       mo.disconnect()
     }
-  }, [])
+  }, [bodyEl])
   const hold = (e: Event) => {
     if (busy || dirty) e.preventDefault()
   }
@@ -229,7 +230,7 @@ export function DialogContentImpl({
             </RadixDialog.Close>
           </header>
           <div
-            ref={bodyRef}
+            ref={setBodyEl}
             data-dialog-body
             // a body that scrolls but holds nothing to tab to (a long History) takes focus itself, so the keyboard can scroll it (axe
             // scrollable-region-focusable, audit 2)

@@ -57,12 +57,23 @@ export function Popover(props: RootProps) {
   return <mod.PopoverImpl {...props} defaultOpen={Boolean(props.defaultOpen) || wanted} />
 }
 
+/**
+ * The Radix half, but only under a Radix root: while this popover's root still draws the light stand-in (it provides Want), its
+ * parts stay light too. The download can land between the root's render and its children's, and a Radix part under the light root
+ * threw "PopoverPortal must be used within Popover" (audit 2, New RFQ at 1024).
+ */
+function useRootImpl() {
+  const mod = usePopoverImpl()
+  const want = useContext(Want)
+  return want ? null : mod
+}
+
 type TriggerProps = ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Trigger>
 
 export const PopoverTrigger = forwardRef<HTMLButtonElement, TriggerProps>(function PopoverTrigger({ asChild, children, onClick, ...rest }, ref) {
   const mod = usePopoverImpl()
   const want = useContext(Want)
-  if (mod) {
+  if (mod && !want) {
     return (
       <mod.PopoverTriggerImpl ref={ref} asChild={asChild} onClick={onClick} {...rest}>
         {children}
@@ -97,17 +108,17 @@ export const PopoverTrigger = forwardRef<HTMLButtonElement, TriggerProps>(functi
 })
 
 export function PopoverAnchor({ children }: { children?: ReactNode; asChild?: boolean }) {
-  const mod = usePopoverImpl()
+  const mod = useRootImpl()
   return mod ? <mod.PopoverAnchorImpl asChild>{children as ReactElement}</mod.PopoverAnchorImpl> : <>{children}</>
 }
 
 export function PopoverClose({ children, ...rest }: ComponentPropsWithoutRef<typeof import('@radix-ui/react-popover').Close>) {
-  const mod = usePopoverImpl()
+  const mod = useRootImpl()
   return mod ? <mod.PopoverCloseImpl {...rest}>{children}</mod.PopoverCloseImpl> : null
 }
 
 export const PopoverContent = forwardRef<HTMLDivElement, Impl.ContentProps>(function PopoverContent(props, ref) {
-  const mod = usePopoverImpl()
+  const mod = useRootImpl()
   return mod ? <mod.PopoverContentImpl ref={ref} {...props} /> : null
 })
 

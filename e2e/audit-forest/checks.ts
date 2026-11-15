@@ -381,7 +381,18 @@ export async function axe(page: Page, scope: string | null): Promise<Raw[]> {
       const ctx = scope && document.querySelector(scope) ? { include: [scope] } : document
       const r = await ax.run(ctx, { runOnly: { type: 'tag', values: tags }, resultTypes: ['violations', 'incomplete'], rules: { region: { enabled: !scope } } })
       const slim = (x: AxeResult[]) => x.map(v => ({ id: v.id, impact: v.impact, help: v.help, tags: v.tags, nodes: v.nodes.slice(0, 12).map(n => ({ target: n.target, failureSummary: n.failureSummary })) }))
-      return { violations: slim(r.violations), incomplete: slim(r.incomplete.filter(i => i.id === 'color-contrast')) }
+      // Narrowed (audit 2): a colour-contrast node that is a disabled control (or inside one) is WCAG 1.4.3's "inactive user interface
+      // component", exempt by the rule itself; axe still reported the Team page's disabled Add person button (2.09, --fg-disabled,
+      // which the tokens mark WCAG-exempt) once while the list was loading. Re-read each node: a :disabled one is dropped.
+      const inactive = (n: AxeNode) => {
+        const sel = Array.isArray(n.target) ? n.target[n.target.length - 1] : null
+        const el = typeof sel === 'string' ? document.querySelector(sel) : null
+        return Boolean(el?.closest(':disabled, [aria-disabled="true"]'))
+      }
+      const violations = r.violations
+        .map(v => (v.id === 'color-contrast' ? { ...v, nodes: v.nodes.filter(n => !inactive(n)) } : v))
+        .filter(v => v.nodes.length > 0)
+      return { violations: slim(violations), incomplete: slim(r.incomplete.filter(i => i.id === 'color-contrast')) }
     },
     { tags: AXE_TAGS, scope },
   )
