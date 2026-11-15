@@ -433,7 +433,7 @@ function RowCard({ r, shared }: { r: QuotedRow; shared: string | null }) {
   return (
     <li className="grid grid-cols-[minmax(0,1fr)] gap-2 px-card py-4 [container-type:inline-size]" data-statement-row={r.supplierName}>
       <p className="text-base font-semibold [overflow-wrap:anywhere]">{r.supplierName}</p>
-      {/* Label beside value where a whole amount fits beside the label; on a narrow phone (320) each label sits over its value, so an
+      {/* Label beside value where a whole amount fits beside the label; on a phone card (under 18.5em) each label sits over its value, so an
           amount never runs out of the card or breaks inside its digits. em, so Larger text stacks sooner. */}
       <dl className={FACTS}>
         {facts.map(([label, value]) => (
