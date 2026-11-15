@@ -58,7 +58,10 @@ export function StageTrack({ job }: { job: JobStanding }) {
         return (
           <li key={s.name} className="relative grid min-w-0 content-start justify-items-center gap-2 text-center" aria-current={s.state === 'current' ? 'step' : undefined}>
             {s.index > 0 ? <span aria-hidden="true" className={cn('absolute left-[calc(-50%+var(--sp-4))] right-[calc(50%+var(--sp-4))] top-4 h-1 -translate-y-1/2 rounded-pill', lit ? 'bg-brand-500' : 'bg-deep')} /> : null}
-            <span aria-hidden="true" className={cn('relative grid size-8 place-items-center rounded-pill border-2', DOT[s.state], s.half && 'outline outline-2 outline-offset-2 outline-brand-500')}>
+            {/* An advance in: the Payment dot, the same size as the rest, is half filled (its note says "advance received"); a ring
+                round it read as a different control. */}
+            <span aria-hidden="true" className={cn('relative grid size-8 place-items-center rounded-pill border-2', DOT[s.state], s.half && 'overflow-hidden border-brand-500')}>
+              {s.half ? <span className="absolute inset-y-0 left-0 w-1/2 bg-brand-100" data-stage-half /> : null}
               <Mark s={s} />
             </span>
             <span className={cn('min-w-0 text-sm [overflow-wrap:anywhere] max-md:sr-only', s.state === 'current' ? 'font-heavy text-fg' : s.state === 'done' ? 'text-fg-2' : 'text-fg-muted')}>
@@ -78,7 +81,7 @@ export function StageTrack({ job }: { job: JobStanding }) {
 export function StageMini({ job }: { job: JobStanding }) {
   const m = stageModel(job)
   return (
-    <span className="grid min-w-[160px] gap-1 whitespace-normal" data-stage-mini>
+    <span className="grid min-w-[9rem] gap-1 whitespace-normal" data-stage-mini>
       <span className="flex w-[7rem] gap-[3px]" aria-hidden="true">
         {m.stops.map(s => (
           <span key={s.name} className={cn('h-[6px] flex-1 rounded-round', SEG[s.state])} />
@@ -127,6 +130,7 @@ export function StageBlock({
   label,
   text,
   tone,
+  chip: chipTone,
   action,
   facts,
   between,
@@ -137,6 +141,8 @@ export function StageBlock({
   /** The step in one sentence ("Waiting for the goods"). */
   text: string
   tone: StepTone
+  /** The chip's word when it is not the tone's own (an imported job: grey, yet "Needs action"); see JobNext.chip. */
+  chip?: StepTone
   /** The page's one green button (a computer only; a phone has the sticky bar). */
   action?: ReactNode
   /** The key facts line, under the track. */
@@ -145,7 +151,7 @@ export function StageBlock({
   between?: ReactNode
 }) {
   const m = stageModel(job)
-  const chip = CHIP[tone]
+  const chip = CHIP[chipTone ?? tone]
   const detail = m.ending ? null : sentences(m.detail)
   const title = text || (m.ending ?? m.label)
   return (

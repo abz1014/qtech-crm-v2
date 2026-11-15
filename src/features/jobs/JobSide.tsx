@@ -39,13 +39,13 @@ export function ContactRow({ facts, showWhere = false }: { facts: JobFacts; show
   const c = facts.contact
   if (!c) {
     return (
-      // The sentence under the title, left with it (as a set contact's actions are): right-aligned beside "Contact" it broke into two ragged lines in the side column.
+      // The sentence under the title, from the card's left edge like a set contact's lines (Forest 30-job-page): indented under the label it hung loose, right-aligned it broke into two ragged lines.
       <section aria-label="Contact" className="border-b py-2">
         <div className="flex min-h-touch items-center gap-3">
           <Icon icon={User} className="text-fg-muted" />
           <h2 className="type-row">Contact</h2>
         </div>
-        <p className="type-body pb-2 pl-8 text-fg-muted">No contact person is set</p>
+        <p className="type-body pb-2 text-fg-muted">No contact person is set</p>
       </section>
     )
   }
@@ -58,8 +58,8 @@ export function ContactRow({ facts, showWhere = false }: { facts: JobFacts; show
         <h2 className="type-row">Contact</h2>
         <p className="type-body min-w-0 flex-1 text-right text-fg-2 [overflow-wrap:anywhere]">{c.name}</p>
       </div>
-      {where && showWhere ? <p className="type-body pb-2 pl-8 text-fg-2 [overflow-wrap:anywhere]">{where}</p> : null}
-      <div data-row-actions="" className="flex flex-wrap gap-2 pb-2 pl-8">
+      {where && showWhere ? <p className="type-body pb-2 text-fg-2 [overflow-wrap:anywhere]">{where}</p> : null}
+      <div data-row-actions="" className="flex flex-wrap gap-2 pb-2">
         {c.phone ? (
           <a className={linkBtn} href={`tel:${c.phone.replace(/[^\d+]/g, '')}`} aria-label={`Call ${c.name}, ${c.phone}`}>
             <Icon icon={Phone} />

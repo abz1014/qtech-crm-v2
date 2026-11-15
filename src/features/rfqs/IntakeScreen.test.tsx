@@ -109,7 +109,7 @@ function SendCapture() {
 
 type InitialEntry = string | { pathname: string; search?: string; state?: unknown }
 
-function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState = SIGNED_IN) {
+function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState = SIGNED_IN, mode?: 'enquiry') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
@@ -120,7 +120,7 @@ function renderScreen(entry: InitialEntry = '/rfqs/new', session: SessionState =
             <Link to="/today">Today</Link>
             <SendCapture />
             <Routes>
-              <Route path="/rfqs/new" element={<IntakeScreen />} />
+              <Route path="/rfqs/new" element={<IntakeScreen mode={mode} />} />
               <Route path="/today" element={<h1>Today page</h1>} />
             </Routes>
           </ToastProvider>
@@ -175,6 +175,27 @@ async function reachEnquiry(user: ReturnType<typeof setup>) {
 }
 
 describe('intake screen', () => {
+  it('New RFQ says at once when Q-Tech cannot be reached (the next job number does not load), and Try again asks again', async () => {
+    let down = true
+    let asked = 0
+    installFakeDb(call => {
+      if (call.target === 'rfqs' && call.ops.some(([n]) => n === 'order')) {
+        asked++
+        return down ? { error: { message: 'Failed to fetch' } } : { data: [{ number: 184 }] }
+      }
+      return respond(call)
+    })
+    const user = setup()
+    renderScreen('/rfqs/new', SIGNED_IN, 'enquiry') // New RFQ on /enquiries/new: the form that reads the next job number
+    const banner = await screen.findByText('Q-Tech CRM could not be reached')
+    expect(screen.getByText('You can fill this in now. Creating the job needs a connection.')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Company' })).toBeEnabled()
+    down = false
+    await user.click(within(banner.closest('[role]') as HTMLElement).getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(screen.queryByText('Q-Tech CRM could not be reached')).toBeNull())
+    expect(asked).toBe(2)
+  })
+
   it('pastes into rows, ticks only the supplier that supplied it before, and flags the item nobody is asked about', async () => {
     installFakeDb(respond)
     const user = setup()

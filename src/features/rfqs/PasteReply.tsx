@@ -99,7 +99,7 @@ export function PasteReplyPanel({
                         {s.itemNumber !== null ? `Item ${s.itemNumber}` : 'No item matched'}
                         {name ? <span className="font-regular text-fg-muted">{` · ${name.length > 60 ? `${name.slice(0, 57)}...` : name}`}</span> : null}
                       </span>
-                      <span className="font-mono text-sm font-bold tabular-nums">
+                      <span className="num text-sm font-bold">
                         {s.unitPrice !== null ? (
                           <>
                             <span className="mr-1 font-sans text-xs font-medium text-fg-muted">{s.currency}</span>

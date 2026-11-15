@@ -51,6 +51,10 @@ describe('an imported job', () => {
     expect(live.tone).toBe('late')
     expect(old.tone).toBe('inert')
     expect(old.text).toBe('Imported · The goods are late: follow up with the supplier')
+    // the chip still says who acts next (the step and its button are live), only its colour is grey: never "Nothing to do" over a step
+    expect(old.chip).toBe('late')
+    expect(jobNext({ stage: 'ordered', stageDetail: null, role: 'admin', imported: true })).toMatchObject({ tone: 'inert', chip: 'now', button: 'Place the order' })
+    expect(live.chip).toBeUndefined()
     // a finished or already quiet step is left as it is
     expect(jobNext({ stage: 'paid', stageDetail: null, role: 'admin', imported: true }).text).toBe('Done')
   })

@@ -52,23 +52,30 @@ function Shell({ children, bar = false }: { children: ReactNode; bar?: boolean }
   return <div className={cn('mx-auto w-full max-w-detail px-4 pb-16 pt-4 md:px-8 md:pt-6', bar && 'max-md:pb-[calc(var(--control-lg-h)+2rem)]')}>{children}</div>
 }
 
-function PageSkeleton() {
+/** The page's one heading while it loads or cannot load: a screen reader still lands on "Job 139" (the title draws it once the job is read). */
+function PageTitle({ jobKey }: { jobKey?: string }) {
+  return <h1 className="sr-only">{jobKey ? jobLabel(jobKey) : 'Job'}</h1>
+}
+
+function PageSkeleton({ jobKey }: { jobKey?: string }) {
+  // Every grid here has a minmax(0,1fr) track: a bare grid sizes its track to the widest bar (24rem), wider than a 375 phone.
   return (
     <Shell>
-      <div role="status" className="grid gap-4" aria-busy="true" aria-label="Loading job">
+      <PageTitle jobKey={jobKey} />
+      <div role="status" className="grid grid-cols-[minmax(0,1fr)] gap-4" aria-busy="true" aria-label="Loading job">
         <Skeleton className="h-4 w-[10rem]" />
         <Skeleton className="h-[2.25rem] w-[24rem] max-w-full" />
         <Skeleton className="h-5 w-[18rem] max-w-full" />
         {/* the hero and the track card */}
         <Skeleton className="h-[10rem] w-full rounded-card" />
         <Skeleton className="h-[8rem] w-full rounded-card" />
-        <div className="grid items-start gap-card-gap lg:grid-cols-[minmax(0,1fr)_340px]">
-          <div className="grid gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-card-gap lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-12" />
             ))}
           </div>
-          <div className="grid gap-4">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
             <Skeleton className="h-[8rem] rounded-card" />
             <Skeleton className="h-[10rem] rounded-card" />
           </div>
@@ -82,10 +89,11 @@ export default function JobPage() {
   const { key: raw } = useParams()
   const key = raw ? decodeURIComponent(raw) : undefined
   const facts = useJobFacts(key)
-  if (facts.isPending) return <PageSkeleton />
+  if (facts.isPending) return <PageSkeleton jobKey={key} />
   if (facts.isError && !facts.data) {
     return (
       <Shell>
+        <PageTitle jobKey={key} />
         <EmptyState
           mood="error"
           icon={CloudOff}
@@ -233,6 +241,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         label={role === 'engineer' ? 'Where it stands' : `Next step · ${jobLabel(job.key)}`}
         text={next.text}
         tone={next.tone}
+        chip={next.chip}
         action={phone ? undefined : button}
         facts={keyFacts ? <JobKeyFacts facts={keyFacts} /> : null}
         between={
@@ -245,14 +254,15 @@ function JobView({ facts }: { facts: JobFacts }) {
         }
       />
       {phone && (button || jobHasMore(ctx)) ? (
-        <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} className={button ? undefined : 'left-auto rounded-tl-panel'} />
+        // Always the full-width bar (More on the right when there is no green button): a floating More corner covered the chip of the row under it.
+        <StickyActionBar label="Job actions" primary={button} secondary={<JobSlot name="next-step" context={ctx} />} />
       ) : null}
       {job.rfqId ? <WonDialogHost rfqId={job.rfqId} /> : null}
       <div
         data-work
         className="mt-4 grid min-w-0 items-start gap-card-gap md:mt-6 lg:grid-cols-[minmax(0,1fr)_340px]"
       >
-        <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} tone={next.tone} />
+        <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} tone={next.tone} chip={next.chip} />
         <aside aria-label="About this job" className="min-w-0 rounded-card border bg-surface px-card py-2 shadow-e1 [&>:last-child]:border-b-0">
           <ContactRow facts={facts} showWhere={role === 'engineer'} />
           {role === 'admin' ? <MoneyRow data={data} hasOrder={Boolean(job.orderId)} /> : null}
