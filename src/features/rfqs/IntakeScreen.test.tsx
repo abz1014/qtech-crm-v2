@@ -268,7 +268,7 @@ describe('intake screen', () => {
     expect(screen.getAllByRole('combobox', { name: /^Family of item \d$/ })).toHaveLength(2)
   })
 
-  it('opens a Memory card per supplier: tier label, last quote at the time, brands, replies; one memory call per item, none per row', async () => {
+  it('opens a Memory card per supplier: tier label, last quote in its own currency (no PKR), brands, replies; one memory call per item, none per row', async () => {
     const db = installFakeDb(respond)
     const user = setup()
     renderScreen()
@@ -295,8 +295,8 @@ describe('intake screen', () => {
     expect(within(card).getByText('same model')).toBeInTheDocument()
     expect(within(card).getByText('Matched on model code.', { exact: false })).toBeInTheDocument()
     expect(within(card).getByText('USD 1,980')).toBeInTheDocument()
-    expect(within(card).getByText(/≈ PKR 551,034/)).toBeInTheDocument()
-    expect(within(card).getByText('at the time')).toBeInTheDocument()
+    expect(card).not.toHaveTextContent('PKR')
+    expect(within(card).queryByText('at the time')).toBeNull()
     expect(within(card).getByText('6 weeks')).toBeInTheDocument()
     expect(within(card).getByText('Hach')).toBeInTheDocument()
     expect(within(card).getByText('answered 7 of 8')).toBeInTheDocument()

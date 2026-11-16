@@ -141,8 +141,9 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
       await fillReplyDetails(cn, s.china.name, [i + 1], { leadTime: `${3 + i} weeks`, weight: String(2 + i) })
       void it
     }
-    // No CNY rate: the row says the reply can be saved and the rate added afterwards (live PKR preview, C-40).
-    await expect(cn.getByText('No current CNY rate. You can save the reply and add the rate afterwards.').first()).toBeVisible()
+    // A typed price stays in the currency chosen: no PKR preview and no rate note under it (owner, 16 Nov 2026).
+    await expect(cn.locator('[data-preview]')).toHaveCount(0)
+    await expect(cn.getByText(/≈ PKR|Reads as|No current CNY rate/)).toHaveCount(0)
     await cn.getByRole('button', { name: 'Save reply' }).click()
     taps++
     await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
@@ -160,11 +161,15 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
       ['4 weeks', 3, 'kg'],
     ])
 
-    // The price line shows the supplier's own figure, not compared; the dialog closed, and the supplier's row offers Edit reply.
+    // The price line shows the supplier's own figure, in CNY, and nothing about PKR; the dialog closed, and the supplier's row offers Edit reply.
     await expect(cn).toHaveCount(0)
     const one = page.getByRole('article', { name: 'Item 1' })
-    await expect(one.getByText('not compared, no rate').first()).toBeVisible()
+    await expect(one.locator('li[data-price-row]', { hasText: s.china.name }).locator('[data-price]')).toContainText('CNY')
+    await expect(one).not.toContainText(/PKR|not compared/)
     await expect(page.locator(`[data-reply-row="${s.china.id}"]`).getByRole('button', { name: `Edit reply, ${s.china.name}` })).toBeVisible()
+    // Show in PKR, asked for: the CNY line has no rate, so it says it is not compared.
+    await page.getByRole('button', { name: 'Show in PKR' }).click()
+    await expect(one.getByText('not compared, no rate').first()).toBeVisible()
     await one.getByRole('button', { name: `Show details for ${s.china.name}` }).click()
     await expect(one.getByText('not compared — no rate').first()).toBeVisible()
     await expect(one.locator('[data-status="fx-capture:none"]').first()).toHaveText('No rate') // a chip only when the rate is a problem
@@ -175,8 +180,8 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.usd.name)
     await r.getByLabel(`Price for item 1 from ${s.usd.name}`).fill('100')
-    // The live preview: what it reads as in PKR at today's rate (and nothing about being the lowest).
-    await expect(r.getByText("Reads as ≈ PKR 28,000 at today's USD rate.")).toBeVisible()
+    // No PKR preview: the typed price stays in USD (owner, 16 Nov 2026).
+    await expect(r.getByText(/≈ PKR|Reads as|28,000/)).toHaveCount(0)
     // Save is refused until the priced item has its lead time and weight: the first missing box gets the cursor.
     await r.getByRole('button', { name: 'Save reply' }).click()
     const lead = r.getByLabel(`Lead time, item 1 from ${s.usd.name}`, { exact: true })
@@ -194,7 +199,15 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     expect(Number(line.weight)).toBe(750)
     expect(Number(line.fx_rate_pkr)).toBe(280)
     const item = page.getByRole('article', { name: 'Item 1' })
-    // One line: the PKR figure, the lead time; the supplier's own figure and the rates open on request.
+    // By default one line in the currency quoted, no PKR and no rate bar.
+    await expect(item.locator('[data-compared] [data-price]')).toHaveText('USD 100.00')
+    await expect(item).not.toContainText('PKR')
+    await expect(page.locator('[data-ratebar]')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Show in PKR' })).toHaveAttribute('aria-pressed', 'false')
+    // Show in PKR, asked for: the PKR figure, the lead time; the supplier's own figure and the rates open on request.
+    await page.getByRole('button', { name: 'Show in PKR' }).click()
+    await expect(page.getByRole('button', { name: 'Show in PKR' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('[data-ratebar]')).toBeVisible()
     await expect(item.locator('[data-compared]')).toContainText('28,000')
     await expect(item.locator('[data-compared]')).toContainText('3 weeks')
     await expect(item.getByText("USD 280.00, today's rate")).toHaveCount(0)
@@ -225,6 +238,9 @@ test.describe('reply form: lead time and weight on every priced item (16 Nov 202
       await r.getByLabel(`Lead time, item 1 from ${s.germany.name}`, { exact: true }).fill('6 weeks')
       await r.getByLabel(`Country of origin, item 1 from ${s.germany.name}`, { exact: true }).fill('Germany')
       await r.getByLabel(`Price for item 2 from ${s.germany.name}`).fill('480')
+      // A typed price stays in the currency chosen (EUR): no PKR figure under it (owner, 16 Nov 2026).
+      await expect(r.getByText(/≈ PKR|Reads as/)).toHaveCount(0)
+      if (w === 1440) await review(page, 'quoted-currency-reply-desktop')
       await r.getByRole('button', { name: 'Save reply' }).click()
       // Item 1 lacks its weight, item 2 both; the cursor goes to the first missing box (item 1's weight).
       await expect(r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true })).toBeFocused()
@@ -353,6 +369,19 @@ test.describe('comparison', () => {
     const shown = await art.locator('li[data-price-row]').evaluateAll(els => els.map(e => e.textContent ?? ''))
     expect(names.map(n => shown.findIndex(t => t.includes(n)))).toEqual([0, 1, 2])
     const eur = art.locator('li[data-price-row]', { hasText: s.germany.name })
+    // By default each price is in its quoted currency, never converted.
+    await expect(eur.locator('[data-price]')).toHaveText('EUR 90.00')
+    await expect(art).not.toContainText(/PKR|not compared/)
+    await page.locator('section[data-slot="items"]').evaluate(el => { el.scrollIntoView({ block: 'start' }); window.scrollBy(0, -96) })
+    await review(page, 'quoted-currency-rfq-desktop')
+    const size = page.viewportSize()
+    await page.setViewportSize({ width: 375, height: 812 })
+    await expect(art.locator('li[data-price-row]', { hasText: s.germany.name }).locator('[data-price]')).toHaveText('EUR 90.00')
+    await page.locator('section[data-slot="items"]').evaluate(el => { el.scrollIntoView({ block: 'start' }); window.scrollBy(0, -96) })
+    await review(page, 'quoted-currency-rfq-phone')
+    if (size) await page.setViewportSize(size)
+    // Show in PKR, asked for.
+    await page.getByRole('button', { name: 'Show in PKR' }).click()
     await expect(eur).toContainText('27,000')
     // The rate behind the figure is one tap away.
     await eur.getByRole('button', { name: `Show details for ${s.germany.name}` }).click()
@@ -366,6 +395,10 @@ test.describe('comparison', () => {
     // Item 2 has no prices.
     await expect(page.getByRole('article', { name: 'Item 2' }).locator('li[data-price-row]')).toHaveCount(0)
     await review(page, 'rfq-detail-02-rate-states-1440')
+    // The switch fills over --dur-fast: wait for its colour transition to end before the shot.
+    await page.waitForTimeout(400)
+    await page.locator('section[data-slot="items"]').evaluate(el => { el.scrollIntoView({ block: 'start' }); window.scrollBy(0, -96) })
+    await review(page, 'quoted-currency-rfq-pkr-desktop')
   })
 
   test('two lines, one without a rate: nothing is marked', async ({ page }) => {
@@ -718,6 +751,9 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
       { inquiry_id: s.china.inquiryId, rfq_item_id: s.items[0].id, unit_price: 90, currency: 'EUR' }, // PKR 27,000 on a stale rate
     ] }))
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    // The rate bar is part of Show in PKR: off to start, no bar.
+    await expect(page.locator('[data-ratebar]')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Show in PKR' }).click()
     const bar = page.locator('[data-ratebar]')
     // One line (grade-B R5): a fresh rate is its figure (where it came from is its title); a stale one says how old.
     await expect(bar).toContainText('Rates today, PKR per unit')
@@ -747,6 +783,8 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
     await review(page, 'exchange-rates-1440')
 
     await page.goto(`/rfqs/${s.rfq.id}`)
+    // Show in PKR is remembered in this browser.
+    await expect(page.getByRole('button', { name: 'Show in PKR' })).toHaveAttribute('aria-pressed', 'true')
     const lowest = page.getByRole('article', { name: 'Item 1' }).locator('li[data-price-row]', { hasText: s.germany.name })
     await expect(lowest).toContainText('9,000')
     await expect(page.locator('[data-ratebar] [data-rate="JPY"]')).toContainText('JPY 1.80')

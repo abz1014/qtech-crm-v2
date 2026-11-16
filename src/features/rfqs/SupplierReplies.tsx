@@ -1,11 +1,9 @@
 import { readClipboardText } from '@/lib/docread/htmlTable'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Link } from 'react-router-dom'
 import { Ban, ChevronDown, ClipboardPaste, MessageSquareReply, Undo2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
-import { formatPaisa } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { Button } from '@/ui/Button'
 import { classifyDoc, KIND_LABEL, NOT_A_SUPPLIER_QUOTE, type DocKind } from '@/lib/docread/docKind'
@@ -27,7 +25,6 @@ import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
 import {
   CANT_QUOTE_REASONS,
-  comparePrices,
   currencyForSupplier,
   currencySourceNote,
   draftFromLines,
@@ -57,8 +54,8 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  * price form: a price per item, the currency already filled in (the supplier's last currency, else the country map: "there is
  * nothing to pick"), and stock once for the whole reply. Each item also has its own lead time, weight of one unit and country of
  * origin; the lead time and the weight are required for every item that gets a price (owner, 16 Nov 2026), so Save reply says
- * what is missing under the box and puts the cursor in the first one instead of saving. While a price is typed the row says what it reads as in PKR at
- * today's rate (never whether it is the lowest); with no rate it says the reply can be saved and the rate added afterwards.
+ * what is missing under the box and puts the cursor in the first one instead of saving. A typed price stays in the currency chosen:
+ * no PKR figure is shown under it (owner, 16 Nov 2026: no conversion until the person asks for it).
  *
  *   FE-2  supplier reply   Enter reply, one typed price per item, currency never typed, then Save reply
  *         cannot quote      Enter reply, Cannot quote, the reason (the five reasons sit behind one menu, not five buttons)
@@ -78,31 +75,6 @@ export function ReplyChip({ inquiry, itemCount }: { inquiry: InquiryRow; itemCou
   if (inquiry.responseState === 'quoted' || inquiry.lines.length > 0) return <StatusBadge dimension="inquiry" value="quoted" detail={`${inquiry.lines.length} of ${itemCount}`} />
   if (inquiry.responseState === 'no_offer' || inquiry.noOfferOn) return <StatusBadge dimension="inquiry" value="no-offer" />
   return <StatusBadge dimension="inquiry" value={inquiry.chaseCount > 0 ? 'chased' : 'awaiting'} detail={inquiry.chaseCount > 0 ? `followed up ×${inquiry.chaseCount}` : undefined} />
-}
-
-/** What a typed price reads as in PKR at today's rate. It never says whether it is the lowest: the CRM suggests no supplier. */
-function PricePreview({ amount, currency, rates }: { amount: number; currency: string; rates: RateTable }) {
-  if (!currency || currency === 'PKR') return null
-  const rate = rates[currency]
-  const usable = rate && rate.staleness !== 'unusable' && rate.ageDays <= 30
-  if (!usable) {
-    return (
-      <p className="text-sm text-fg-muted" data-preview="no-rate">
-        {`No current ${currency} rate. You can save the reply and add the rate afterwards.`}{' '}
-        <Link to="/settings/exchange-rates" className="underline underline-offset-2">
-          Exchange rates
-        </Link>
-      </p>
-    )
-  }
-  const cmp = comparePrices([{ id: 'new', amount, currency }], rates)
-  const mine = cmp.lines.find(l => l.id === 'new')
-  if (!mine || mine.pkrPaisa === null) return null
-  return (
-    <p className="text-sm text-fg-muted" data-preview="rate">
-      {`Reads as ≈ PKR ${formatPaisa(mine.pkrPaisa)} at today's ${currency} rate.`}
-    </p>
-  )
 }
 
 /** "Cannot quote ▾": the five reasons behind one menu, one tap each. */
@@ -142,7 +114,6 @@ export function SupplierReplyDialog({
   rfq,
   items,
   inquiry,
-  rates,
   focusItemId,
   onClose,
   allItems,
@@ -154,7 +125,8 @@ export function SupplierReplyDialog({
   inquiry: InquiryRow
   /** The other suppliers' replies. No longer read here (the price preview names no lowest), kept so callers need no change. */
   inquiries?: InquiryRow[]
-  rates: RateTable
+  /** Today's rates. No longer read here (a typed price is not converted to PKR), kept so callers need no change. */
+  rates?: RateTable
   /** The item whose price box gets the cursor ("Edit reply" on a price row); else the first price box. */
   focusItemId?: string
   /** Closed, or saved. */
@@ -214,11 +186,9 @@ export function SupplierReplyDialog({
         prices: plan.prices,
         removeItemIds: plan.removeItemIds,
       })
-      const r = rates[d.currency]
-      const noRate = d.currency !== 'PKR' && (!r || r.staleness === 'unusable' || r.ageDays > 30)
       toast({
         title: 'Reply saved',
-        body: `${inquiry.supplierName} · ${n} ${n === 1 ? 'price' : 'prices'}${noRate ? ' · not compared, no rate' : ''}`,
+        body: `${inquiry.supplierName} · ${n} ${n === 1 ? 'price' : 'prices'}`,
         tone: 'success',
       })
       onClose()
@@ -545,7 +515,7 @@ export function SupplierReplyDialog({
                           {problem}
                         </p>
                       ) : null}
-                      {!reason && typeof price === 'number' && price > 0 ? <PricePreview amount={price} currency={draft.currency} rates={rates} /> : null}
+
                       {reason ? null : (
                         <div className="mt-1 grid items-start gap-x-3 gap-y-2 sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]" data-reply-details={it.id}>
                           <div className="grid gap-1">

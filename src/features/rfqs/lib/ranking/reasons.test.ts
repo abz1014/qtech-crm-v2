@@ -168,9 +168,9 @@ describe('the memory card evidence block: up to three recent orders', () => {
   })
 })
 
-describe('a ranked row (admin and sales)', () => {
+describe('a ranked row (admin and sales), with Show in PKR on', () => {
   it('a line inside the band that is not the cheapest says how far above, why it is first, and the spread', () => {
-    const r = reasonsFor(row(), { showSell: true, bandSize: 2, evidence: ev })
+    const r = reasonsFor(row(), { showSell: true, bandSize: 2, evidence: ev, showPkr: true })
     expect(texts(r.short)).toEqual([
       '≈ PKR 7,000 each above the best (1.3%)',
       'Within 2% of the best: by delivery record',
@@ -186,41 +186,65 @@ describe('a ranked row (admin and sales)', () => {
       'Ordered Endress+Hauser Proline Promag 300 ×1 for ORD-0027, placed 3 Feb 2026, delivered after 9 days (expected 10)',
     ])
   })
-  it('the cheapest line is "Best price" with the rate it was converted at', () => {
-    const r = reasonsFor(row({ pct_above_best: 0, pkr_unit_price: 545_664, price: 1960, orders_count: 0, deliveries: 0, on_time: 0, spread_unit: 66_336, spread_total: 132_672, last_order_number: null, last_order_on: null }), { showSell: true, bandSize: 2 })
-    expect(r.full[0].text).toBe('Best price: ≈ PKR 545,700 each (USD 1,960 at 278.40, today)')
-    expect(texts(r.short)).toEqual(['Best price', 'Within 2% of the best: by delivery record', 'No deliveries yet', 'Spread ≈ PKR 66,300 each'])
+  it('the cheapest line says it is lowest after converting, with the rate it was converted at', () => {
+    const r = reasonsFor(row({ pct_above_best: 0, pkr_unit_price: 545_664, price: 1960, orders_count: 0, deliveries: 0, on_time: 0, spread_unit: 66_336, spread_total: 132_672, last_order_number: null, last_order_on: null }), { showSell: true, bandSize: 2, showPkr: true })
+    expect(r.full[0].text).toBe("Lowest after converting at today's rates: ≈ PKR 545,700 each (USD 1,960 at 278.40, today)")
+    expect(texts(r.short)).toEqual(["Lowest at today's rates", 'Within 2% of the best: by delivery record', 'No deliveries yet', 'Spread ≈ PKR 66,300 each'])
     expect(r.full.some(x => x.id === 'history' || x.id === 'evidence')).toBe(false)
   })
   it('the band line is only printed when the band decided something', () => {
-    const r = reasonsFor(row({ pct_above_best: 0 }), { showSell: true, bandSize: 1 })
+    const r = reasonsFor(row({ pct_above_best: 0 }), { showSell: true, bandSize: 1, showPkr: true })
     expect(texts(r.full).join('\n')).not.toContain('Within 2%')
   })
   it('a stale rate is named, a line above the band has no band line', () => {
-    const r = reasonsFor(row({ fx_state: 'stale', fx_age_days: 12, within_band: false, pct_above_best: 4.3, currency: 'EUR', price: 392 }), { showSell: true, bandSize: 2 })
+    const r = reasonsFor(row({ fx_state: 'stale', fx_age_days: 12, within_band: false, pct_above_best: 4.3, currency: 'EUR', price: 392 }), { showSell: true, bandSize: 2, showPkr: true })
     expect(r.short.find(x => x.id === 'rate')).toMatchObject({ text: 'Rate 12 days old', tone: 'warn' })
     expect(texts(r.short)).not.toContain('Within 2% of the best: by delivery record')
   })
   it('often late is a warning and still listed', () => {
-    const r = reasonsFor(row({ deliveries: 6, on_time: 2, late: 4, median_days_late: 12, reliability_band: 3 }), { showSell: true, bandSize: 2 })
+    const r = reasonsFor(row({ deliveries: 6, on_time: 2, late: 4, median_days_late: 12, reliability_band: 3 }), { showSell: true, bandSize: 2, showPkr: true })
     expect(r.full.find(x => x.id === 'record')).toMatchObject({ tone: 'warn', text: 'Often late: on time 2 of 6 deliveries · late ones median 12 days' })
   })
   it('no selling price: the spread line is replaced by the note', () => {
-    const r = reasonsFor(row({ sell_unit_net: null, sell_source: 'none', spread_unit: null, spread_total: null }), { showSell: true, bandSize: 2 })
+    const r = reasonsFor(row({ sell_unit_net: null, sell_source: 'none', spread_unit: null, spread_total: null }), { showSell: true, bandSize: 2, showPkr: true })
     expect(texts(r.full)).toContain('No selling price yet: ranked by supplier price')
     expect(r.short.some(x => x.id === 'spread')).toBe(false)
   })
   it('a last-sold price says which order it came from', () => {
-    const r = reasonsFor(row({ sell_source: 'last_sold', sell_unit_net: 52_000, sell_order_number: 27, sell_on: '2026-02-03', spread_unit: 10_500, spread_total: 21_000 }), { showSell: true, bandSize: 2 })
+    const r = reasonsFor(row({ sell_source: 'last_sold', sell_unit_net: 52_000, sell_order_number: 27, sell_on: '2026-02-03', spread_unit: 10_500, spread_total: 21_000 }), { showSell: true, bandSize: 2, showPkr: true })
     expect(r.full.find(x => x.id === 'spread')?.text).toContain('against the last price we sold, PKR 52,000 (ORD-0027, 3 Feb 2026)')
   })
   it('a supplier price above the selling price is a warning, not a hidden number', () => {
-    const r = reasonsFor(row({ spread_unit: -3_000, spread_total: -6_000 }), { showSell: true, bandSize: 2 })
+    const r = reasonsFor(row({ spread_unit: -3_000, spread_total: -6_000 }), { showSell: true, bandSize: 2, showPkr: true })
     expect(r.short.find(x => x.id === 'spread')).toMatchObject({ text: 'Spread ≈ −PKR 3,000 each', tone: 'warn' })
   })
   it('a same-currency item with no rate compares in its own currency', () => {
-    const r = reasonsFor(row({ pkr_unit_price: null, fx_state: 'none', fx_rate_pkr: null, price: 102, pct_above_best: 2, within_band: false, spread_unit: null }), { showSell: true, bandSize: 1 })
+    const r = reasonsFor(row({ pkr_unit_price: null, fx_state: 'none', fx_rate_pkr: null, price: 102, pct_above_best: 2, within_band: false, spread_unit: null }), { showSell: true, bandSize: 1, showPkr: true })
     expect(r.full[0].text).toBe('USD 2 each above the best (2.0%)')
+  })
+})
+
+describe('a ranked row, Show in PKR off (the default): the quoted currency, no PKR', () => {
+  it('a converted line says its own price and makes no best or above-the-best claim', () => {
+    const r = reasonsFor(row(), { showSell: true, bandSize: 2, evidence: ev })
+    expect(r.short[0].text).toBe('USD 1,985 each')
+    expect(r.full[0].text).toBe('USD 1,985 each')
+    expect(JSON.stringify(r.short)).not.toMatch(/PKR|best|lowest|Within 2%|Spread/i)
+    expect(texts(r.full.filter(x => x.id !== 'history')).join(' ')).not.toMatch(/PKR|best|lowest|Spread/i)
+  })
+  it('the cheapest converted line is not called best in words', () => {
+    const r = reasonsFor(row({ pct_above_best: 0, currency: 'EUR', price: 95.5 }), { showSell: true, bandSize: 2 })
+    expect(r.full[0].text).toBe('EUR 95.50 each')
+    expect(texts(r.short)).not.toContain('Best price')
+  })
+  it('every quote in one currency is still the best price, in that currency', () => {
+    const r = reasonsFor(row({ pkr_unit_price: null, fx_state: 'same_currency', currency: 'EUR', price: 95.5, pct_above_best: 0 }), { showSell: true, bandSize: 1 })
+    expect(r.full[0].text).toBe('Best price: EUR 95.50 each, every quote is in EUR')
+  })
+  it('a PKR quote keeps its spread (no conversion behind it)', () => {
+    const r = reasonsFor(row({ currency: 'PKR', price: 552_624 }), { showSell: true, bandSize: 2 })
+    expect(r.short.some(x => x.id === 'spread')).toBe(true)
+    expect(r.short[0].text).toBe('PKR 552,624 each')
   })
 })
 

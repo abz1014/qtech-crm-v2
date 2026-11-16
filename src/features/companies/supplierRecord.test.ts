@@ -51,7 +51,8 @@ describe('recent quotes', () => {
     )
     const q = r.quotes[0]
     expect(q.price.pkr).toBeNull()
-    expect(q.price.note).toBe('PKR value not captured at the time')
+    expect(q.price.note).toBeNull()
+    expect(q.price.pkrMissing).toBe(true)
     expect(q.imported).toBe(true)
     expect(q.dateText).toBe('Apr 2025')
     expect(q.ago).toBe('19 months ago')
