@@ -195,7 +195,7 @@ test('weight and country of origin are typed beside the prices in the reply dial
   await page.getByRole('button', { name: `Enter reply, ${name}`, exact: true }).click()
   const d = page.getByRole('dialog')
   await d.getByLabel(`Price for item 1 from ${name}`).fill('250')
-  await d.getByText('Weight and country of origin (optional)').click()
+  await d.getByLabel(`Lead time, item 1 from ${name}`).fill('3 weeks')
   await d.getByLabel(`Weight of one unit, item 1 from ${name}`).fill('1.25')
   await d.getByLabel(`Weight unit, item 1 from ${name}`).selectOption('lb')
   await d.getByLabel(`Country of origin, item 1 from ${name}`).fill('Italy')
@@ -239,7 +239,7 @@ test('a pasted reply that gives a weight and a country of origin saves them with
   await openAs(page, 'sales', `/jobs/${rfq.number}`)
   await page.getByRole('button', { name: /^Add to this job/ }).click()
   await expect(page.getByRole('region', { name: 'Add to this job' })).toBeVisible()
-  const message = [`${rhein.name.split(' ').slice(0, 2).join(' ')}: dear Ayesha, our offer`, '1) Ultrasonic flowmeter RST 1158S EUR 3610 - 8 weeks, net wt 4.5 kg, made in Germany', '2) Clamp-on transducer pair DN50 EUR 980 - 8 weeks'].join('\n')
+  const message = [`${rhein.name.split(' ').slice(0, 2).join(' ')}: dear Ayesha, our offer`, '1) Ultrasonic flowmeter RST 1158S EUR 3610 - 8 weeks, net wt 4.5 kg, made in Germany', '2) Clamp-on transducer pair DN50 EUR 980 - 8 weeks, net wt 900 g'].join('\n')
   await page.evaluate(t => {
     const dt = new DataTransfer()
     dt.setData('text/plain', t)
@@ -251,7 +251,7 @@ test('a pasted reply that gives a weight and a country of origin saves them with
   const rows = await must(rest<{ rfq_item_id: string; unit_price: number; weight: number | null; weight_unit: string; origin: string | null }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${inquiry.id}&select=rfq_item_id,unit_price,weight,weight_unit,origin&order=unit_price.desc`))
   expect(rows.map(r => [r.rfq_item_id, Number(r.unit_price), r.weight === null ? null : Number(r.weight), r.weight_unit, r.origin])).toEqual([
     [item.id, 3610, 4.5, 'kg', 'Germany'],
-    [second.id, 980, null, 'kg', null],
+    [second.id, 980, 900, 'g', null],
   ])
 })
 

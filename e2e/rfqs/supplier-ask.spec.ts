@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { openStage } from '../support/job'
+import { fillReplyDetails } from '../support/replyDetails'
 
 /*
  * Asking suppliers from the RFQ page without leaving it (owner, 13 Nov 2026): "Search or add a supplier" in Suppliers to ask,
@@ -86,6 +87,7 @@ test.describe('supplier ask flow', () => {
     expect(made[0].sent_on).toBe(karachiDay(0))
     await reply.getByRole('button', { name: 'PKR', exact: true }).click()
     await reply.getByLabel(`Price for item 1 from ${supplier.name}`).fill('1500')
+    await fillReplyDetails(reply, supplier.name, [1])
     await reply.getByRole('button', { name: 'Save reply' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
     await expect.poll(async () => (await must(rest<unknown[]>('admin', `supplier_quote_lines?inquiry_id=eq.${made[0].id}&select=id`))).length).toBe(1)

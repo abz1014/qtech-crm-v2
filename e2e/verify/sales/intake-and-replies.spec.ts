@@ -195,6 +195,8 @@ test('prices in three currencies are stored with the rate of the day and ranked 
     await page.getByRole('button', { name: `Enter reply, ${sup.name}`, exact: true }).click()
     const region = page.getByRole('dialog', { name: sup.name, exact: true })
     await region.getByLabel(SALES.reply.price(1, sup.name)).fill(price)
+    await region.getByLabel(SALES.reply.leadTime(1, sup.name), { exact: true }).fill('4 weeks')
+    await region.getByLabel(SALES.reply.weight(1, sup.name), { exact: true }).fill('2')
     await region.getByRole('button', { name: SALES.reply.save }).click()
     await expect(page.getByRole('status').filter({ hasText: SALES.reply.saved }).first()).toBeVisible()
   }
