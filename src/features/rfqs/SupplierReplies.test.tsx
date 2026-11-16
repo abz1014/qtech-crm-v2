@@ -39,14 +39,14 @@ const inquiry: InquiryRow = {
   lines: [],
 }
 
-function renderDialog(onClose: () => void = () => undefined) {
+function renderDialog(onClose: () => void = () => undefined, list: RfqItemRow[] = items) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   render(
     <QueryClientProvider client={client}>
       <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
         <MemoryRouter>
           <ToastProvider>
-            <SupplierReplyDialog rfq={rfq} items={items} inquiry={inquiry} inquiries={[inquiry]} rates={{}} onClose={onClose} />
+            <SupplierReplyDialog rfq={rfq} items={list} inquiry={inquiry} inquiries={[inquiry]} rates={{}} onClose={onClose} />
           </ToastProvider>
         </MemoryRouter>
       </SessionContext.Provider>
@@ -121,6 +121,31 @@ describe('SupplierReplyDialog', () => {
     const rows = opArgs(writes[0], 'upsert')?.[0] as Record<string, unknown>[]
     expect(rows).toEqual([expect.objectContaining({ rfq_item_id: 'it-1', unit_price: 1500, lead_time: 'Ex-stock', weight: 0.75, weight_unit: 'lb' })])
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('a weight typed after a refused save is not left marked invalid while another item still misses one (review shot, 16 Nov)', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    const two: RfqItemRow[] = [...items, { id: 'it-2', number: 2, description: 'Pressure transmitter 0-10 bar', brandId: null, brandName: null, familyId: null, qty: 2, unit: 'nos' }]
+    renderDialog(undefined, two)
+    const box = (label: string) => screen.getByRole('textbox', { name: `${label} from Orient Analytical` })
+    await user.type(box('Price for item 1'), '1250')
+    await user.type(box('Lead time, item 1'), '6 weeks')
+    await user.type(box('Price for item 2'), '480')
+    await user.click(screen.getByRole('button', { name: 'Save reply' }))
+    const w1 = box('Weight of one unit, item 1')
+    await waitFor(() => expect(w1).toHaveFocus())
+    expect(w1).toHaveAttribute('aria-invalid', 'true')
+    await user.click(screen.getByRole('button', { name: 'Same for all items' }))
+    await user.type(w1, '3.4')
+    await user.click(box('Lead time, item 1')) // the box loses the cursor, as in the review shot
+    expect(w1).toHaveValue('3.4')
+    expect(w1).not.toHaveAttribute('aria-invalid')
+    expect(w1).not.toHaveAttribute('aria-describedby')
+    expect(screen.queryAllByText('Add the weight of one unit, above zero.')).toHaveLength(1) // item 2 only
+    expect(box('Weight of one unit, item 2')).toHaveAttribute('aria-invalid', 'true')
+    expect(box('Lead time, item 2')).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByText('One priced item still needs a lead time or a weight. Add it, then save the reply.')).toBeInTheDocument()
   })
 
   it('asks nothing of an item with no price: only the priced items need a lead time and weight', async () => {

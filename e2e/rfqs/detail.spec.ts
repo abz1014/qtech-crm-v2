@@ -234,8 +234,17 @@ test.describe('reply form: lead time and weight on every priced item (16 Nov 202
       // "Same for all items" copies the first item's lead time to the rest.
       await r.getByRole('button', { name: 'Same for all items' }).click()
       await expect(r.getByLabel(`Lead time, item 2 from ${s.germany.name}`, { exact: true })).toHaveValue('6 weeks')
-      await r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true }).fill('3.4')
+      const w1 = r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true })
+      await w1.fill('3.4')
       await r.getByLabel(`Lead time, item 1 from ${s.germany.name}`, { exact: true }).focus()
+      // The filled weight is no longer marked invalid. The box fades from the danger colours over --dur-fast (120 ms): the
+      // first review shot was taken inside that fade and looked pink. Wait for the colour transitions to end before the shot,
+      // then check the box is drawn exactly like a valid one (item 1's country box).
+      await expect(w1).not.toHaveAttribute('aria-invalid', 'true')
+      await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a instanceof CSSTransition).map(a => a.finished.catch(() => undefined))))
+      const paint = (el: Element) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).borderTopColor].join(' ')
+      expect(await w1.evaluate(paint)).toBe(await r.getByLabel(`Country of origin, item 1 from ${s.germany.name}`, { exact: true }).evaluate(paint))
+      expect(await w1.evaluate(paint)).not.toBe(await r.getByLabel(`Weight of one unit, item 2 from ${s.germany.name}`, { exact: true }).evaluate(paint))
       await review(page, `reply-details-${w === 375 ? 'phone' : 'desktop'}-${w}`)
       // No horizontal scroll inside the form at this width.
       expect(await r.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
