@@ -13,6 +13,7 @@ import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
 import { MenuItem, MenuSeparator, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
+import { ToggleButton } from '@/ui/ToggleButton'
 import { agoDays, days } from '@/lib/timeWords'
 import { useToast } from '@/ui/useToast'
 import { LastPriceChipView } from '@/features/rfqs/LastPriceChip'
@@ -38,9 +39,10 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
  * audit of 2026-10-19). One panel: its header with the counts, Add item and one tip that says how prices are compared; the rate
  * bar; then every item with what each supplier quoted for it, in supplier-name order.
  *
- * Each price is ONE line: the supplier, the price in PKR at today's rate (the figure people compare), the lead time and the stock.
- * The supplier's own currency and figure, the rate and its age, the rate captured when the price was entered, the last price for
- * the item open under the line (rows start closed). NO SUPPLIER IS SINGLED OUT (owner decision 2026-10-29): no "Recommended", "Lowest" or
+ * Each price is ONE line: the supplier, the price in the currency it was quoted in, the lead time and the stock. Nothing is
+ * converted to PKR until the person asks (owner, 16 Nov 2026): "Show in PKR" in the panel header (off to start, remembered in this
+ * browser) adds the PKR figure at today's rate, the rate bar, and under each line the rate and its age and the rate captured when
+ * the price was entered. The last price for the item opens under the line (rows start closed). NO SUPPLIER IS SINGLED OUT (owner decision 2026-10-29): no "Recommended", "Lowest" or
  * "Cheapest" mark, no reasons, no ranking; the suppliers are listed by name. A price with no usable rate is shown and never blocks anything (BUILD_PLAN A3/A4); it is not compared.
  * Entering replies lives once per supplier in Suppliers asked (SuppliersAsked.tsx opens SupplierReplies.tsx).
  *
@@ -53,6 +55,28 @@ import type { SupplierSuggestion } from '@/features/rfqs/lib/supplierSuggestion'
  * price column, no own-currency figure, no rate bar, no marks or Cheapest tag/line, no price details, no chevron and no row menu
  * (Edit reply and Copy price are price work). The lines come without prices (listInquiries), so they are listed by supplier name.
  */
+
+/** "Show in PKR", remembered per browser. Storage can be missing or blocked (private window): then it is off each visit. */
+const SHOW_PKR_KEY = 'qtech.rfq.showPkr'
+function useShowPkr(): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState(() => {
+    try {
+      return window.localStorage.getItem(SHOW_PKR_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const set = (next: boolean) => {
+    setOn(next)
+    try {
+      if (next) window.localStorage.setItem(SHOW_PKR_KEY, '1')
+      else window.localStorage.removeItem(SHOW_PKR_KEY)
+    } catch {
+      // Not remembered; the choice still holds on this page.
+    }
+  }
+  return [on, set]
+}
 
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
@@ -75,7 +99,16 @@ interface Entry {
   c: ComparedLine
 }
 
-function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
+function PriceCell({ line, c, showPkr }: { line: QuoteLineRow; c: ComparedLine; showPkr: boolean }) {
+  if (!showPkr) {
+    // The price as the supplier quoted it: "EUR 1,250.00", "PKR 29,000". No conversion, no "not compared".
+    return (
+      <span className="whitespace-nowrap num text-base font-bold" data-price>
+        <span className="font-sans text-sm font-medium text-fg-muted">{line.currency}</span>{' '}
+        {formatAmount(line.unitPrice, line.currency === 'PKR' ? 'auto' : 'always')}
+      </span>
+    )
+  }
   if (line.currency === 'PKR' || c.pkrPaisa !== null) {
     return (
       <span className="inline-grid justify-items-start gap-x-2 lg:grid lg:justify-items-end">
@@ -108,7 +141,7 @@ function PriceCell({ line, c }: { line: QuoteLineRow; c: ComparedLine }) {
 }
 
 /** What opens under a price line: the supplier's own figure and the rate behind the PKR, the rate captured at entry, where they are. */
-function PriceDetail({ line, inquiry, c, rates }: { line: QuoteLineRow; inquiry: InquiryRow; c: ComparedLine; rates: RateTable }) {
+function PriceDetail({ line, inquiry, c, rates, showPkr }: { line: QuoteLineRow; inquiry: InquiryRow; c: ComparedLine; rates: RateTable; showPkr: boolean }) {
   const today = businessToday()
   const rate = rates[line.currency]
   const where = [inquiry.supplierCity, inquiry.supplierCountry].filter(Boolean).join(', ')
@@ -119,7 +152,7 @@ function PriceDetail({ line, inquiry, c, rates }: { line: QuoteLineRow; inquiry:
         <span className="num">
           Quoted {line.currency} {formatAmount(line.unitPrice, 'always')}
         </span>
-        {line.currency === 'PKR' ? null : c.pkrPaisa !== null ? (
+        {line.currency === 'PKR' || !showPkr ? null : c.pkrPaisa !== null ? (
           <span className={cn('inline-flex items-center gap-1', c.band === 'stale' ? 'text-tone-warning-fg' : 'text-fg-muted')}>
             {c.band === 'stale' ? <Icon icon={TriangleAlert} size="chip" /> : <Icon icon={Clock} size="chip" />}
             <span className="num">
@@ -137,7 +170,7 @@ function PriceDetail({ line, inquiry, c, rates }: { line: QuoteLineRow; inquiry:
           </span>
         )}
         {/* The rate captured at entry: a chip only when it is a problem (Old rate, No rate); a fresh one is its age in words. */}
-        {line.currency === 'PKR' ? null : line.fxRatePkr !== null && line.fxRateOn ? (
+        {line.currency === 'PKR' || !showPkr ? null : line.fxRatePkr !== null && line.fxRateOn ? (
           <span className="inline-flex flex-wrap items-center gap-2 text-fg-muted">
             <span className="num">{`At entry ${formatRate(line.fxRatePkr)} · ${formatDay(line.fxRateOn)}`}</span>
             {fxStaleness(age ?? 0) === 'fresh' ? (
@@ -270,11 +303,17 @@ function Dot({ children }: { children: React.ReactNode }) {
 }
 
 /** The panel's one explanation of the figures. It says nothing about which supplier is better: the CRM never suggests one. */
-function HowCompared() {
+function HowCompared({ showPkr }: { showPkr: boolean }) {
   return (
     <InfoTip label="How are prices shown?">
-      <p>Every price is shown in PKR at today&apos;s rate, with the supplier&apos;s own figure under it. Suppliers are listed by name.</p>
-      <p className="mt-2">A price with no current rate is shown as the supplier gave it. Add the rate in Exchange rates to see it in PKR.</p>
+      {showPkr ? (
+        <>
+          <p>Every price is shown in PKR at today&apos;s rate, with the supplier&apos;s own figure under it. Suppliers are listed by name.</p>
+          <p className="mt-2">A price with no current rate is shown as the supplier gave it. Add the rate in Exchange rates to see it in PKR.</p>
+        </>
+      ) : (
+        <p>Every price is shown in the currency the supplier quoted. Suppliers are listed by name. Turn on Show in PKR to see each price in PKR at today&apos;s rate.</p>
+      )}
       <p className="mt-2">The comparative statement lays the replies side by side. You choose the supplier, per item, when you create the order.</p>
     </InfoTip>
   )
@@ -309,6 +348,10 @@ export function ItemsPanel({
   const today = businessToday()
   // Every price (supplier, selling, spread) is for admin and sales only (owner decision 2026-10-22); an engineer's lines carry none.
   const prices = useSeesPrices()
+  const [pkrOn, setPkrOn] = useShowPkr()
+  // Only worth offering when a price is in another currency; an engineer sees no prices, so never PKR either.
+  const foreign = inquiries.some(i => i.lines.some(l => l.currency !== 'PKR'))
+  const showPkr = prices && pkrOn
   const [opened, setOpened] = useState<Readonly<Record<string, boolean>>>({})
   const phone = useMediaQuery('(max-width: 767px)')
   // Phone: the one item open (undefined: the first item with something to show; null: all closed by the person).
@@ -316,7 +359,7 @@ export function ItemsPanel({
   const responders = inquiries.filter(i => i.lines.length > 0)
   // Asked at all: sent, or answered "cannot quote" (a supplier only on the shortlist is not asked yet).
   const askedCount = inquiries.filter(i => i.sentOn || i.noOfferOn).length
-  const rateBar = prices
+  const rateBar = showPkr
     ? buildRateBar(
         fxRows,
         inquiries.flatMap(i => i.lines.map(l => l.currency)),
@@ -331,7 +374,7 @@ export function ItemsPanel({
   return (
     <DetailPanel
       title={prices ? 'Items and supplier prices' : 'Items and supplier replies'}
-      tip={!nobodyAsked && prices ? <HowCompared /> : null}
+      tip={!nobodyAsked && prices ? <HowCompared showPkr={showPkr} /> : null}
       dataSlot="items"
       meta={
         <>
@@ -340,9 +383,16 @@ export function ItemsPanel({
         </>
       }
       actions={
-        <Button icon={Plus} onClick={onAddItem}>
-          Add item
-        </Button>
+        <>
+          {prices && !nobodyAsked && foreign ? (
+            <ToggleButton pressed={showPkr} onPressedChange={setPkrOn} data-show-pkr>
+              Show in PKR
+            </ToggleButton>
+          ) : null}
+          <Button icon={Plus} onClick={onAddItem}>
+            Add item
+          </Button>
+        </>
       }
     >
       {!nobodyAsked && rateBar.length > 0 ? <RateBar entries={rateBar} /> : null}
@@ -480,7 +530,7 @@ export function ItemsPanel({
                         {entries.length > 0 && prices ? (
                           item.id !== headItemId ? null : <div className={HEAD} aria-hidden="true">
                             <span>Supplier</span>
-                            <span className="text-right">Price, PKR today</span>
+                            <span className="text-right">{showPkr ? 'Price, PKR today' : 'Price'}</span>
                             <span>Lead time</span>
                             <span>Stock</span>
                             <span />
@@ -515,10 +565,10 @@ export function ItemsPanel({
                                     {prices ? (
                                       <>
                                         {/* Phone: a price with a second line (its own currency, or "not compared") takes the whole line, and lead time and stock follow under it. */}
-                                        <span className={cn('lg:text-right', line.currency !== 'PKR' && 'max-lg:basis-full')}>
-                                          <PriceCell line={line} c={c} />
+                                        <span className={cn('lg:text-right', showPkr && line.currency !== 'PKR' && 'max-lg:basis-full')}>
+                                          <PriceCell line={line} c={c} showPkr={showPkr} />
                                         </span>
-                                        <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', (!line.leadTime || line.currency !== 'PKR') && 'hidden')}>
+                                        <span aria-hidden="true" className={cn('text-fg-muted lg:hidden', (!line.leadTime || (showPkr && line.currency !== 'PKR')) && 'hidden')}>
                                           ·
                                         </span>
                                       </>
@@ -561,8 +611,8 @@ export function ItemsPanel({
                                   ) : null}
                                   {open && prices ? (
                                     <div id={detailId} className="col-span-full grid gap-2 pb-1 lg:col-start-2">
-                                      <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} />
-                                      {chip ? <LastPriceChipView chip={chip} /> : null}
+                                      <PriceDetail line={line} inquiry={inquiry} c={c} rates={rates} showPkr={showPkr} />
+                                      {chip ? <LastPriceChipView chip={chip} showPkr={showPkr} /> : null}
                                     </div>
                                   ) : null}
                                 </li>

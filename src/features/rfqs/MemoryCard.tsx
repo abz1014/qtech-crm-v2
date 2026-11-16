@@ -9,8 +9,8 @@ import { Tag } from '@/ui/Tag'
 /*
  * The memory card (R17; g2-intake-float.html "Memory card states"). Facts about one supplier for one item: the last quote,
  * the last ordered price, the lead time as they wrote it, the brands they carry, how they reply, what came of it.
- * Every figure is a count out of a count, there is no score, a price shows the rate of the day it was entered, and the
- * footnote says where it comes from. Built from lib/memory (pure); this file only lays it out.
+ * Every figure is a count out of a count, there is no score, a price is in the currency it was quoted in (never converted to PKR:
+ * owner, 16 Nov 2026), and the footnote says where it comes from. Built from lib/memory (pure); this file only lays it out.
  */
 
 const CELL = 'grid min-w-0 content-start gap-1 bg-surface px-4 py-3'
@@ -55,12 +55,6 @@ function Price({ fact, source }: { fact: PriceFact; source?: boolean }) {
         <span className="num text-lg font-bold">{fact.amount}</span>
         <span className="text-xs text-fg-muted">each</span>
       </p>
-      {fact.pkr ? (
-        <p className="text-xs text-fg-muted">
-          <span className="num">≈ PKR {fact.pkr}</span> <span className="underline decoration-dotted underline-offset-2">at the time</span>
-          {fact.rate ? <span className="num">{` (rate ${fact.rate})`}</span> : null}
-        </p>
-      ) : null}
       {fact.note ? <p className="text-xs text-fg-muted">{fact.note}</p> : null}
       <p className="flex flex-wrap items-center gap-x-1 text-xs text-fg-muted">
         {source && fact.source ? <span>{fact.source}</span> : null}

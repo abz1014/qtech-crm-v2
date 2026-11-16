@@ -10,6 +10,9 @@
 //  - The selling price and the spread are for admin and sales only. They are composed only when `showSell` is true AND the row
 //    carries them (the database returns NULL for an engineer, so an engineer's strings can never hold one).
 //  - Prices that are an estimate (a conversion, a difference) are rounded to the nearest 100 PKR and carry the sign "≈".
+//  - A supplier's price is said in the currency it was quoted in (owner, 16 Nov 2026). A PKR conversion is said only when the
+//    person asked for PKR (`showPkr`). Without it, a row ranked across currencies (on PKR at today's rate) makes no "best" or
+//    "above the best" claim in words: the order alone carries it, and the row says its own price.
 
 import { formatAmount, formatRate } from '@/lib/money'
 import { orderRef } from '@/lib/refs'
@@ -129,6 +132,8 @@ export interface ReasonContext {
   /** The order evidence for this supplier and item (supplier_item_memory), when it is loaded. */
   evidence?: Evidence | null
   names?: EvidenceNames
+  /** True when the person turned on "Show in PKR". Off (the default), no PKR conversion is said. */
+  showPkr?: boolean
 }
 
 // ------------------------------------------------------------------------------------------------ small helpers
@@ -294,24 +299,36 @@ function basis(row: RankRow): { value: number; pkr: boolean } {
   return row.pkr_unit_price !== null ? { value: row.pkr_unit_price, pkr: true } : { value: row.price, pkr: false }
 }
 
-function gapReason(row: RankRow): Reason {
+/** "EUR 95.50 each": the row's own price, with no claim about where it stands (the order was decided on a conversion). */
+function ownPriceReason(row: RankRow): Reason {
+  return reason('price', 'gap', [t(`${row.currency} ${formatAmount(row.price, 'auto')} each`)])
+}
+
+function gapReason(row: RankRow, showPkr: boolean): Reason {
   const pct = row.pct_above_best ?? 0
   const b = basis(row)
+  if (b.pkr && !showPkr) return ownPriceReason(row)
   const best = b.value / (1 + pct / 100)
   const diff = b.value - best
   const amount = b.pkr ? `≈ PKR ${approxPkr(diff)}` : `${row.currency} ${formatAmount(Math.round(diff * 100) / 100, 'auto')}`
   return reason('price', 'gap', [t(amount + ' each above the best ('), n(pctText(pct)), t(')')])
 }
 
-function bestReason(row: RankRow, long: boolean): Reason {
-  if (!long) return reason('price', 'best', [t('Best price')])
+function bestReason(row: RankRow, long: boolean, showPkr: boolean): Reason {
   const b = basis(row)
-  if (!b.pkr) return reason('price', 'best', [t(`Best price: ${row.currency} ${formatAmount(row.price, 'auto')} each, every quote is in ${row.currency}`)])
-  if (row.currency === 'PKR' || row.fx_rate_pkr === null) return reason('price', 'best', [t('Best price: PKR '), n(formatAmount(row.price, 'auto')), t(' each')])
+  // Every quote in one currency: the claim needs no conversion.
+  if (!b.pkr) {
+    if (!long) return reason('price', 'best', [t('Best price')])
+    return reason('price', 'best', [t(`Best price: ${row.currency} ${formatAmount(row.price, 'auto')} each, every quote is in ${row.currency}`)])
+  }
+  // Ranked on PKR at today's rate: said only when the person asked for PKR.
+  if (!showPkr) return ownPriceReason(row)
+  if (!long) return reason('price', 'best', [t("Lowest at today's rates")])
+  if (row.currency === 'PKR' || row.fx_rate_pkr === null) return reason('price', 'best', [t("Lowest after converting at today's rates: PKR "), n(formatAmount(row.price, 'auto')), t(' each')])
   const age = row.fx_age_days ?? 0
   const when = age === 0 ? 'today' : `${plural(age, 'day', 'days')} old`
   return reason('price', 'best', [
-    t(`Best price: ≈ PKR ${approxPkr(b.value)} each (${row.currency} ${formatAmount(row.price, 'auto')} at ${formatRate(row.fx_rate_pkr)}, ${when})`),
+    t(`Lowest after converting at today's rates: ≈ PKR ${approxPkr(b.value)} each (${row.currency} ${formatAmount(row.price, 'auto')} at ${formatRate(row.fx_rate_pkr)}, ${when})`),
   ])
 }
 
@@ -389,18 +406,23 @@ export function reasonsFor(row: RankRow, ctx: ReasonContext): ReasonSet {
   }
 
   const best = (row.pct_above_best ?? 0) <= 0
-  const band = ctx.bandSize >= 2 && row.within_band === true
+  const showPkr = ctx.showPkr === true
+  // A row ranked on a PKR conversion says nothing about the 2% band or the spread (both are PKR comparisons) until PKR is asked for.
+  const converted = basis(row).pkr && row.currency !== 'PKR'
+  const quiet = basis(row).pkr && !showPkr
+  const band = !quiet && ctx.bandSize >= 2 && row.within_band === true
   const bandShort = reason('band', 'band', [t('Within 2% of the best: by delivery record')])
   const bandLong = reason('band', 'band', [t('Within 2% of the best price: ordered by delivery record')])
   const rate = rateReason(row)
   const sellOn = ctx.showSell
-  const spreadShort = sellOn ? spreadReason(row, false) : null
-  const spreadLong = sellOn ? spreadReason(row, true) : null
+  const spreadOn = sellOn && (showPkr || !converted)
+  const spreadShort = spreadOn ? spreadReason(row, false) : null
+  const spreadLong = spreadOn ? spreadReason(row, true) : null
   const noSell = sellOn && row.sell_source === 'none' ? reason('sell', 'sell-none', [t('No selling price yet: ranked by supplier price')]) : null
 
-  const short = [best ? bestReason(row, false) : gapReason(row), ...(band ? [bandShort] : []), record, ...(rate ? [rate] : []), ...(spreadShort ? [spreadShort] : [])]
+  const short = [best ? bestReason(row, false, showPkr) : gapReason(row, showPkr), ...(band ? [bandShort] : []), record, ...(rate ? [rate] : []), ...(spreadShort ? [spreadShort] : [])]
   const full = [
-    best ? bestReason(row, true) : gapReason(row),
+    best ? bestReason(row, true, showPkr) : gapReason(row, showPkr),
     ...(band ? [bandLong] : []),
     ...(rate ? [rate] : []),
     ...(spreadLong ? [spreadLong] : noSell ? [noSell] : []),

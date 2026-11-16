@@ -19,7 +19,7 @@ import { Tag } from '@/ui/Tag'
 import type { StepTone } from '@/lib/status'
 
 /*
- * The supplier's record (R18; g2-company.html): recent quotes with the PKR value at the time, deliveries from purchase
+ * The supplier's record (R18; g2-company.html): recent quotes in the currency quoted, deliveries from purchase
  * orders and delivery dates, and "Open with them". Every line is a fact with its count; there is no score, no ranking and
  * no percentage. What each row says is decided in supplierRecord.ts (pure, tested); this file lays it out. The notes that
  * explained the columns are in an (i) tip on each panel (UX audit 2026-10-19). An engineer (owner decision 2026-10-22) gets no
@@ -104,7 +104,7 @@ function latestOf(shown: number, total: number): ReactNode {
 /*
  * Three columns when the card is wide enough (a container query on the card, not the window: at 1024 the card sits beside the side
  * column and is ~430 px, which squeezed the item to one word per line and pushed its RFQ tag under the price): what (item, with the
- * date, the RFQ, the brand and the lead time under it), the price (original currency, then the PKR value at the time), and what
+ * date, the RFQ, the brand and the lead time under it), the price (in the currency quoted, never converted to PKR), and what
  * came of it. Narrower, the item takes the full row and the price and outcome sit side by side under it, each with its label.
  */
 const QGRID = '[@container(min-width:40rem)]:grid-cols-[minmax(0,1fr)_minmax(0,176px)_minmax(0,176px)] [@container(min-width:40rem)]:gap-x-5'
@@ -133,14 +133,6 @@ function PriceCell({ r }: { r: QuoteRow }) {
         <span className="mr-1 font-sans text-base text-fg-muted">{cur}</span>
         {p.figure}
       </span>
-      {p.pkr ? (
-        <span className="num whitespace-nowrap text-base text-fg-2">
-          <span className="mr-1 font-sans text-fg-muted">≈ PKR</span>
-          {p.pkr}
-        </span>
-      ) : null}
-      {p.pkr && p.rate ? <span className="num text-base text-fg-muted">{`at ${p.rate}`}</span> : null}
-      {!p.pkr && !p.inPkr ? <span className="text-base text-fg-muted">No rate captured</span> : null}
     </span>
   )
 }
@@ -286,7 +278,7 @@ export function RecentQuotes({
         prices ? (
           <InfoTip label="About the prices">
             <span className="grid gap-2">
-              <span>Each price is in the currency they quoted. “≈ PKR” uses the rate saved when the supplier price was typed in, not today&apos;s.</span>
+              <span>Each price is in the currency they quoted, not converted to PKR.</span>
               <span>A locked price is on file, but its currency was never checked, so it is not shown.</span>
             </span>
           </InfoTip>

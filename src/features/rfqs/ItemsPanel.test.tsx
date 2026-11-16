@@ -16,6 +16,7 @@ import { ToastProvider } from '@/ui/Toast'
 
 afterEach(() => {
   installFakeDb(() => ({})).uninstall()
+  window.localStorage.clear()
 })
 
 const rfq = { id: 'r-1', number: 177, company: { id: 'c-1', name: 'Indus Textile Mills' } } as unknown as RfqHeader
@@ -113,11 +114,32 @@ describe('the supplier comparison', () => {
     expect(rows().map(r => /ABC Traders|Lahore Flow Systems|Zed Co/.exec(r.textContent ?? '')?.[0])).toEqual(['ABC Traders', 'Lahore Flow Systems', 'Zed Co'])
   })
 
-  it('each price is one line in PKR at today’s rate; the supplier’s own figure and the rate open on request', async () => {
+  it('by default each price is in the currency quoted: no PKR figure, no PKR column, no rate bar, no rate in the details', async () => {
+    const user = userEvent.setup()
+    renderPanel(
+      [inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), inquiry('b', 'ABC Traders', [line('lb', 'b', 120, 'EUR')])],
+    )
+    const art = screen.getByRole('article', { name: 'Item 1' })
+    const [abc, lahore] = [...art.querySelectorAll<HTMLElement>('li[data-price-row]')]
+    expect(abc.querySelector('[data-price]')).toHaveTextContent('EUR 120.00')
+    expect(lahore.querySelector('[data-price]')).toHaveTextContent('USD 100.00')
+    expect(art).not.toHaveTextContent('PKR')
+    expect(art).not.toHaveTextContent(/not compared/)
+    expect(document.querySelector('[data-ratebar], [data-own-price]')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Show in PKR' })).toHaveAttribute('aria-pressed', 'false')
+    await user.click(within(lahore).getByRole('button', { name: 'Show details for Lahore Flow Systems' }))
+    expect(within(lahore).getByText('Quoted USD 100.00')).toBeInTheDocument()
+    expect(lahore).not.toHaveTextContent(/PKR|rate/i)
+  })
+
+  it('Show in PKR, when the person turns it on, adds the PKR figure at today’s rate and the rate behind it; off again, it goes', async () => {
     const user = userEvent.setup()
     renderPanel(
       [inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)]), inquiry('b', 'ABC Traders', [line('lb', 'b', 120)])],
     )
+    await user.click(screen.getByRole('button', { name: 'Show in PKR' }))
+    expect(screen.getByRole('button', { name: 'Show in PKR' })).toHaveAttribute('aria-pressed', 'true')
+    expect(window.localStorage.getItem('qtech.rfq.showPkr')).toBe('1')
     const first = rows()[1] // listed by name: ABC Traders first, then Lahore Flow Systems
     expect(first).toHaveTextContent('≈ PKR 28,000')
     expect(first.querySelector('[data-own-price]')).toHaveTextContent('USD 100') // the supplier's own figure, in grey under the PKR
@@ -130,6 +152,19 @@ describe('the supplier comparison', () => {
     expect(within(first).getByText("USD 280.00, today's rate")).toBeInTheDocument()
     expect(within(first).getByText('Dubai, UAE')).toBeInTheDocument()
     expect(first.querySelector('[data-reasons-for]')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Show in PKR' }))
+    expect(screen.getByRole('article', { name: 'Item 1' })).not.toHaveTextContent('PKR')
+    expect(window.localStorage.getItem('qtech.rfq.showPkr')).toBeNull()
+  })
+
+  it('remembers Show in PKR in this browser, and offers no switch when every price is already in PKR', () => {
+    window.localStorage.setItem('qtech.rfq.showPkr', '1')
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])])
+    expect(rows()[0]).toHaveTextContent('≈ PKR 28,000')
+    cleanup()
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 29_000, 'PKR')])])
+    expect(screen.queryByRole('button', { name: 'Show in PKR' })).toBeNull()
+    expect(rows()[0].querySelector('[data-price]')).toHaveTextContent('PKR 29,000')
   })
 
   it('has no reply or Can\'t quote buttons on an item: the suppliers still to answer are one "Waiting on" line (grade-B R1)', () => {
@@ -223,6 +258,7 @@ describe('the supplier comparison', () => {
     expect(screen.queryByRole('button', { name: /Show details for/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /More for (?!item)/ })).toBeNull()
     expect(screen.queryByRole('button', { name: 'How are prices shown?' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Show in PKR' })).toBeNull()
   })
 
   it('explains the figures once, in a tip in the panel header, and says nothing about a better supplier', async () => {

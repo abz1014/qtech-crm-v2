@@ -165,17 +165,14 @@ test.describe('R17 memory in intake', () => {
     // The one-liner: counts only, and the low-data wording.
     await expect(page.locator('li', { hasText: s.s2.name }).locator('[data-memory-line]')).toHaveText('no history yet')
 
-    // s1: same model, the quote at the rate of the day, the PO price, the lead time as written.
+    // s1: same model, the quote and the PO price in the currency quoted (no PKR: owner, 16 Nov 2026), the lead time as written.
     await memoryButton(page, s.s1.name).click()
     const card = page.getByLabel(`What we know about ${s.s1.name}`)
     await expect(card.getByText('same model', { exact: true })).toBeVisible()
     await expect(card.getByText('Matched on model code.', { exact: false })).toBeVisible()
     await expect(card.getByText('USD 412')).toBeVisible()
-    await expect(card).toContainText('≈ PKR 114,742')
-    await expect(card).toContainText('at the time')
-    await expect(card).toContainText('rate 278.50')
+    await expect(card).not.toContainText(/PKR|at the time|rate 278\.50/)
     await expect(card.getByText('USD 395')).toBeVisible()
-    await expect(card).toContainText('≈ PKR 110,205')
     await expect(card).toContainText('PO')
     await expect(card.getByText('ex Dubai stock, 3 pcs')).toBeVisible()
     await expect(card).toContainText('Before that: “4 weeks”')
@@ -195,12 +192,12 @@ test.describe('R17 memory in intake', () => {
     await expect(empty.getByText('same brand')).toBeVisible()
     await shot(empty, 'r17-memory-card-no-history-1440')
 
-    // s3: imported, no captured rate: original currency only, old, marked.
+    // s3: imported, no captured rate: original currency only (and no PKR note), old, marked.
     await memoryButton(page, s.s3.name).click()
     const old = page.getByLabel(`What we know about ${s.s3.name}`)
     await expect(old.getByText('same brand', { exact: true })).toBeVisible()
     await expect(old.getByText('USD 640')).toBeVisible()
-    await expect(old).toContainText('PKR value not captured at the time')
+    await expect(old).not.toContainText('PKR value not captured at the time')
     await expect(old).toContainText('months ago')
     await expect(old).toContainText('Imported')
     await expect(old).toContainText('Includes imported history')
@@ -316,7 +313,7 @@ Regards`)
 })
 
 test.describe('R17 last price chip on RFQ reply rows', () => {
-  test('(n) shows the supplier\'s last price for the same item at the time; an imported line with no rate shows the original currency only', async ({ page }) => {
+  test('(n) shows the supplier\'s last price for the same item in its currency; Show in PKR adds PKR at the time; an imported line with no rate says none was captured', async ({ page }) => {
     const s = await seedMemory()
     // An imported same-model quote with no captured rate, from a supplier that has since been asked again.
     const s7 = await createCompany(uniqueName('Legacy Same Model'))
@@ -339,12 +336,17 @@ test.describe('R17 last price chip on RFQ reply rows', () => {
     await expect(chip1).toContainText('Last price for this item:')
     // The PO (101 days ago) is newer than the quote (120 days ago) and both are the same model: the newer wins.
     await expect(chip1).toContainText('USD 395')
-    await expect(chip1).toContainText('≈ PKR 110,205')
-    await expect(chip1).toContainText('at the time')
     await expect(chip1).toContainText('ordered')
     await expect(chip1).toContainText('same model')
     const chip7 = page.locator('li', { hasText: s7.name }).locator('[data-last-price]')
     await expect(chip7).toContainText('USD 640')
+    // By default no PKR anywhere on the chips.
+    await expect(chip1).not.toContainText(/PKR|at the time/)
+    await expect(chip7).not.toContainText('PKR')
+    // Show in PKR, asked for: PKR at the rate of the day it was entered, or that none was captured.
+    await page.getByRole('button', { name: 'Show in PKR' }).click()
+    await expect(chip1).toContainText('≈ PKR 110,205')
+    await expect(chip1).toContainText('at the time')
     await expect(chip7).toContainText('PKR value not captured at the time')
     await expect(chip7).not.toContainText('≈ PKR')
     // A same-brand price is not a price for this item: s3 has no chip.
@@ -365,7 +367,7 @@ test.describe('R17 last price chip on RFQ reply rows', () => {
 })
 
 test.describe('R18 company page: What we know', () => {
-  test('recent quotes with PKR at the time, deliveries, quoted N times per brand and Open with them', async ({ page }) => {
+  test('recent quotes in the currency quoted, deliveries, quoted N times per brand and Open with them', async ({ page }) => {
     const tag = letters()
     const brand = await post<{ id: string; name: string }>('brands', { name: `Belimo${tag}`, kind: 'brand' })
     const listed = await post<{ id: string; name: string }>('brands', { name: `Siemens${tag}`, kind: 'brand' })
@@ -409,8 +411,7 @@ test.describe('R18 company page: What we know', () => {
     await quotes.getByRole('button', { name: 'Show all 6' }).click()
     const rowA = quotes.locator('li', { hasText: 'NM24A-SR' })
     await expect(rowA).toContainText(/EUR\s*214\.00/)
-    await expect(rowA).toContainText(/≈\s*PKR\s*69,935/)
-    await expect(rowA).toContainText('at 326.80')
+    await expect(rowA).not.toContainText(/PKR|69,935|326\.80/)
     await expect(rowA).toContainText('2 to 3 weeks ex stock')
     await expect(rowA).toContainText('Ordered here')
     await expect(quotes.locator('li', { hasText: 'LM24A-SR' })).toContainText('Quoted, RFQ open')

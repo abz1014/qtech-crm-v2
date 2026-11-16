@@ -75,7 +75,7 @@ interface Props {
   items: RfqItemRow[]
   inquiries: InquiryRow[]
   stats: Readonly<Record<string, SupplierFacts | undefined>> | undefined
-  /** Today's rates, for the PKR preview while a price is typed in the reply dialog. */
+  /** Today's rates, handed to the reply dialog (which no longer converts a typed price to PKR). */
   rates?: RateTable
   /** How much chase to show, by the RFQ's state (see above). */
   chase?: ChaseMode

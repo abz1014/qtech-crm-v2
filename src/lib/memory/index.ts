@@ -3,8 +3,9 @@
 // The database derives the facts (supplier_item_memory(), v_supplier_stats). This module decides how they are SAID:
 //  - every rate is a count out of a count, never a percentage and never a score;
 //  - below a threshold only the raw fact is shown ("asked twice, 1 reply", "no history yet");
-//  - prices in history show the rate captured on the day ("at the time"), never today's; a line with no captured rate
-//    shows its own currency only;
+//  - prices in history are said in the currency they were quoted in. The PKR value at the rate captured on the day ("at the
+//    time", never today's) is kept in `pkr` for a screen where the person asked to see PKR; nothing shows it by default (owner,
+//    16 Nov 2026: no conversion until asked);
 //  - a price older than 18 months carries its age; a price whose currency is unverified is hidden;
 //  - imported history is marked wherever it feeds a number.
 // Nothing here orders anything. (A8 supersedes the old "memory never reorders" rule: the float suggestions are ordered by track record
@@ -161,8 +162,10 @@ export interface PriceFact {
   pkr: string | null
   /** The rate behind `pkr`, "326.80 · 11 Oct". */
   rate: string | null
-  /** One line when there is no PKR figure and a reader would wonder why. */
+  /** One line when a reader would wonder about the figure (no currency recorded). */
   note: string | null
+  /** A non-PKR price with no rate captured that day: a screen showing PKR says "PKR value not captured at the time". */
+  pkrMissing: boolean
   date: AgedDate | null
   qty: string | null
   /** Where an ordered price came from. */
@@ -172,7 +175,7 @@ export interface PriceFact {
   inPkr: boolean
 }
 
-const NONE: PriceFact = { state: 'none', amount: null, figure: null, pkr: null, rate: null, note: null, date: null, qty: null, source: null, imported: false, inPkr: false }
+const NONE: PriceFact = { state: 'none', amount: null, figure: null, pkr: null, rate: null, note: null, pkrMissing: false, date: null, qty: null, source: null, imported: false, inPkr: false }
 
 function qtyText(qty: number | null | undefined, unit: string | null | undefined): string | null {
   if (qty === null || qty === undefined) return null
@@ -207,6 +210,7 @@ export function priceFactOf(p: PriceIn, today: string): PriceFact {
   let pkr: string | null = null
   let rate: string | null = null
   let note: string | null = null
+  let pkrMissing = false
   if (!cur) {
     note = 'no currency recorded on the order'
   } else if (cur === 'PKR') {
@@ -215,9 +219,9 @@ export function priceFactOf(p: PriceIn, today: string): PriceFact {
     pkr = formatAmount(p.pkr, 'never')
     rate = `${formatRate(p.rate)}${p.rateOn ? ` · ${formatShortDate(p.rateOn, today)}` : ''}`
   } else {
-    note = 'PKR value not captured at the time'
+    pkrMissing = true
   }
-  return { state: 'price', amount, figure: formatAmount(p.price, 'always'), pkr, rate, note, date, qty: qtyText(p.qty, p.unit), source: p.source ?? null, imported: Boolean(p.imported), inPkr: cur === 'PKR' }
+  return { state: 'price', amount, figure: formatAmount(p.price, 'always'), pkr, rate, note, pkrMissing, date, qty: qtyText(p.qty, p.unit), source: p.source ?? null, imported: Boolean(p.imported), inPkr: cur === 'PKR' }
 }
 
 export function lastQuoteFact(r: MemoryRow | null | undefined, today: string): PriceFact {
@@ -367,8 +371,10 @@ export interface LastPriceChip {
   amount: string | null
   pkr: string | null
   rate: string | null
-  /** "PKR value not captured at the time", when a reader would wonder. */
+  /** "no currency recorded on the order", when a reader would wonder. */
   note: string | null
+  /** A non-PKR price with no rate captured that day (said only where PKR is shown). */
+  pkrMissing: boolean
   date: AgedDate
   tierLabel: TierLabel
   from: 'quote' | 'order'
@@ -398,6 +404,7 @@ export function lastPriceChip(row: MemoryRow | null | undefined, today: string):
     pkr: fact.pkr,
     rate: fact.rate,
     note: fact.note,
+    pkrMissing: fact.pkrMissing,
     date: fact.date,
     tierLabel: tierLabelOf(best.tier) as TierLabel,
     from: best.from,

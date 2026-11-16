@@ -163,11 +163,17 @@ test.describe('R25 supplier prices on the RFQ page: listed by name, nothing mark
     // The CRM never suggests a supplier (owner decision 2026-10-29): no mark, no reason, no ranking, no spread.
     await expect(art).not.toContainText(/Recommended|Cheapest|Lowest price|Best price|Within 2%|Spread|above the best|Our price/)
     await expect(page.locator('[data-lowest], [data-recommended], [data-ranked], [data-cheapest], [data-cheapest-tag], [data-sell-note], [data-reasons], [data-reasons-for]')).toHaveCount(0)
-    // The facts stay: the price in PKR at today's rate, the lead time, the stock.
-    await expect(rowOf(page, 'Item 1', s.apex.name)).toContainText('28,000')
+    // The facts stay: the price in the currency quoted (no PKR until asked: owner, 16 Nov 2026), the lead time, the stock.
+    await expect(rowOf(page, 'Item 1', s.apex.name).locator('[data-price]')).toHaveText('USD 100.00')
+    await expect(rowOf(page, 'Item 1', s.apex.name)).not.toContainText('28,000')
     await expect(rowOf(page, 'Item 1', s.apex.name)).toContainText('3 weeks')
     await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('In stock')
+    await expect(rowOf(page, 'Item 1', s.delta.name)).not.toContainText('not compared')
+    // Show in PKR, asked for: the PKR figure at today's rate; a currency with no rate is not compared.
+    await page.getByRole('button', { name: 'Show in PKR' }).click()
+    await expect(rowOf(page, 'Item 1', s.apex.name)).toContainText('28,000')
     await expect(rowOf(page, 'Item 1', s.delta.name)).toContainText('not compared, no rate')
+    await expect(art).not.toContainText(/Recommended|Cheapest|Lowest price|Best price|Within 2%|Spread|above the best|Our price/)
     // Opening a row shows the supplier's own figure and the rate, and no reasons.
     await rowOf(page, 'Item 1', s.bravo.name).getByRole('button', { name: `Show details for ${s.bravo.name}` }).click()
     await expect(rowOf(page, 'Item 1', s.bravo.name)).toContainText('Quoted USD 101.00')
@@ -191,6 +197,7 @@ test.describe('R25 supplier prices on the RFQ page: listed by name, nothing mark
     await expect(art.getByText('Recommended')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Show details for / })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'How are prices shown?' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Show in PKR' })).toHaveCount(0)
     await expect(art.getByText(/Cheapest/)).toHaveCount(0)
 
     // No price, selling price or spread anywhere on the items panel.
@@ -455,6 +462,9 @@ test.describe('R25 stale and missing exchange rates (audit K1)', () => {
     await openAs(page, 'sales', `/rfqs/${rfq.id}`)
     const art = page.getByRole('article', { name: 'Item 1' })
     await expect(art.locator('li[data-price-row]')).toHaveCount(3)
+    // Off to start: each in its own currency. Then Show in PKR.
+    await expect(rowOf(page, 'Item 1', stale.name).locator('[data-price]')).toHaveText('EUR 96.00')
+    await page.getByRole('button', { name: 'Show in PKR' }).click()
     // EUR 96 at 300 = PKR 28,800 and USD 100 at 280 = PKR 28,000: both are shown in PKR, by name; the EUR row says its rate is 12 days old.
     await expect(rowOf(page, 'Item 1', fresh.name)).toContainText('28,000')
     await expect(rowOf(page, 'Item 1', stale.name)).toContainText('28,800')

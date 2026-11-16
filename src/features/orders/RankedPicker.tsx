@@ -8,7 +8,7 @@ import { rovingKeyDown, rovingTabIndex } from '@/ui/roving'
 
 /*
  * The supplier picker (A8; g2-ranking-split.html ".spl-sel" and ".spl-pop"). One button shows the chosen supplier and its price; it opens the
- * item's quotes by supplier name, each with the price in the quote's currency and in PKR. NO RANK, MARK OR REASON: the CRM never suggests a
+ * item's quotes by supplier name, each with the price in the quote's currency (not converted to PKR: owner, 16 Nov 2026). NO RANK, MARK OR REASON: the CRM never suggests a
  * supplier (owner decision 2026-10-29). A supplier already used by another part of the same item is listed but cannot be picked again (the database refuses the same
  * quote line twice). Used by the convert dialog (O08); the Split line dialog (O09) lists the same rows with RankedOptionRow.
  *
@@ -30,10 +30,7 @@ export function RankedOptionRow({ q, className }: { q: RankedQuote; among?: read
         <b className="text-sm font-medium">{q.supplierName}</b>
         {q.inStock ? <span className="text-xs text-fg-muted">In stock</span> : null}
       </span>
-      <span className="num text-right text-xs">
-        {p.price}
-        <em className="block font-sans not-italic text-fg-muted">{p.pkr}</em>
-      </span>
+      <span className="num text-right text-xs">{p.price}</span>
     </span>
   )
 }

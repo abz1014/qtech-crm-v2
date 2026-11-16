@@ -188,14 +188,15 @@ describe('supplier page', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'About these numbers' })).toBeNull())
   })
 
-  it('one Enquiries list reads item, reply time, price (with PKR at the time) and outcome; deliveries keep their PO and result', async () => {
+  it('one Enquiries list reads item, reply time, price (in the quoted currency, no PKR) and outcome; deliveries keep their PO and result', async () => {
     installFakeDb(supplierDb)
     mount('/companies/s1', <CompanyPage />)
     const quotes = await screen.findByRole('region', { name: 'RFQs' })
     const row = await within(quotes).findByText('Belimo NM24A-SR damper actuator')
     const li = row.closest('li') as HTMLElement
     expect(li).toHaveTextContent(/EUR\s*214\.00/)
-    expect(li).toHaveTextContent(/≈ PKR\s*69,935/)
+    expect(li).not.toHaveTextContent('PKR')
+    expect(li).not.toHaveTextContent('69,935')
     expect(li).toHaveTextContent('Lead time: 2 to 3 weeks ex stock')
     await waitFor(() => expect(li).toHaveTextContent('Replied in 1 day'))
     expect(li).toHaveTextContent('Ordered here')

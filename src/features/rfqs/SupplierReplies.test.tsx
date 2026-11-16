@@ -193,6 +193,29 @@ describe('SupplierReplyDialog', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('a typed price stays in the currency chosen: no PKR figure under it, even with a rate on file (owner, 16 Nov 2026)', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    const eur: InquiryRow = { ...inquiry, supplierCountry: 'Germany', lastCurrency: 'EUR' }
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }}>
+          <MemoryRouter>
+            <ToastProvider>
+              <SupplierReplyDialog rfq={rfq} items={items} inquiry={eur} rates={{ EUR: { rate: 300, ageDays: 0, staleness: 'fresh' } }} onClose={() => undefined} />
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionContext.Provider>
+      </QueryClientProvider>,
+    )
+    await user.type(screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' }), '1250')
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent('EUR')
+    expect(dialog).not.toHaveTextContent(/PKR|Reads as|375,000/)
+    expect(dialog.querySelector('[data-preview]')).toBeNull()
+  })
+
   it('HW-48: a price that is not a number says why next to the box; "PKR 1,200/-" is read as 1200', async () => {
     installFakeDb(() => ({ data: [] }))
     const user = userEvent.setup()

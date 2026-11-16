@@ -95,7 +95,8 @@ describe('memory card', () => {
     )
     expect(c.quote.amount).toBe('USD 640')
     expect(c.quote.pkr).toBeNull()
-    expect(c.quote.note).toBe('PKR value not captured at the time')
+    expect(c.quote.note).toBeNull()
+    expect(c.quote.pkrMissing).toBe(true)
     expect(c.quote.date).toEqual({ text: 'Apr 2025', ago: '19 months ago' })
     expect(c.quote.imported).toBe(true)
     expect(c.hasImported).toBe(true)
@@ -174,10 +175,11 @@ describe('last price chip (reply rows)', () => {
     expect(c?.state).toBe('hidden')
     expect(c?.amount).toBeNull()
   })
-  it('a legacy line with no captured rate shows the original currency and says no PKR value was captured', () => {
+  it('a legacy line with no captured rate shows the original currency and marks that no PKR value was captured', () => {
     const c = lastPriceChip(row({ ...base, last_quote_fx_rate_pkr: null, last_quote_fx_rate_on: null, last_quote_price_pkr: null, last_quote_is_legacy: true }), TODAY)
     expect(c?.pkr).toBeNull()
-    expect(c?.note).toBe('PKR value not captured at the time')
+    expect(c?.note).toBeNull()
+    expect(c?.pkrMissing).toBe(true)
     expect(c?.imported).toBe(true)
   })
 })
