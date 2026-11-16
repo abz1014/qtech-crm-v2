@@ -101,11 +101,12 @@ describe('buildStatement', () => {
   it('shows the weight of one unit and of the whole quantity in the supplier\'s unit, and the origin and lead time', () => {
     const s = buildStatement(ITEMS, [ZED, ALPHA])
     const zed = s.sections[0].rows.find(r => r.supplierName === 'Zed Controls')!
-    expect(zed).toMatchObject({ weightEachText: '2.5 kg', origin: 'Germany', leadTime: '3 weeks', unitCostText: '100.00' })
+    expect(zed).toMatchObject({ weightEachText: '2.5 kg', totalWeight: 10, totalWeightText: '10 kg', origin: 'Germany', leadTime: '3 weeks', unitCostText: '100.00' })
     const alpha = s.sections[0].rows.find(r => r.supplierName.startsWith('alpha'))!
-    expect(alpha).toMatchObject({ weightEachText: '400 g', note: 'valid 7 days' })
+    expect(alpha).toMatchObject({ weightEachText: '400 g', totalWeightText: '1,600 g', note: 'valid 7 days' })
     const noWeight = s.sections[1].rows[0]
     expect(noWeight.weightEachText).toBeNull()
+    expect(noWeight.totalWeightText).toBeNull()
     expect(noWeight.origin).toBeNull()
   })
 

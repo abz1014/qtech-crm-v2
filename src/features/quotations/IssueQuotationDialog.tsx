@@ -22,6 +22,7 @@ import { TextArea, TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader, InquiryRow } from '@/features/rfqs/api'
 import { useCompanyProfile } from '@/features/settings/hooks'
+import { StatementDownloads } from '@/features/statement/StatementDownloads'
 import { loadPdfData, loadSignatory, type PdfData, type QuotationRow, type PriceMemory, type QuoteItem } from '@/features/quotations/api'
 import { useCompanyContacts, useIssueQuotation, usePriceMemory, useQuoteItems, useQuotations, useStorePdf } from '@/features/quotations/hooks'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
@@ -147,7 +148,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const byItem = useMemo(() => new Map((memory.data ?? []).map(m => [m.itemId, m] as const)), [memory.data])
 
   // No supplier is singled out here (owner decision 2026-10-29: the CRM selects no supplier and shows no "best" or "lowest" reply).
-  // The replies are laid out side by side, with no mark, on the Comparative Statement; the selling price is typed by a person.
+  // The replies are laid out side by side, with no mark, in the Comparative Statement (Excel or PDF); the selling price is typed by a person.
   const replyCount = (itemId: string) => inquiries.filter(i => i.lines.some(l => l.itemId === itemId)).length
   const hasSupplierPrice = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId))
 
@@ -546,6 +547,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
               </Field>
             </div>
 
+            {inquiries.some(i => i.lines.length > 0) ? <StatementDownloads jobKey={String(rfq.number)} rfqId={rfq.id} look="inline" /> : null}
+
             {/* No overflow-hidden here: in the phone sheet's scrolling grid body a clipping box collapsed to no height (Chromium), so the
                 tinted pieces round their own corners instead. */}
             <div className="w-full min-w-0 rounded-control border">
@@ -586,10 +589,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                         </p>
                         {replies > 0 ? (
                           <p className="text-sm text-fg-muted" data-testid={`supplier-replies-${n}`}>
-                            {`${replies} supplier ${replies === 1 ? 'reply' : 'replies'}. `}
-                            <a href={`/jobs/${rfq.number}/statement`} target="_blank" rel="noreferrer" className="rounded font-medium underline underline-offset-2 hover:text-fg">
-                              Compare them on the comparative statement
-                            </a>
+                            {`${replies} supplier ${replies === 1 ? 'reply' : 'replies'}`}
                           </p>
                         ) : null}
                         {nothingToQuote ? <p className="text-sm">No supplier price yet, so there is nothing to quote. Add a reply to include it, or type a price.</p> : null}

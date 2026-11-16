@@ -764,15 +764,17 @@ export const VISITS: readonly Visit[] = [
   screen('job-invoiced', 'Job page: order, invoiced, not paid', ALL, fx => `/orders/${fx.order.invoiced}`),
   screen('job-compare', 'Job page: supplier comparison (4 suppliers, 3 currencies)', ALL, fx => `/rfqs/${fx.rfq.compare}`, { scrollTo: '[data-compared]' }),
   {
-    // The Comparative Statement of the compare job (4 suppliers, 3 currencies), with the "did not reply" rows on. Admin and sales only.
+    // The Comparative Statement of the compare job (4 suppliers, 3 currencies): since 2026-11-16 only two downloads (Excel, PDF) on the
+    // job page, no page of its own. Admin and sales only.
     id: 'job-statement',
-    title: 'Job page: Comparative statement (4 suppliers, 3 currencies)',
+    title: 'Job page: Comparative statement downloads (4 suppliers, 3 currencies)',
     roles: MONEY,
     screens: ['job-statement'],
     run: async (page, fx, capture) => {
       const [rfq] = await must(rest<{ number: number }[]>('admin', `rfqs?id=eq.${fx.rfq.compare}&select=number`))
-      await open(page, `/jobs/${rfq.number}/statement`)
-      await page.getByTestId('statement').waitFor()
+      await open(page, `/jobs/${rfq.number}`)
+      await page.getByTestId('statement-downloads').waitFor()
+      await page.getByTestId('statement-downloads').scrollIntoViewIfNeeded()
       await capture('job-statement')
     },
   },

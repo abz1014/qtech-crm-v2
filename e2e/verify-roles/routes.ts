@@ -90,7 +90,7 @@ export const ROUTES: readonly RouteSpec[] = [
     sales: 'ok',
     engineer: 'ok',
     // no prices, no money panel, no price-carrying files and no quotation or invoice actions for an engineer
-    engineerAbsent: [/^Money for this job$/, /^Send quotation$/, /^Mark won$/, /^Costs/, /^Has prices/, /^Gross, PKR$/, /^Price, PKR today/, /^Enter reply/, /^Edit reply/, /^Paste reply/],
+    engineerAbsent: [/^Money for this job$/, /^Send quotation$/, /^Mark won$/, /^Costs/, /^Has prices/, /^Gross, PKR$/, /^Price, PKR today/, /^Enter reply/, /^Edit reply/, /^Paste reply/, /^Download Excel$/, /^Download PDF$/, /^Comparative statement$/],
   },
   { path: '/jobs/{directJob}', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'an order with no enquiry: Job O-n, the ruler starts at Order' },
   { path: '/jobs/9999999', admin: 'no', sales: 'no', engineer: 'no', note: 'no such job: the not-found state' },
@@ -159,7 +159,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/my-expenses', admin: 'no', sales: 'ok', engineer: 'ok', note: '"I paid": an engineer or a salesperson records what they paid (their own claims only, 0124)' },
   { path: '/jobs/{job}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation on the Job page (an engineer gets the page without the dialog)' },
   { path: '/jobs/{job}?won=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Mark won on the Job page (an engineer gets the page without the dialog)' },
-  { path: '/jobs/{job}/statement', admin: 'ok', sales: 'ok', engineer: 'no', note: 'the Comparative Statement: what suppliers charge, so admin and sales only (the database refuses an engineer the prices as well)' },
+  { path: '/jobs/{job}/statement', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs\/\d+$/, note: 'the old Comparative Statement page: the statement is now only downloaded (Excel, PDF) from the job page, so the address opens the job; an engineer gets the job page with no downloads (engineer-surfaces checks no money)' },
   { path: '/capture', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'opens the Capture sheet' },
 ]
 

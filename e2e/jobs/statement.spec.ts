@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs'
+import { read, utils } from 'xlsx'
 import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 
 /*
- * The Comparative Statement (owner request, 2026-10-29): /jobs/<n>/statement, one section per item, one row per supplier that quoted it,
- * with cost, lead time, weight and country of origin, exported as an A4 landscape PDF. It SELECTS NOTHING (no "cheapest", no
+ * The Comparative Statement (owner request, 2026-10-29): one section per item, one row per supplier that quoted it, with cost, lead
+ * time, weight and country of origin. Since 2026-11-16 (owner) it is only downloaded, as an Excel file or an A4 landscape PDF, from the
+ * job page; the old /jobs/<n>/statement address opens the job page. It SELECTS NOTHING (no "cheapest", no
  * "recommended", nothing ticked, supplier-name order), and it is admin and sales only: the database refuses an engineer the prices it is
  * made of (0081), and weight and origin are entered where supplier prices are (the reply dialog, a pasted reply). Fictional data only.
  * It runs in the `jobs` suite.
@@ -54,118 +56,108 @@ async function seed(): Promise<Seed> {
   return { rfq, customer, items, names: { zeta: zeta.name, alpha: alpha.name, mid: mid.name, silent: silent.name }, inquiries }
 }
 
-const rowNames = (page: Page, item: number) => page.locator(`[data-statement-item="${item}"] [data-statement-row]`).evaluateAll(els => els.map(e => e.getAttribute('data-statement-row') ?? ''))
+/** Downloads the statement as Excel from the job page and reads its one sheet back as rows (header: 1, blanks as null). */
+async function downloadExcel(page: Page, jobNumber: number): Promise<unknown[][]> {
+  const box = page.getByTestId('statement-downloads')
+  await expect(box.getByRole('button', { name: 'Download Excel' })).toBeEnabled()
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), box.getByRole('button', { name: 'Download Excel' }).click()])
+  expect(download.suggestedFilename()).toBe(`Comparative-statement-Job-${jobNumber}.xlsx`)
+  const bytes = readFileSync(await download.path())
+  expect(bytes.subarray(0, 2).toString()).toBe('PK') // a real .xlsx (a zip), not a CSV
+  const wb = read(bytes, { type: 'buffer' })
+  expect(wb.SheetNames).toEqual(['Comparative statement'])
+  return utils.sheet_to_json<unknown[]>(wb.Sheets['Comparative statement'], { header: 1, blankrows: true, defval: null })
+}
+
+// The grid's columns in the Excel file (src/features/statement/excel/workbook.ts COLUMNS).
+const C = { no: 0, item: 1, qty: 3, unit: 4, supplier: 5, currency: 6, unitCost: 7, total: 8, lead: 9, weight: 10, totalWeight: 11, origin: 12, note: 13 }
 
 for (const role of ['sales', 'admin'] as const) {
-  test(`${role}: the statement has one section per item, suppliers in name order, totals per currency, and selects nothing`, async ({ page }) => {
+  test(`${role}: the job page has only the two downloads; the Excel file has one row per quote, suppliers in name order, totals per currency, and selects nothing`, async ({ page }) => {
     const s = await seed()
-    await openAs(page, role, `/jobs/${s.rfq.number}/statement`)
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Comparative statement')
-    const statement = page.getByTestId('statement')
-    await expect(statement.locator('[data-statement-item]')).toHaveCount(2)
-    await expect(page.locator('[data-statement-item="1"]')).toContainText('Pressure transmitter 0-10 bar, 4-20 mA')
-    await expect(page.locator('[data-statement-item="1"]')).toContainText('Qty 4 pcs')
-    await expect(page.locator('[data-statement-item="2"]')).toContainText('Qty 2.5 m')
+    await openAs(page, role, `/jobs/${s.rfq.number}`)
+    const box = page.getByTestId('statement-downloads')
+    await expect(box.getByRole('heading', { name: 'Comparative statement' })).toBeVisible()
+    await expect(box.getByRole('button')).toHaveText(['Download Excel', 'Download PDF'])
+    await expect(page.locator('[data-statement-item], [data-statement-row], [data-testid="statement"]')).toHaveCount(0) // no table on screen
+    await expect(page.getByTestId('open-statement')).toHaveCount(0)
 
-    // by supplier name, A to Z (Alpha, Mid, Zeta), though Mid is cheapest in rupees terms and Zeta quoted both items
-    expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.mid, s.names.zeta])
-    expect(await rowNames(page, 2)).toEqual([s.names.zeta])
-    await expect(page.getByTestId('statement-order-note')).toHaveText('') // no sentence about the order unless a person has sorted by a column
-
-    // cost, lead time, weight and origin of one row
-    const zeta = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.zeta}"]`)
-    await expect(zeta).toContainText('USD')
-    await expect(zeta).toContainText('100.00')
-    await expect(zeta).toContainText('400.00') // 4 x 100
-    await expect(zeta).toContainText('3 weeks')
-    await expect(zeta).toContainText('2.5 kg')
-    await expect(zeta).not.toContainText('10 kg') // the weight of ONE unit only
-    await expect(zeta).toContainText('Germany')
-    const alpha = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.alpha}"]`)
-    await expect(alpha).toContainText('400 g')
-    await expect(page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.mid}"]`)).toContainText('—') // no origin: a dash
-    await expect(page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${s.names.mid}"]`)).toContainText('6 lb')
-
+    const rows = await downloadExcel(page, s.rfq.number)
+    expect(rows[3][0]).toBe('Comparative statement')
+    expect(rows[4][0]).toBe(`Job / RFQ: Job ${s.rfq.number} (RFQ-${String(s.rfq.number).padStart(4, '0')})`)
+    expect(rows[5][0]).toBe(`Customer: ${s.customer.name}`)
+    expect(rows[9]).toEqual(['No.', 'Item', 'Specification', 'Qty', 'Unit', 'Supplier', 'Currency', 'Unit cost', 'Total cost', 'Lead time', 'Unit weight', 'Total weight', 'Country of origin', 'Note'])
+    const quotes = (n: number) => rows.slice(10).filter(r => r[C.no] === n && r[C.supplier] !== null)
+    // by supplier name, A to Z (Alpha, Mid, Zeta), though Zeta quoted both items
+    expect(quotes(1).map(r => r[C.supplier])).toEqual([s.names.alpha, s.names.mid, s.names.zeta])
+    expect(quotes(2).map(r => r[C.supplier])).toEqual([s.names.zeta])
+    // cost, lead time, weight and origin of one row, numbers as numbers
+    const zeta = quotes(1)[2]
+    expect([zeta[C.item], zeta[C.qty], zeta[C.unit], zeta[C.currency], zeta[C.unitCost], zeta[C.total], zeta[C.lead], zeta[C.weight], zeta[C.totalWeight], zeta[C.origin]]).toEqual([
+      'Pressure transmitter 0-10 bar, 4-20 mA', 4, 'pcs', 'USD', 100, 400, '3 weeks', 2.5, 10, 'Germany',
+    ])
+    expect([quotes(1)[0][C.currency], quotes(1)[0][C.unitCost], quotes(1)[0][C.total], quotes(1)[0][C.weight]]).toEqual(['PKR', 9000, 36000, 400])
+    expect([quotes(1)[1][C.currency], quotes(1)[1][C.weight], quotes(1)[1][C.origin]]).toEqual(['EUR', 6, null])
+    expect(quotes(2)[0][C.qty]).toBe(2.5)
+    // the suppliers that did not reply or did not quote are one line under the item, not quote rows
+    const notes = (n: number) => rows.slice(10).filter(r => r[C.no] === n && r[C.supplier] === null).map(r => r[C.note])
+    expect(notes(1)).toEqual([`No reply: ${s.names.silent}`])
+    expect(notes(2)).toEqual([`No reply: ${s.names.silent}. Did not quote: ${s.names.alpha}, ${s.names.mid}`])
     // totals: per supplier, each in its own currency, never added across currencies
-    const totals = page.locator('[data-statement-totals]')
-    await expect(totals.locator(`[data-statement-total="${s.names.zeta}"]`)).toContainText('USD')
-    await expect(totals.locator(`[data-statement-total="${s.names.zeta}"]`)).toContainText('500.00') // 4 x 100 + 2.5 x 40
-    await expect(totals.locator(`[data-statement-total="${s.names.zeta}"]`)).toContainText('2 of 2')
-    await expect(totals.locator(`[data-statement-total="${s.names.alpha}"]`)).toContainText('36,000.00')
-    await expect(totals.locator(`[data-statement-total="${s.names.alpha}"]`)).toContainText('1 of 2')
-    await expect(totals.locator(`[data-statement-total="${s.names.mid}"]`)).toContainText('382.00')
-
-    // no mark, no recommendation, nothing ticked or chosen
-    await expect(statement).not.toContainText(/cheap|lowest|best|recommend|winner|preferred/i)
-    await expect(statement.locator('[aria-checked="true"], [aria-pressed="true"], [aria-selected="true"], input:checked')).toHaveCount(0)
-    await expect(page.locator('#main [data-recommended], #main [data-lowest], #main [data-best]')).toHaveCount(0)
-    // the suppliers that did not reply or did not quote are ONE compact line under the item, not rows
-    await expect(page.locator('[data-statement-item="1"] [data-statement-noreply]')).toHaveText(`No reply: ${s.names.silent}`)
-    await expect(page.locator('[data-statement-item="2"] [data-statement-noreply]')).toHaveText(`No reply: ${s.names.silent} · Did not quote: ${s.names.alpha}, ${s.names.mid}`)
-    await expect(page.locator('[data-statement-item] [role="row"][data-statement-row]').filter({ hasText: s.names.silent })).toHaveCount(0)
-    await page.getByRole('checkbox', { name: 'Show suppliers that did not reply' }).click()
-    await expect(page.locator('[data-statement-noreply]')).toHaveCount(0)
+    const at = rows.findIndex(r => r[C.item] === 'Totals by supplier')
+    const totals = rows.slice(at + 2).filter(r => r[C.supplier] !== null)
+    expect(totals.map(r => [r[C.supplier], r[C.currency], r[C.total], r[C.lead]])).toEqual([
+      [s.names.alpha, 'PKR', 36000, '1 of 2'],
+      [s.names.mid, 'EUR', 382, '1 of 2'],
+      [s.names.zeta, 'USD', 500, '2 of 2'], // 4 x 100 + 2.5 x 40
+    ])
+    // no mark, no recommendation
+    expect(JSON.stringify(rows)).not.toMatch(/cheap|lowest|best|recommend|winner|preferred/i)
+    await expect(page.getByRole('status').filter({ hasText: 'Comparative statement downloaded' })).toBeVisible()
   })
 }
 
-test('a column can be sorted by hand, only moves the rows, and the page says so', async ({ page }) => {
+test('Download PDF downloads an A4 landscape PDF named for the job', async ({ page }) => {
   const s = await seed()
-  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
-  const first = page.locator('[data-statement-item="1"]')
-  await expect(first.getByRole('columnheader', { name: /supplier/i })).toHaveAttribute('aria-sort', 'ascending')
-  // unit cost: grouped by currency (EUR, PKR, USD), never compared as numbers across currencies
-  await first.getByRole('button', { name: 'Sort by unit cost' }).click()
-  await expect(page.getByTestId('statement-order-note')).toContainText('Sorted by unit cost')
-  await expect(page.getByTestId('statement-order-note')).toContainText('only changes the order on the page')
-  expect(await rowNames(page, 1)).toEqual([s.names.mid, s.names.alpha, s.names.zeta])
-  await first.getByRole('button', { name: 'Sort by lead time' }).click()
-  expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.zeta, s.names.mid]) // 10 days, 3 weeks, 6 weeks
-  await first.getByRole('button', { name: 'Sort by supplier' }).click()
-  expect(await rowNames(page, 1)).toEqual([s.names.alpha, s.names.mid, s.names.zeta])
-  await expect(page.getByTestId('statement-order-note')).toHaveText('')
-})
-
-test('Export PDF downloads an A4 landscape PDF named for the job', async ({ page }) => {
-  const s = await seed()
-  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
-  await expect(page.getByTestId('statement')).toBeVisible()
-  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Export PDF' }).click()])
+  await openAs(page, 'sales', `/jobs/${s.rfq.number}`)
+  const button = page.getByTestId('statement-downloads').getByRole('button', { name: 'Download PDF' })
+  await expect(button).toBeEnabled()
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), button.click()])
   expect(download.suggestedFilename()).toBe(`Comparative-statement-Job-${s.rfq.number}.pdf`)
   const bytes = readFileSync(await download.path())
   expect(bytes.subarray(0, 4).toString()).toBe('%PDF')
   const text = bytes.toString('latin1')
   expect(text).toMatch(/\/MediaBox\s*\[\s*0\s+0\s+841\.89/)
   expect((text.match(/\/Type \/Page\b/g) ?? []).length).toBeGreaterThanOrEqual(1)
-  await expect(page.getByRole('status').filter({ hasText: 'Comparative statement exported' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'Comparative statement downloaded' })).toBeVisible()
 })
 
-test('the job page links to the statement for sales; an engineer has no link and the page tells them why, asking for no price', async ({ page }) => {
+test('the old statement address opens the job page; an engineer has no downloads and asks for no price', async ({ page }) => {
   const s = await seed()
-  await openAs(page, 'sales', `/jobs/${s.rfq.number}`)
-  const link = page.getByTestId('open-statement')
-  await expect(link).toBeVisible()
-  await link.click()
-  await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}/statement$`))
-  await expect(page.getByTestId('statement')).toBeVisible()
+  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
+  await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}$`))
+  await expect(page.getByTestId('statement-downloads').getByRole('button')).toHaveText(['Download Excel', 'Download PDF'])
 
-  // an engineer: no link on the job page, and the address itself shows a notice and asks the database for no price
+  // an engineer: no downloads on the job page, and the old address asks the database for no price either
   await page.context().clearCookies()
   await page.evaluate(() => {
     localStorage.clear()
     sessionStorage.clear()
   })
-  await openAs(page, 'engineer', `/jobs/${s.rfq.number}`)
-  await page.waitForLoadState('networkidle')
-  await expect(page.getByTestId('open-statement')).toHaveCount(0)
   const priced: string[] = []
   page.on('request', r => {
     const u = decodeURIComponent(r.url())
     if (u.includes('/rest/v1/') && /unit_price|weight/.test(u)) priced.push(u)
   })
+  await openAs(page, 'engineer', `/jobs/${s.rfq.number}`)
+  await page.waitForLoadState('networkidle')
+  await expect(page.locator('[data-slot="items"]')).toBeVisible()
+  await expect(page.getByTestId('statement-downloads')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Download (Excel|PDF)$/ })).toHaveCount(0)
   await page.goto(`/jobs/${s.rfq.number}/statement`)
-  await expect(page.getByTestId('statement-no-access')).toContainText('The comparative statement is for admins and sales')
-  await expect(page.getByTestId('statement')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Export PDF' })).toHaveCount(0)
+  await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}$`))
+  await page.waitForLoadState('networkidle')
+  await expect(page.getByTestId('statement-downloads')).toHaveCount(0)
   expect(priced).toEqual([])
 })
 
@@ -214,12 +206,10 @@ test('weight and country of origin are typed beside the prices in the reply dial
   await again.getByRole('button', { name: 'Save reply' }).click()
   await expect.poll(async () => (await must(rest<{ origin: string | null }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.inquiries.silent}&select=origin`)))[0].origin).toBe('Japan')
 
-  // and the statement shows it
-  await page.getByTestId('open-statement').click()
-  await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}/statement$`))
-  const row = page.locator('[data-statement-item="1"]').locator(`[data-statement-row="${name}"]`)
-  await expect(row).toContainText('1.25 lb')
-  await expect(row).toContainText('Japan')
+  // and the statement's Excel file has it
+  const sheet = await downloadExcel(page, s.rfq.number)
+  const row = sheet.slice(10).find(r => r[C.no] === 1 && r[C.supplier] === name)
+  expect([row?.[C.unitCost], row?.[C.weight], row?.[C.totalWeight], row?.[C.origin]]).toEqual([250, 1.25, 5, 'Japan'])
 })
 
 test('a pasted reply that gives a weight and a country of origin saves them with the price', async ({ page }) => {
@@ -255,40 +245,40 @@ test('a pasted reply that gives a weight and a country of origin saves them with
   ])
 })
 
-test('at 1024 px beside the open rail each quote is a card (six columns break mid-word there, audit 2); no sideways scroll', async ({ page }) => {
-  const s = await seed()
-  await page.setViewportSize({ width: 1024, height: 800 })
-  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
-  const first = page.locator('[data-statement-item="1"]')
-  await expect(first.locator(`li[data-statement-row="${s.names.zeta}"]`)).toContainText('400.00')
-  await expect(first.getByRole('table')).toHaveCount(0)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
-})
+for (const [w, h] of [[320, 640], [375, 812], [1440, 900]] as const) {
+  test(`at ${w} px the two downloads fit inside the page and the Issue quotation dialog (stacked on a phone, one row on desktop): no sideways scroll`, async ({ page }) => {
+    const s = await seed()
+    await page.setViewportSize({ width: w, height: h })
+    await openAs(page, 'sales', `/jobs/${s.rfq.number}`)
+    const box = page.getByTestId('statement-downloads')
+    const excel = await box.getByRole('button', { name: 'Download Excel' }).boundingBox()
+    const pdf = await box.getByRole('button', { name: 'Download PDF' }).boundingBox()
+    expect(excel && pdf).toBeTruthy()
+    if (w >= 768) {
+      expect(Math.abs((excel?.y ?? 0) - (pdf?.y ?? 1))).toBeLessThanOrEqual(1) // one row, Excel then PDF
+      expect(pdf?.x ?? 0).toBeGreaterThan(excel?.x ?? 0)
+    } else {
+      expect(pdf?.y ?? 0).toBeGreaterThan((excel?.y ?? 0) + (excel?.height ?? 0) - 1) // stacked, PDF under Excel, same width
+      expect(Math.abs((pdf?.width ?? 0) - (excel?.width ?? 1))).toBeLessThanOrEqual(1)
+    }
+    for (const b of [excel, pdf]) {
+      expect(b?.x ?? -1).toBeGreaterThanOrEqual(0)
+      expect((b?.x ?? 0) + (b?.width ?? w + 1)).toBeLessThanOrEqual(w)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
+    await box.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `review-shots/statement-export/job-page-${w}.png` })
 
-test('at 1280 px wide the quotes table fits the page: no sideways scroll inside the item or the totals', async ({ page }) => {
-  const s = await seed()
-  await page.setViewportSize({ width: 1280, height: 800 })
-  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
-  await expect(page.locator('[data-statement-item="1"]')).toBeVisible()
-  await expect(page.locator('[data-statement-item="1"]').getByRole('table')).toBeVisible()
-  const overflow = await page.evaluate(() =>
-    Array.from(document.querySelectorAll('[data-statement-item] .overflow-x-auto, [data-statement-totals] .overflow-x-auto')).filter(el => el.scrollWidth > el.clientWidth + 1).length,
-  )
-  expect(overflow).toBe(0)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
-})
-
-test('live bug 7: on a tablet (768 px) the page never scrolls sideways; each quote is a card and the heads are one Sort field', async ({ page }) => {
-  const s = await seed()
-  await page.setViewportSize({ width: 768, height: 1024 })
-  await openAs(page, 'sales', `/jobs/${s.rfq.number}/statement`)
-  const first = page.locator('[data-statement-item="1"]')
-  await expect(first.locator(`li[data-statement-row="${s.names.zeta}"]`)).toContainText('400.00')
-  await expect(first.getByRole('table')).toHaveCount(0)
-  await expect(page.getByRole('combobox', { name: 'Sort the rows by' })).toBeVisible()
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
-  expect(await page.evaluate(() => {
-    const m = document.querySelector('#main') as HTMLElement
-    return m.scrollWidth - m.clientWidth
-  })).toBeLessThanOrEqual(1)
-})
+    // the Issue quotation dialog: one compact line with the same two downloads, inside the dialog
+    await page.goto(`/jobs/${s.rfq.number}?issue=1`)
+    const inline = page.getByRole('dialog').getByTestId('statement-downloads')
+    await expect(inline.getByRole('button')).toHaveText(['Download Excel', 'Download PDF'])
+    const dialogBox = await page.getByRole('dialog').boundingBox()
+    for (const name of ['Download Excel', 'Download PDF']) {
+      const b = await inline.getByRole('button', { name }).boundingBox()
+      expect((b?.x ?? 0) + (b?.width ?? 0)).toBeLessThanOrEqual((dialogBox?.x ?? 0) + (dialogBox?.width ?? w))
+    }
+    await inline.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: `review-shots/statement-export/issue-quotation-${w}.png` })
+  })
+}
