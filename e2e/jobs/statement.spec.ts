@@ -245,8 +245,8 @@ test('a pasted reply that gives a weight and a country of origin saves them with
   ])
 })
 
-for (const [w, h] of [[375, 812], [1440, 900]] as const) {
-  test(`at ${w} px the two downloads sit in one row inside the page and the Issue quotation dialog: no sideways scroll`, async ({ page }) => {
+for (const [w, h] of [[320, 640], [375, 812], [1440, 900]] as const) {
+  test(`at ${w} px the two downloads fit inside the page and the Issue quotation dialog (stacked on a phone, one row on desktop): no sideways scroll`, async ({ page }) => {
     const s = await seed()
     await page.setViewportSize({ width: w, height: h })
     await openAs(page, 'sales', `/jobs/${s.rfq.number}`)
@@ -254,8 +254,17 @@ for (const [w, h] of [[375, 812], [1440, 900]] as const) {
     const excel = await box.getByRole('button', { name: 'Download Excel' }).boundingBox()
     const pdf = await box.getByRole('button', { name: 'Download PDF' }).boundingBox()
     expect(excel && pdf).toBeTruthy()
-    expect(Math.abs((excel?.y ?? 0) - (pdf?.y ?? 1))).toBeLessThanOrEqual(1)
-    expect((pdf?.x ?? 0) + (pdf?.width ?? 0)).toBeLessThanOrEqual(w)
+    if (w >= 768) {
+      expect(Math.abs((excel?.y ?? 0) - (pdf?.y ?? 1))).toBeLessThanOrEqual(1) // one row, Excel then PDF
+      expect(pdf?.x ?? 0).toBeGreaterThan(excel?.x ?? 0)
+    } else {
+      expect(pdf?.y ?? 0).toBeGreaterThan((excel?.y ?? 0) + (excel?.height ?? 0) - 1) // stacked, PDF under Excel, same width
+      expect(Math.abs((pdf?.width ?? 0) - (excel?.width ?? 1))).toBeLessThanOrEqual(1)
+    }
+    for (const b of [excel, pdf]) {
+      expect(b?.x ?? -1).toBeGreaterThanOrEqual(0)
+      expect((b?.x ?? 0) + (b?.width ?? w + 1)).toBeLessThanOrEqual(w)
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
     await box.scrollIntoViewIfNeeded()
     await page.screenshot({ path: `review-shots/statement-export/job-page-${w}.png` })
