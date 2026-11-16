@@ -271,7 +271,7 @@ function chipOf(state: StopState, current: StepTone, word: StepTone = current, a
   if (state === 'done') return { icon: CircleCheck, word: 'Done', tone: 'success' }
   // the word follows the step (an imported job still "Needs action"); the colour follows the tone (grey for an imported job)
   // the colour follows the word too: an imported job's "Needs action" is the usual amber chip (owner, audit 2)
-  if (state === 'current') return { ...CHIP[word], ...(word === 'now' && action ? { word: action } : null), tone: CHIP_TONE[word] }
+  if (state === 'current') return { ...CHIP[word], ...(word === 'now' && action ? { word: action, heard: CHIP[word].word } : null), tone: CHIP_TONE[word] }
   if (state === 'future') return { icon: CircleDashed, word: 'Not yet', tone: 'neutral' }
   if (state === 'stopped') return { icon: CircleX, word: 'Not reached', tone: 'neutral' }
   if (state === 'office') return OFFICE_CHIP
