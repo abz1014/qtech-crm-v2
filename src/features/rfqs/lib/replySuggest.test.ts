@@ -122,6 +122,25 @@ describe('draftFromSuggestions', () => {
     expect(d.inStock).toBeNull() // the two offers disagree
     expect(draftFromSuggestions(empty, set, new Set()).prices).toEqual({})
   })
+  it("gives each item the lead time its own line stated, and never another item's (16 Nov 2026)", () => {
+    const set = suggestFromReply(
+      {
+        offers: [
+          { rfqItemId: 'a', unitPrice: 10, currency: 'USD', confidence: 'high', flags: [], snippet: '', inStock: null, leadTimeText: 'ex-stock' },
+          { rfqItemId: 'b', unitPrice: 20, currency: 'USD', confidence: 'high', flags: [], snippet: '', inStock: null, leadTimeText: null },
+        ],
+        regret: false,
+        regretKind: null,
+        declined: [],
+      } as never,
+      items,
+      'USD',
+    )
+    const d = draftFromSuggestions({ ...empty, leadTimes: { b: '5 weeks' } }, set, new Set(set.suggestions.map(s => s.key)))
+    expect(d.leadTimes).toEqual({ a: 'ex-stock', b: '5 weeks' })
+    // An item with nothing stated and nothing saved stays empty, to be asked for.
+    expect(draftFromSuggestions(empty, set, new Set(set.suggestions.map(s => s.key))).leadTimes).toEqual({ a: 'ex-stock', b: '' })
+  })
 })
 
 describe('weight and origin from a reply (0111)', () => {

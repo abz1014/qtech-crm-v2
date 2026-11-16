@@ -27,6 +27,9 @@ export const SALES = {
     price: (item: number, supplier: string) => `Price for item ${item} from ${supplier}`,
     save: 'Save reply',
     saved: 'Reply saved',
+    // Required on every priced item (16 Nov 2026).
+    leadTime: (item: number, supplier: string) => `Lead time, item ${item} from ${supplier}`,
+    weight: (item: number, supplier: string) => `Weight of one unit, item ${item} from ${supplier}`,
     eurUsual: /EUR, usual for Germany/,
   },
   won: {

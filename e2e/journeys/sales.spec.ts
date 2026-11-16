@@ -6,6 +6,7 @@ import { markWonButton, openStage, orderCreated, stagesOf } from '../support/job
 import { fe2, todayHas, monthOf, noShareApi, openPage, ordRef, pastePage, readCount, resetCount, roleContext } from './support'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 import { chooseSupplier } from '../support/supplierChoice'
+import { fillReplyDetails } from '../support/replyDetails'
 
 /*
  * P03, the sales journey: one working day from a WhatsApp enquiry to a payment on the books, through the real screens, on the CI stack.
@@ -210,6 +211,8 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     typed++
     await a.getByLabel(`Price for item 2 from ${s.alpen.name}`).fill('200')
     typed++
+    // Each priced item's lead time and weight of one unit are required (16 Nov 2026); typed, not tapped.
+    await fillReplyDetails(a, s.alpen.name, [1, 2])
     await a.getByRole('button', { name: 'Save reply' }).click()
     await expect(toast(page, 'Reply saved')).toBeVisible()
     fe2('Supplier reply, typed: prices typed (one per item)', typed, 2)
@@ -222,7 +225,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
 
     // Lahore: the reply as the supplier wrote it, pasted from the clipboard; nothing is saved until Accept.
     const b = await reply(page, s.lahore.name)
-    await page.evaluate(t => navigator.clipboard.writeText(t), ['Dear Sir,', `${s.model1} DN50 - USD 100.00 each, 3 weeks`, `${s.model2} 0-10 bar - USD 190.00 each, 2 weeks`, 'Regards'].join('\n'))
+    await page.evaluate(t => navigator.clipboard.writeText(t), ['Dear Sir,', `${s.model1} DN50 - USD 100.00 each, 3 weeks, net wt 2.5 kg`, `${s.model2} 0-10 bar - USD 190.00 each, 2 weeks, net wt 1.1 kg`, 'Regards'].join('\n'))
     await resetCount(page)
     await b.getByRole('button', { name: 'Paste reply' }).click()
     await expect(b.getByText('Read from their reply')).toBeVisible()

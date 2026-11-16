@@ -33,6 +33,7 @@ import {
   draftFromLines,
   draftFromSuggestions,
   isReplyDirty,
+  missingQuoteDetails,
   planReplySave,
   qtyText,
   REPLY_CURRENCIES,
@@ -54,7 +55,9 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  * A supplier's reply (R07; grade-B R2 and R4, 2026-10-22). The suppliers are listed ONCE, in "Suppliers asked" (SuppliersAsked.tsx):
  * one row per supplier with "Enter reply" or "Edit reply". That opens this dialog (a bottom sheet on a phone), and only then the
  * price form: a price per item, the currency already filled in (the supplier's last currency, else the country map: "there is
- * nothing to pick"), lead time and stock once for the whole reply. While a price is typed the row says what it reads as in PKR at
+ * nothing to pick"), and stock once for the whole reply. Each item also has its own lead time, weight of one unit and country of
+ * origin; the lead time and the weight are required for every item that gets a price (owner, 16 Nov 2026), so Save reply says
+ * what is missing under the box and puts the cursor in the first one instead of saving. While a price is typed the row says what it reads as in PKR at
  * today's rate (never whether it is the lowest); with no rate it says the reply can be saved and the rate added afterwards.
  *
  *   FE-2  supplier reply   Enter reply, one typed price per item, currency never typed, then Save reply
@@ -170,6 +173,8 @@ export function SupplierReplyDialog({
   const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
   /** What was typed in each price box, for the reason shown when it is not a price (HW-48). */
   const [priceText, setPriceText] = useState<Record<string, string>>({})
+  /** A save was tried with a lead time or a weight missing: from then on the missing ones say so under their boxes. */
+  const [checkDetails, setCheckDetails] = useState(false)
 
   const hasLines = inquiry.lines.length > 0
   const askedLine = allItems ? askedAboutText(inquiry, allItems) : null
@@ -189,6 +194,15 @@ export function SupplierReplyDialog({
     if (!d.currency) return // no currency picked yet: nothing is saved (audit R1)
     const plan = planReplySave(existing, d)
     if (plan.prices.length === 0 && plan.removeItemIds.length === 0) return
+    // Every priced item needs its lead time and the weight of one unit: nothing is saved until they are in (16 Nov 2026).
+    const missing = missingQuoteDetails(d)
+    const firstMissing = items.find(it => missing[it.id])
+    if (firstMissing) {
+      setCheckDetails(true)
+      const id = `${replyInputId(inquiry.id, firstMissing.id)}-${missing[firstMissing.id].leadTime ? 'lead' : 'weight'}`
+      requestAnimationFrame(() => document.getElementById(id)?.focus())
+      return
+    }
     if (saving.current) return
     saving.current = true
     try {
@@ -324,6 +338,9 @@ export function SupplierReplyDialog({
   const canSave = Boolean(draft.currency) && dirty && (typed > 0 || planReplySave(existing, draft).removeItemIds.length > 0)
   // The price box that gets the cursor when the dialog opens: the one asked for, else the first item still open.
   const autofocusId = focusItemId ?? items.find(it => !inquiry.itemDeclines[it.id])?.id
+  const missing = checkDetails ? missingQuoteDetails(draft) : {}
+  const openItems = items.filter(it => !inquiry.itemDeclines[it.id])
+  const missingCount = Object.keys(missing).filter(id => openItems.some(it => it.id === id)).length
 
   return (
     <Dialog open onOpenChange={o => (o ? null : onClose())} dirty={dirty || unread} busy={save.isPending}>
@@ -423,6 +440,13 @@ export function SupplierReplyDialog({
                   </span>
                 </div>
               ) : null}
+              {missingCount > 0 ? (
+                <p role="status" className="text-sm font-medium text-tone-danger-fg" data-reply-missing="">
+                  {missingCount === 1
+                    ? 'One priced item still needs a lead time or a weight. Add it, then save the reply.'
+                    : `${missingCount} priced items still need a lead time or a weight. Add them, then save the reply.`}
+                </p>
+              ) : null}
               <ul className="grid gap-3">
                 {items.map(it => {
                   const q = qtyText(it.qty, it.unit)
@@ -430,8 +454,14 @@ export function SupplierReplyDialog({
                   const price = draft.prices[it.id]
                   // A number in the draft is fine as it is (a pasted reply or a saved price may have replaced the text typed).
                   const problem = reason || (typeof price === 'number' && price > 0) ? null : replyPriceProblem(priceText[it.id] ?? '')
+                  const x = draft.extras?.[it.id] ?? { weight: null, weightUnit: 'kg' as const, origin: '' }
+                  const patch = (p: Partial<ItemExtras>) => setDraft(d => ({ ...d, extras: { ...d.extras, [it.id]: { ...(d.extras?.[it.id] ?? x), ...p } } }))
+                  const base = replyInputId(inquiry.id, it.id)
+                  const gap = missing[it.id]
+                  const lead = draft.leadTimes?.[it.id] ?? draft.leadTime
+                  const firstOpen = openItems[0]?.id === it.id
                   return (
-                    <li key={it.id} className="grid content-start gap-1">
+                    <li key={it.id} className="grid content-start gap-1 border-t border-line pt-3 first:border-t-0 first:pt-0" data-reply-line={it.id}>
                       <div className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_auto]" data-reply-item={it.id}>
                         <span className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2" aria-hidden="true">
                           <span className="num text-sm text-fg-muted">{it.number}</span>
@@ -516,77 +546,108 @@ export function SupplierReplyDialog({
                         </p>
                       ) : null}
                       {!reason && typeof price === 'number' && price > 0 ? <PricePreview amount={price} currency={draft.currency} rates={rates} /> : null}
-                    </li>
-                  )
-                })}
-              </ul>
-
-              <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_12.5rem]">
-                <label className="grid gap-1 text-sm font-semibold text-fg">
-                  Lead time
-                  <TextField
-                    aria-label={`Lead time from ${inquiry.supplierName}`}
-                    value={draft.leadTime}
-                    onChange={e => setDraft(d => ({ ...d, leadTime: e.target.value }))}
-                    placeholder="2 weeks, ex-stock"
-                  />
-                </label>
-                <label className="grid gap-1 text-sm font-semibold text-fg">
-                  Stock
-                  <Select
-                    aria-label={`Stock at ${inquiry.supplierName}`}
-                    options={[
-                      { value: 'yes', label: 'In stock' },
-                      { value: 'no', label: 'Not in stock' },
-                    ]}
-                    placeholder="Not stated"
-                    value={draft.inStock === null ? '' : draft.inStock ? 'yes' : 'no'}
-                    onChange={e => setDraft(d => ({ ...d, inStock: e.target.value === '' ? null : e.target.value === 'yes' }))}
-                  />
-                </label>
-              </div>
-              <details className="text-sm" open={Object.keys(draft.extras ?? {}).length > 0 || undefined} data-reply-extras="">
-                <summary className="flex min-h-touch w-fit cursor-pointer items-center rounded-control font-semibold text-fg-2 hover:text-fg md:min-h-control">Weight and country of origin (optional)</summary>
-                <p className="mt-2 text-fg-muted">Weight is for ONE unit. It goes on the comparative statement. Nothing is worked out from it.</p>
-                <ul className="mt-2 grid gap-3">
-                  {items
-                    .filter(it => !inquiry.itemDeclines[it.id])
-                    .map(it => {
-                      const x = draft.extras?.[it.id] ?? { weight: null, weightUnit: 'kg' as const, origin: '' }
-                      const patch = (p: Partial<ItemExtras>) => setDraft(d => ({ ...d, extras: { ...d.extras, [it.id]: { ...x, ...p } } }))
-                      return (
-                        <li key={it.id} className="grid items-center gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-                          <span className="min-w-0 [overflow-wrap:anywhere]" title={it.description}>
-                            <span className="num mr-2 text-fg-muted">{it.number}</span>
-                            {it.description}
-                          </span>
-                          <span className="grid grid-cols-[minmax(0,1fr)_5.25rem_minmax(0,1.3fr)] gap-2">
-                            <NumberInput
-                              aria-label={`Weight of one unit, item ${it.number} from ${inquiry.supplierName}`}
-                              value={x.weight}
-                              onChange={v => patch({ weight: v })}
-                              placeholder="Weight"
-                              min={0}
-                            />
-                            <Select
-                              aria-label={`Weight unit, item ${it.number} from ${inquiry.supplierName}`}
-                              options={WEIGHT_UNITS}
-                              value={x.weightUnit}
-                              onChange={e => patch({ weightUnit: e.target.value as WeightUnit })}
-                            />
+                      {reason ? null : (
+                        <div className="mt-1 grid items-start gap-x-3 gap-y-2 sm:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)_minmax(0,1fr)]" data-reply-details={it.id}>
+                          <div className="grid gap-1">
+                            <span className="flex min-h-6 items-center justify-between gap-2">
+                              <label htmlFor={`${base}-lead`} className="text-sm font-semibold text-fg-2">
+                                Lead time
+                              </label>
+                              {firstOpen && openItems.length > 1 && lead.trim() ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setDraft(d => ({ ...d, leadTimes: { ...d.leadTimes, ...Object.fromEntries(openItems.map(o => [o.id, lead])) } }))}
+                                  className="inline-flex min-h-touch items-center rounded-control px-1 text-sm font-bold text-primary hover:bg-selected md:min-h-6"
+                                >
+                                  Same for all items
+                                </button>
+                              ) : null}
+                            </span>
                             <TextField
+                              id={`${base}-lead`}
+                              aria-label={`Lead time, item ${it.number} from ${inquiry.supplierName}`}
+                              aria-invalid={gap?.leadTime ? true : undefined}
+                              aria-describedby={gap?.leadTime ? `${base}-lead-problem` : undefined}
+                              value={lead}
+                              onChange={e => {
+                                const v = e.target.value
+                                setDraft(d => ({ ...d, leadTimes: { ...d.leadTimes, [it.id]: v } }))
+                              }}
+                              placeholder="2 weeks, ex-stock"
+                              maxLength={80}
+                            />
+                            {gap?.leadTime ? (
+                              <p id={`${base}-lead-problem`} className="text-sm font-medium text-tone-danger-fg">
+                                Add the lead time, for example 2 weeks or ex-stock.
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="grid gap-1">
+                            <span className="flex min-h-6 items-center">
+                              <label htmlFor={`${base}-weight`} className="text-sm font-semibold text-fg-2">
+                                Weight of one unit
+                              </label>
+                            </span>
+                            <span className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
+                              <NumberInput
+                                id={`${base}-weight`}
+                                aria-label={`Weight of one unit, item ${it.number} from ${inquiry.supplierName}`}
+                                aria-invalid={gap?.weight ? true : undefined}
+                                aria-describedby={gap?.weight ? `${base}-weight-problem` : undefined}
+                                value={x.weight}
+                                onChange={v => patch({ weight: v })}
+                                placeholder="Weight"
+                                min={0}
+                                className="num"
+                              />
+                              <Select
+                                aria-label={`Weight unit, item ${it.number} from ${inquiry.supplierName}`}
+                                options={WEIGHT_UNITS}
+                                value={x.weightUnit}
+                                onChange={e => patch({ weightUnit: e.target.value as WeightUnit })}
+                              />
+                            </span>
+                            {gap?.weight ? (
+                              <p id={`${base}-weight-problem`} className="text-sm font-medium text-tone-danger-fg">
+                                Add the weight of one unit, above zero.
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="grid gap-1">
+                            <span className="flex min-h-6 items-center">
+                              <label htmlFor={`${base}-origin`} className="text-sm font-semibold text-fg-2">
+                                Country of origin <span className="font-normal text-fg-muted">(optional)</span>
+                              </label>
+                            </span>
+                            <TextField
+                              id={`${base}-origin`}
                               aria-label={`Country of origin, item ${it.number} from ${inquiry.supplierName}`}
                               value={x.origin}
                               onChange={e => patch({ origin: e.target.value })}
                               placeholder="Country"
                               maxLength={60}
                             />
-                          </span>
-                        </li>
-                      )
-                    })}
-                </ul>
-              </details>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+
+              <label className="grid gap-1 text-sm font-semibold text-fg sm:max-w-[12.5rem]">
+                Stock
+                <Select
+                  aria-label={`Stock at ${inquiry.supplierName}`}
+                  options={[
+                    { value: 'yes', label: 'In stock' },
+                    { value: 'no', label: 'Not in stock' },
+                  ]}
+                  placeholder="Not stated"
+                  value={draft.inStock === null ? '' : draft.inStock ? 'yes' : 'no'}
+                  onChange={e => setDraft(d => ({ ...d, inStock: e.target.value === '' ? null : e.target.value === 'yes' }))}
+                />
+              </label>
               {draft.currency ? (
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-2">
                   <span>{`Prices in ${currencyNote}.`}</span>

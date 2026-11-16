@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SessionContext } from '@/app/session'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { SupplierReplyDialog } from '@/features/rfqs/SupplierReplies'
-import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
+import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 /* One supplier's reply, in its dialog (R07; grade-B R2): Enter in a price box saves the reply once; closing with prices typed asks first. */
@@ -72,6 +72,9 @@ describe('SupplierReplyDialog', () => {
     const box = screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' })
     expect(box).toHaveFocus()
     await user.type(box, '1500')
+    await user.type(screen.getByRole('textbox', { name: 'Lead time, item 1 from Orient Analytical' }), '2 weeks')
+    await user.type(screen.getByRole('textbox', { name: 'Weight of one unit, item 1 from Orient Analytical' }), '1.5')
+    await user.click(box)
     await user.keyboard('{Enter}')
     await waitFor(() => expect(writes).toHaveLength(1))
     await user.keyboard('{Enter}')
@@ -80,6 +83,56 @@ describe('SupplierReplyDialog', () => {
     await waitFor(() => expect(screen.getAllByText('Reply saved').length).toBeGreaterThan(0))
     expect(writes).toHaveLength(1)
     expect(onClose).toHaveBeenCalled() // saved: the dialog closes
+  })
+
+  it('refuses to save a priced item without its lead time and weight, says which under each box, and puts the cursor in the first', async () => {
+    const writes: FakeCall[] = []
+    installFakeDb(call => {
+      if (call.target === 'supplier_quote_lines' && call.verb === 'upsert') writes.push(call)
+      return { data: [] }
+    })
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    renderDialog(onClose)
+    await user.type(screen.getByRole('textbox', { name: 'Price for item 1 from Orient Analytical' }), '1500')
+    await user.click(screen.getByRole('button', { name: 'Save reply' }))
+    const lead = screen.getByRole('textbox', { name: 'Lead time, item 1 from Orient Analytical' })
+    const weight = screen.getByRole('textbox', { name: 'Weight of one unit, item 1 from Orient Analytical' })
+    await waitFor(() => expect(lead).toHaveFocus())
+    expect(lead).toHaveAttribute('aria-invalid', 'true')
+    expect(lead).toHaveAccessibleDescription('Add the lead time, for example 2 weeks or ex-stock.')
+    expect(weight).toHaveAttribute('aria-invalid', 'true')
+    expect(weight).toHaveAccessibleDescription('Add the weight of one unit, above zero.')
+    expect(screen.getByText('One priced item still needs a lead time or a weight. Add it, then save the reply.')).toBeInTheDocument()
+    expect(writes).toHaveLength(0)
+    expect(onClose).not.toHaveBeenCalled()
+
+    // The lead time alone is not enough: the cursor goes on to the weight.
+    await user.type(lead, 'Ex-stock')
+    expect(lead).not.toHaveAttribute('aria-invalid')
+    await user.click(screen.getByRole('button', { name: 'Save reply' }))
+    await waitFor(() => expect(weight).toHaveFocus())
+    expect(writes).toHaveLength(0)
+
+    await user.type(weight, '0.75')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Weight unit, item 1 from Orient Analytical' }), 'lb')
+    await user.click(screen.getByRole('button', { name: 'Save reply' }))
+    await waitFor(() => expect(writes).toHaveLength(1))
+    const rows = opArgs(writes[0], 'upsert')?.[0] as Record<string, unknown>[]
+    expect(rows).toEqual([expect.objectContaining({ rfq_item_id: 'it-1', unit_price: 1500, lead_time: 'Ex-stock', weight: 0.75, weight_unit: 'lb' })])
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('asks nothing of an item with no price: only the priced items need a lead time and weight', async () => {
+    installFakeDb(() => ({ data: [] }))
+    const user = userEvent.setup()
+    renderDialog()
+    // Nothing typed: no problem is shown under the lead time or the weight.
+    expect(screen.getByRole('textbox', { name: 'Lead time, item 1 from Orient Analytical' })).not.toHaveAttribute('aria-invalid')
+    expect(screen.queryByText(/Add the lead time/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Save reply' })).toBeDisabled()
+    await user.type(screen.getByRole('textbox', { name: 'Lead time, item 1 from Orient Analytical' }), '2 weeks')
+    expect(screen.queryByText(/Add the weight/)).toBeNull()
   })
 
   it("the five Cannot quote reasons sit behind one menu, not five buttons", async () => {

@@ -49,13 +49,20 @@ test('a pasted WhatsApp price is read, matched to the supplier, and Accept saves
   await expect(page.getByTestId('guess-line')).toHaveText(`Supplier price from ${s.rhein.name}`)
   const accept = page.getByRole('button', { name: /^Accept \d+ prices?$/ })
   await expect(accept).toHaveText('Accept 2 prices')
+  // The lead time the message stated is filled in; the weight of one unit it did not state is asked for before saving.
+  await expect(page.getByLabel(`Lead time, item 1 from ${s.rhein.name}`, { exact: true })).toHaveValue('8 weeks')
+  await accept.click()
+  await expect(page.getByLabel(`Weight of one unit, item 1 from ${s.rhein.name}`, { exact: true })).toBeFocused()
+  expect(await must(rest<unknown[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.rheinInquiry.id}&select=id`))).toEqual([])
+  await page.getByLabel(`Weight of one unit, item 1 from ${s.rhein.name}`, { exact: true }).fill('4.2')
+  await page.getByLabel(`Weight of one unit, item 2 from ${s.rhein.name}`, { exact: true }).fill('0.9')
   await accept.click()
   await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
 
-  const lines = await must(rest<{ inquiry_id: string; rfq_item_id: string; unit_price: number; currency: string }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.rheinInquiry.id}&select=inquiry_id,rfq_item_id,unit_price,currency&order=unit_price.desc`))
-  expect(lines.map(l => [l.rfq_item_id, Number(l.unit_price), l.currency])).toEqual([
-    [s.first.id, 3610, 'EUR'],
-    [s.second.id, 980, 'EUR'],
+  const lines = await must(rest<{ inquiry_id: string; rfq_item_id: string; unit_price: number; currency: string; lead_time: string; weight: number }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.rheinInquiry.id}&select=inquiry_id,rfq_item_id,unit_price,currency,lead_time,weight&order=unit_price.desc`))
+  expect(lines.map(l => [l.rfq_item_id, Number(l.unit_price), l.currency, l.lead_time, Number(l.weight)])).toEqual([
+    [s.first.id, 3610, 'EUR', '8 weeks', 4.2],
+    [s.second.id, 980, 'EUR', '8 weeks', 0.9],
   ])
   const other = await must(rest<unknown[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.shanghaiInquiry.id}&select=id`))
   expect(other).toEqual([])

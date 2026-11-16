@@ -3,6 +3,7 @@ import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqu
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 import { openStage, stagesOf } from '../support/job'
+import { fillReplyDetails } from '../support/replyDetails'
 
 /*
  * R07 end to end, against the local CI stack: the RFQ detail page, as the fixture users through the real login form.
@@ -102,7 +103,12 @@ const row = async (page: Page, name: string) => {
   return dialog
 }
 const linesOf = (inquiryId: string) =>
-  must(rest<{ rfq_item_id: string; unit_price: number; currency: string; fx_rate_pkr: number | null; lead_time: string | null; in_stock: boolean | null }[]>('admin', `supplier_quote_lines?inquiry_id=eq.${inquiryId}&select=rfq_item_id,unit_price,currency,fx_rate_pkr,lead_time,in_stock`))
+  must(
+    rest<{ rfq_item_id: string; unit_price: number; currency: string; fx_rate_pkr: number | null; lead_time: string | null; in_stock: boolean | null; weight: number | null; weight_unit: string | null }[]>(
+      'admin',
+      `supplier_quote_lines?inquiry_id=eq.${inquiryId}&select=rfq_item_id,unit_price,currency,fx_rate_pkr,lead_time,in_stock,weight,weight_unit`,
+    ),
+  )
 const inquiryOf = (id: string) =>
   must(rest<{ no_offer_on: string | null; no_offer_reason: string | null; notes: string | null; chase_count: number; last_chased_on: string | null }[]>('admin', `supplier_inquiries?id=eq.${id}&select=no_offer_on,no_offer_reason,notes,chase_count,last_chased_on`)).then(r => r[0])
 const declinesOf = (inquiryId: string) =>
@@ -131,6 +137,8 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     for (const [i, it] of s.items.entries()) {
       await cn.getByLabel(`Price for item ${i + 1} from ${s.china.name}`).fill(String(1000 + i * 500))
       typedPrices++
+      // Every priced item needs its lead time and the weight of one unit (16 Nov 2026).
+      await fillReplyDetails(cn, s.china.name, [i + 1], { leadTime: `${3 + i} weeks`, weight: String(2 + i) })
       void it
     }
     // No CNY rate: the row says the reply can be saved and the rate added afterwards (live PKR preview, C-40).
@@ -145,6 +153,12 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     expect(lines).toHaveLength(2)
     expect(lines.every(l => l.currency === 'CNY')).toBe(true)
     expect(lines.every(l => l.fx_rate_pkr === null)).toBe(true) // no CNY rate: saved anyway, never blocked
+    // Each item keeps its own lead time and weight.
+    const byItem = Object.fromEntries(lines.map(l => [l.rfq_item_id, l]))
+    expect(s.items.map(it => [byItem[it.id].lead_time, Number(byItem[it.id].weight), byItem[it.id].weight_unit])).toEqual([
+      ['3 weeks', 2, 'kg'],
+      ['4 weeks', 3, 'kg'],
+    ])
 
     // The price line shows the supplier's own figure, not compared; the dialog closed, and the supplier's row offers Edit reply.
     await expect(cn).toHaveCount(0)
@@ -163,11 +177,21 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await r.getByLabel(`Price for item 1 from ${s.usd.name}`).fill('100')
     // The live preview: what it reads as in PKR at today's rate (and nothing about being the lowest).
     await expect(r.getByText("Reads as ≈ PKR 28,000 at today's USD rate.")).toBeVisible()
-    await r.getByLabel(`Lead time from ${s.usd.name}`).fill('3 weeks')
+    // Save is refused until the priced item has its lead time and weight: the first missing box gets the cursor.
+    await r.getByRole('button', { name: 'Save reply' }).click()
+    const lead = r.getByLabel(`Lead time, item 1 from ${s.usd.name}`, { exact: true })
+    await expect(lead).toBeFocused()
+    await expect(lead).toHaveAttribute('aria-invalid', 'true')
+    await expect(r.getByText('Add the lead time, for example 2 weeks or ex-stock.')).toBeVisible()
+    await expect(r.getByText('Add the weight of one unit, above zero.')).toBeVisible()
+    expect(await linesOf(s.usd.inquiryId)).toHaveLength(0)
+    await review(page, 'rfq-detail-02-reply-details-missing-1440')
+    await fillReplyDetails(r, s.usd.name, [1], { leadTime: '3 weeks', weight: '750', unit: 'g' })
     await r.getByRole('button', { name: 'Save reply' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
     const [line] = await linesOf(s.usd.inquiryId)
-    expect(line).toMatchObject({ currency: 'USD', unit_price: 100, lead_time: '3 weeks' })
+    expect(line).toMatchObject({ currency: 'USD', unit_price: 100, lead_time: '3 weeks', weight_unit: 'g' })
+    expect(Number(line.weight)).toBe(750)
     expect(Number(line.fx_rate_pkr)).toBe(280)
     const item = page.getByRole('article', { name: 'Item 1' })
     // One line: the PKR figure, the lead time; the supplier's own figure and the rates open on request.
@@ -182,6 +206,47 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
   })
 })
 
+test.describe('reply form: lead time and weight on every priced item (16 Nov 2026)', () => {
+  for (const [w, h] of [
+    [1440, 900],
+    [375, 812],
+  ] as const) {
+    test(`each item shows its lead time, weight and origin; a missing one is named under its box (${w})`, async ({ page }) => {
+      await page.setViewportSize({ width: w, height: h })
+      const s = await seed()
+      await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+      const r = await row(page, s.germany.name)
+      for (const n of [1, 2]) {
+        await expect(r.getByLabel(`Lead time, item ${n} from ${s.germany.name}`, { exact: true })).toBeVisible()
+        await expect(r.getByLabel(`Weight of one unit, item ${n} from ${s.germany.name}`, { exact: true })).toBeVisible()
+        await expect(r.getByLabel(`Country of origin, item ${n} from ${s.germany.name}`, { exact: true })).toBeVisible()
+      }
+      await r.getByLabel(`Price for item 1 from ${s.germany.name}`).fill('1250')
+      await r.getByLabel(`Lead time, item 1 from ${s.germany.name}`, { exact: true }).fill('6 weeks')
+      await r.getByLabel(`Country of origin, item 1 from ${s.germany.name}`, { exact: true }).fill('Germany')
+      await r.getByLabel(`Price for item 2 from ${s.germany.name}`).fill('480')
+      await r.getByRole('button', { name: 'Save reply' }).click()
+      // Item 1 lacks its weight, item 2 both; the cursor goes to the first missing box (item 1's weight).
+      await expect(r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true })).toBeFocused()
+      await expect(r.getByLabel(`Lead time, item 2 from ${s.germany.name}`, { exact: true })).toHaveAttribute('aria-invalid', 'true')
+      await expect(r.getByLabel(`Lead time, item 1 from ${s.germany.name}`, { exact: true })).not.toHaveAttribute('aria-invalid', 'true')
+      expect(await linesOf(s.germany.inquiryId)).toHaveLength(0)
+      // "Same for all items" copies the first item's lead time to the rest.
+      await r.getByRole('button', { name: 'Same for all items' }).click()
+      await expect(r.getByLabel(`Lead time, item 2 from ${s.germany.name}`, { exact: true })).toHaveValue('6 weeks')
+      await r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true }).fill('3.4')
+      await r.getByLabel(`Lead time, item 1 from ${s.germany.name}`, { exact: true }).focus()
+      await review(page, `reply-details-${w === 375 ? 'phone' : 'desktop'}-${w}`)
+      // No horizontal scroll inside the form at this width.
+      expect(await r.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+      await fillReplyDetails(r, s.germany.name, [2], { leadTime: '6 weeks', weight: '0.9' })
+      await r.getByRole('button', { name: 'Save reply' }).click()
+      await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
+      expect((await linesOf(s.germany.inquiryId)).map(l => l.lead_time)).toEqual(['6 weeks', '6 weeks'])
+    })
+  }
+})
+
 test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
   const copy = (page: Page, text: string) => page.evaluate(t => navigator.clipboard.writeText(t), text)
 
@@ -189,7 +254,8 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.usd.name)
-    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 4 weeks`, 'Regards'].join('\n'))
+    // The reply states each lead time and weight, so Accept saves at once.
+    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks, net wt 2.5 kg`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 4 weeks, net wt 800 g`, 'Regards'].join('\n'))
     let actions = 0
     await r.getByRole('button', { name: 'Paste reply' }).click() // action 1: paste
     actions++
@@ -201,8 +267,33 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
     expect(actions).toBeLessThanOrEqual(2)
     await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
     const lines = await linesOf(s.usd.inquiryId)
-    expect(lines.map(l => [Number(l.unit_price), l.currency]).sort()).toEqual([[100, 'USD'], [250, 'USD']])
+    expect(lines.map(l => [Number(l.unit_price), l.currency, l.lead_time, Number(l.weight), l.weight_unit]).sort()).toEqual([
+      [100, 'USD', '3 weeks', 2.5, 'kg'],
+      [250, 'USD', '4 weeks', 800, 'g'],
+    ])
     expect(Number(lines[0].fx_rate_pkr)).toBe(280)
+  })
+
+  test('a pasted reply that does not state the weight: Accept fills what was read and asks for the rest before saving', async ({ page }) => {
+    const s = await seed()
+    await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
+    const r = await row(page, s.usd.name)
+    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 2 weeks`, 'Regards'].join('\n'))
+    await r.getByRole('button', { name: 'Paste reply' }).click()
+    await r.getByRole('button', { name: 'Accept 2 prices' }).click()
+    // Nothing saved: the prices and lead times read are in the form, and the cursor is in the first weight box.
+    await expect(r.getByLabel(`Lead time, item 1 from ${s.usd.name}`, { exact: true })).toHaveValue('3 weeks')
+    await expect(r.getByLabel(`Lead time, item 2 from ${s.usd.name}`, { exact: true })).toHaveValue('2 weeks')
+    await expect(r.getByLabel(`Weight of one unit, item 1 from ${s.usd.name}`, { exact: true })).toBeFocused()
+    await expect(r.getByText('2 priced items still need a lead time or a weight. Add them, then save the reply.')).toBeVisible()
+    expect(await linesOf(s.usd.inquiryId)).toHaveLength(0)
+    await r.getByLabel(`Weight of one unit, item 1 from ${s.usd.name}`, { exact: true }).fill('2.5')
+    await r.getByLabel(`Weight of one unit, item 2 from ${s.usd.name}`, { exact: true }).fill('1.2')
+    await r.getByRole('button', { name: 'Save reply' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
+    const lines = await linesOf(s.usd.inquiryId)
+    expect(lines.map(l => Number(l.weight)).sort()).toEqual([1.2, 2.5])
+    expect(lines.every(l => l.lead_time)).toBe(true)
   })
 
   test('a figure that could be read two ways is highlighted for checking, and Cancel saves nothing', async ({ page }) => {
@@ -548,7 +639,15 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await page.getByRole('menuitem', { name: 'Edit reply' }).click()
     // The supplier's reply dialog opens with the cursor in that item's price box.
     await expect(page.getByRole('dialog', { name: s.usd.name, exact: true }).getByLabel(`Price for item 1 from ${s.usd.name}`)).toBeFocused()
+    // An older line saved without a weight: the lead time it has is shown on the item, and saving asks for the weight.
+    const edit = page.getByRole('dialog', { name: s.usd.name, exact: true })
+    await expect(edit.getByLabel(`Lead time, item 1 from ${s.usd.name}`, { exact: true })).toHaveValue('3 weeks')
+    await edit.getByLabel(`Price for item 1 from ${s.usd.name}`).fill('110')
+    await edit.getByRole('button', { name: 'Save reply' }).click()
+    await expect(edit.getByLabel(`Weight of one unit, item 1 from ${s.usd.name}`, { exact: true })).toBeFocused()
+    expect((await linesOf(s.usd.inquiryId)).map(l => Number(l.unit_price))).toEqual([100])
     await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Discard' }).click()
 
     await menu()
     await page.getByRole('menuitem', { name: 'Remove reply' }).click()
@@ -809,6 +908,7 @@ test.describe('reply currency for a supplier with no country (audit R1)', () => 
     expect(await linesOf(inq.id)).toEqual([])
     await chips.getByRole('button', { name: 'USD', exact: true }).click()
     await expect(r.getByRole('button', { name: 'Save reply' })).toBeEnabled()
+    await fillReplyDetails(r, bare.name, [1])
     await r.getByRole('button', { name: 'Save reply' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
     expect((await linesOf(inq.id)).map(l => l.currency)).toEqual(['USD'])

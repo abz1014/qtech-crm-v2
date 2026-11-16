@@ -12,12 +12,25 @@ import { FoldRow } from '@/ui/FoldRow'
 import { useToast } from '@/ui/useToast'
 import { Checkbox } from '@/ui/form/Checkbox'
 import { controlClass } from '@/ui/form/fieldContext'
+import { NumberInput } from '@/ui/form/NumberInput'
+import { Select } from '@/ui/form/Select'
+import { TextField } from '@/ui/form/TextField'
 import { invalidateAfter } from '@/features/invalidation'
 import { qk } from '@/features/queryKeys'
 import { deleteAttachment, type AttachmentRow, type InquiryRow, type RfqItemRow } from '@/features/rfqs/api'
 import { useClarifications, useRfqInquiries, useRfqItems, useSaveReply, useSetClarificationAnswer, useSetItemDecline, useUploadAttachment } from '@/features/rfqs/hooks'
 import { attachmentPath, RFQ_FILE_ACCEPT } from '@/features/rfqs/lib/clarifications'
-import { currencyForSupplier, draftFromLines, draftFromSuggestions, planReplySave, suggestFromReply, type SuggestionSet } from '@/features/rfqs/lib'
+import {
+  currencyForSupplier,
+  draftFromLines,
+  draftFromSuggestions,
+  missingQuoteDetails,
+  planReplySave,
+  suggestFromReply,
+  type ReplyDraft,
+  type SuggestionSet,
+  type WeightUnit,
+} from '@/features/rfqs/lib'
 import { deleteCapture, safely } from '@/lib/capture/store'
 import { SHARED_GONE, useSharedItem } from '@/features/jobs/sharedItem'
 import { appendNotesSafely, undoAppendedNote } from '@/features/capture/api'
@@ -418,6 +431,8 @@ function PickButton({ icon, label, accept, capture, onFiles }: { icon: typeof Ca
 /**
  * A supplier's reply read into prices: the suggestions are ticked (the unsure ones say "Check this") and "Accept N prices" saves
  * them through the reply save of the Suppliers asked row (the same plan, the same currency rules). Nothing is saved until then.
+ * Each ticked price shows its lead time and the weight of one unit, filled in from the reply where it said them. Both are required
+ * (owner, 16 Nov 2026): Accept says what is missing under the box and puts the cursor in the first one instead of saving.
  */
 function PriceSection({
   rfqId,
@@ -490,20 +505,58 @@ function PriceSection({
   }, [source, items, inquiry])
 
   const selected = useMemo(() => picked ?? new Set((set?.suggestions ?? []).filter(s => s.selectable).map(s => s.key)), [picked, set])
+  /** Lead time and weight typed here per item, over what the reply said. */
+  const [details, setDetails] = useState<Record<string, { leadTime?: string; weight?: number | null; weightUnit?: WeightUnit }>>({})
+  const [checkDetails, setCheckDetails] = useState(false)
+  useEffect(() => {
+    setDetails({})
+    setCheckDetails(false)
+  }, [set])
+
+  const existing = useMemo(
+    () => (inquiry?.lines ?? []).map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock, weight: l.weight, weightUnit: l.weightUnit, origin: l.origin })),
+    [inquiry],
+  )
+  /** What Accept saves: the ticked prices, with each item's lead time and weight (typed here, else read from the reply). */
+  const next = useMemo<ReplyDraft | null>(() => {
+    if (!inquiry || !set) return null
+    const base = draftFromLines(existing, currencyForSupplier(inquiry.lastCurrency, inquiry.supplierCountry).currency)
+    const d = draftFromSuggestions(base, set, selected)
+    const leadTimes = { ...d.leadTimes }
+    const extras = { ...d.extras }
+    for (const [itemId, t] of Object.entries(details)) {
+      if (t.leadTime !== undefined) leadTimes[itemId] = t.leadTime
+      if (t.weight !== undefined || t.weightUnit !== undefined) {
+        const had = extras[itemId] ?? { weight: null, weightUnit: 'kg' as const, origin: '' }
+        extras[itemId] = { ...had, ...(t.weight !== undefined ? { weight: t.weight } : {}), ...(t.weightUnit ? { weightUnit: t.weightUnit } : {}) }
+      }
+    }
+    return { ...d, leadTimes, extras }
+  }, [inquiry, set, selected, existing, details])
+  // Only the ticked items are asked for: an older saved line for another item is not shown here.
+  const ticked = new Set((set?.suggestions ?? []).filter(s => selected.has(s.key) && s.selectable && s.itemId).map(s => s.itemId as string))
+  const missingAll = next ? missingQuoteDetails(next) : {}
+  const missing = Object.fromEntries(Object.entries(missingAll).filter(([id]) => ticked.has(id)))
+  const fieldId = (itemId: string, what: 'lead' | 'weight') => `add-price-${itemId}-${what}`
+  const patch = (itemId: string, p: { leadTime?: string; weight?: number | null; weightUnit?: WeightUnit }) => setDetails(d => ({ ...d, [itemId]: { ...d[itemId], ...p } }))
 
   async function accept() {
-    if (!inquiry || !set || busy) return
+    if (!inquiry || !set || !next || busy) return
+    const plan = planReplySave(existing, next)
+    if (plan.prices.length === 0 && plan.removeItemIds.length === 0) {
+      toast({ title: 'Nothing to accept', body: 'Tick at least one price.' })
+      return
+    }
+    const first = set.suggestions.find(s => s.itemId && ticked.has(s.itemId) && missing[s.itemId])
+    if (first?.itemId) {
+      setCheckDetails(true)
+      const id = fieldId(first.itemId, missing[first.itemId].leadTime ? 'lead' : 'weight')
+      requestAnimationFrame(() => document.getElementById(id)?.focus())
+      return
+    }
     setBusy(true)
     try {
       for (const d of set.declined) if (inquiry.itemDeclines[d.itemId] !== d.reason) await decline.mutateAsync({ inquiryId: inquiry.id, itemId: d.itemId, reason: d.reason })
-      const existing = inquiry.lines.map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock }))
-      const base = draftFromLines(existing, currencyForSupplier(inquiry.lastCurrency, inquiry.supplierCountry).currency)
-      const next = draftFromSuggestions(base, set, selected)
-      const plan = planReplySave(existing, next)
-      if (plan.prices.length === 0 && plan.removeItemIds.length === 0) {
-        toast({ title: 'Nothing to accept', body: 'Tick at least one price.' })
-        return
-      }
       const n = await save.mutateAsync({ inquiryId: inquiry.id, currency: next.currency, leadTime: plan.leadTime, inStock: plan.inStock, prices: plan.prices, removeItemIds: plan.removeItemIds })
       for (const f of files) await upload.mutateAsync({ clarificationId: null, file: f, path: attachmentPath(rfqId, crypto.randomUUID(), f.name, f.type) })
       toast({ title: 'Reply saved', body: `${inquiry.supplierName} · ${n} ${n === 1 ? 'price' : 'prices'}`, tone: 'success' })
@@ -564,17 +617,122 @@ function PriceSection({
                 }}
               />
               {s.blocked ? <span className="pl-8 text-base text-fg-2">{s.blocked}</span> : s.check.length > 0 ? <span className="pl-8 text-base text-tone-warning-fg">Check this: {s.check.join('; ')}</span> : null}
+              {next && s.itemId && selected.has(s.key) && s.selectable ? (
+                <QuoteDetails
+                  itemId={s.itemId}
+                  itemNumber={s.itemNumber ?? 0}
+                  supplierName={inquiry?.supplierName ?? ''}
+                  leadTime={next.leadTimes?.[s.itemId] ?? next.leadTime}
+                  weight={next.extras?.[s.itemId]?.weight ?? null}
+                  weightUnit={next.extras?.[s.itemId]?.weightUnit ?? 'kg'}
+                  missing={checkDetails ? missing[s.itemId] : undefined}
+                  fieldId={fieldId}
+                  onChange={p => patch(s.itemId as string, p)}
+                />
+              ) : null}
             </li>
           ))}
         </ul>
       )}
       {set && set.suggestions.length > 0 && inquiry ? (
-        <div>
+        <div className="grid justify-items-start gap-2">
+          {checkDetails && Object.keys(missing).length > 0 ? (
+            <p role="status" className="text-sm font-medium text-tone-danger-fg">
+              {Object.keys(missing).length === 1
+                ? 'One price still needs a lead time or a weight. Add it, then accept.'
+                : `${Object.keys(missing).length} prices still need a lead time or a weight. Add them, then accept.`}
+            </p>
+          ) : null}
           <Button variant="secondary" size="touch" icon={Check} onClick={() => void accept()} disabled={selected.size === 0} busy={busy} busyLabel="Saving">
             {selected.size === 1 ? 'Accept 1 price' : `Accept ${selected.size} prices`}
           </Button>
         </div>
       ) : null}
     </div>
+  )
+}
+
+const WEIGHT_UNITS = [
+  { value: 'kg', label: 'kg' },
+  { value: 'g', label: 'g' },
+  { value: 'lb', label: 'lb' },
+]
+
+/** One ticked price's lead time and weight of one unit, both required before Accept saves (the reply form's rule). */
+function QuoteDetails({
+  itemId,
+  itemNumber,
+  supplierName,
+  leadTime,
+  weight,
+  weightUnit,
+  missing,
+  fieldId,
+  onChange,
+}: {
+  itemId: string
+  itemNumber: number
+  supplierName: string
+  leadTime: string
+  weight: number | null
+  weightUnit: WeightUnit
+  missing: { leadTime: boolean; weight: boolean } | undefined
+  fieldId: (itemId: string, what: 'lead' | 'weight') => string
+  onChange: (p: { leadTime?: string; weight?: number | null; weightUnit?: WeightUnit }) => void
+}) {
+  const lead = fieldId(itemId, 'lead')
+  const wt = fieldId(itemId, 'weight')
+  return (
+    <span className="mt-1 grid gap-x-3 gap-y-2 pl-8 sm:grid-cols-2" data-add-price-details={itemId}>
+      <span className="grid gap-1">
+        <label htmlFor={lead} className="text-sm font-semibold text-fg-2">
+          Lead time
+        </label>
+        <TextField
+          id={lead}
+          aria-label={`Lead time, item ${itemNumber} from ${supplierName}`}
+          aria-invalid={missing?.leadTime ? true : undefined}
+          aria-describedby={missing?.leadTime ? `${lead}-problem` : undefined}
+          value={leadTime}
+          onChange={e => onChange({ leadTime: e.target.value })}
+          placeholder="2 weeks, ex-stock"
+          maxLength={80}
+        />
+        {missing?.leadTime ? (
+          <span id={`${lead}-problem`} className="text-sm font-medium text-tone-danger-fg">
+            Add the lead time, for example 2 weeks or ex-stock.
+          </span>
+        ) : null}
+      </span>
+      <span className="grid gap-1">
+        <label htmlFor={wt} className="text-sm font-semibold text-fg-2">
+          Weight of one unit
+        </label>
+        <span className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
+          <NumberInput
+            id={wt}
+            aria-label={`Weight of one unit, item ${itemNumber} from ${supplierName}`}
+            aria-invalid={missing?.weight ? true : undefined}
+            aria-describedby={missing?.weight ? `${wt}-problem` : undefined}
+            value={weight}
+            onChange={v => onChange({ weight: v })}
+            placeholder="Weight"
+            min={0}
+            className="num"
+          />
+          <Select
+            aria-label={`Weight unit, item ${itemNumber} from ${supplierName}`}
+            options={WEIGHT_UNITS}
+            value={weightUnit}
+            onChange={e => onChange({ weightUnit: e.target.value as WeightUnit })}
+          />
+        </span>
+        {missing?.weight ? (
+          <span id={`${wt}-problem`} className="text-sm font-medium text-tone-danger-fg">
+            Add the weight of one unit, above zero.
+          </span>
+        ) : null}
+      </span>
+    </span>
   )
 }

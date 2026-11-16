@@ -25,6 +25,8 @@ export interface FoldRowChip {
   icon: LucideIcon
   /** The chip's word, drawn and heard ("Done", "Waiting", "Not yet"). */
   word: string
+  /** What a screen reader hears instead of the drawn word, when they differ (the drawn "Create invoice" chip is heard "Needs action", so the row is not a second "Create invoice" button). */
+  heard?: string
   tone: FoldRowChipTone
 }
 const CHIP_TONE: Record<FoldRowChipTone, string> = {
@@ -82,7 +84,8 @@ export function FoldRow({ state, title, summary, open, onToggle, controlsId, chi
       {/* On a phone the chip drops its icon (the word says it) and sits closer, so a two-word title ("Supplier order") keeps one line (audit 2). */}
       <span className={cn('col-start-2 row-span-2 row-start-1 inline-flex min-h-chip items-center gap-1 self-center whitespace-nowrap rounded-pill border py-px pl-2 pr-3 text-xs font-card leading-none max-sm:px-2', CHIP_TONE[chip.tone])}>
         <Icon icon={chip.icon} size="chip" className="size-icon-chip max-sm:hidden" />
-        {chip.word}
+        {chip.heard ? <span aria-hidden="true">{chip.word}</span> : chip.word}
+        {chip.heard ? <span className="sr-only">{chip.heard}</span> : null}
       </span>
       <span className={cn('col-start-1 row-start-2 min-w-0 text-sm font-regular [overflow-wrap:anywhere]', tone ? summaryTone : 'text-fg-muted')}>{summary}</span>
     </>

@@ -285,7 +285,7 @@ function JobView({ facts }: { facts: JobFacts }) {
         data-work
         className="mt-4 grid min-w-0 items-start gap-card-gap md:mt-6 lg:grid-cols-[minmax(0,1fr)_340px]"
       >
-        <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} tone={next.tone} chip={next.chip} />
+        <StageSections facts={facts} data={data} model={model} ctx={ctx} open={open} onToggle={toggle} meta={meta} tone={next.tone} chip={next.chip} action={next.button} />
         <aside aria-label="About this job" className="min-w-0 rounded-card border bg-surface px-card py-2 shadow-e1 [&>:last-child]:border-b-0">
           <ContactRow facts={facts} showWhere={role === 'engineer'} />
           {role === 'admin' ? <MoneyRow data={data} hasOrder={Boolean(job.orderId)} /> : null}

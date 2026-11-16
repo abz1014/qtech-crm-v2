@@ -562,6 +562,7 @@ export async function listFxLatest(): Promise<FxLatestRow[]> {
 export interface SaveReplyInput {
   inquiryId: string
   currency: string
+  /** The row's lead time, written on a price that carries none of its own. */
   leadTime: string | null
   inStock: boolean | null
   /** Items with a price now. Existing lines for these items are updated in place. */
@@ -583,7 +584,8 @@ export async function saveReply(input: SaveReplyInput): Promise<number> {
     rfq_item_id: p.itemId,
     unit_price: p.unitPrice,
     currency: input.currency,
-    lead_time: input.leadTime,
+    // Each item's own lead time (16 Nov 2026); a caller that plans none for the item writes the row's.
+    lead_time: p.leadTime !== undefined ? p.leadTime : input.leadTime,
     in_stock: input.inStock,
     // Weight and origin are written only when the form held them (a missing key leaves the saved value alone).
     ...(p.weight !== undefined ? { weight: p.weight, weight_unit: p.weightUnit ?? 'kg' } : {}),
