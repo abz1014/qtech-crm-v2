@@ -266,11 +266,12 @@ export const NO_ENQUIRY_ROW = 'No RFQ or quotation: this job started as an order
 
 /** The drawn chip per row (Forest 30-job-page): Done, Not yet; the step the job is at says who acts next, as the hero's chip does. */
 const CHIP_TONE: Record<StepTone, FoldRowChipTone> = { now: 'warning', waiting: 'info', late: 'danger', done: 'success', inert: 'neutral' }
-function chipOf(state: StopState, current: StepTone, word: StepTone = current): FoldRowChip {
+/** The current step's chip names the action when it is yours (owner, 16 Nov 2026: "Needs action for what?"), e.g. "Ask suppliers". */
+function chipOf(state: StopState, current: StepTone, word: StepTone = current, action: string | null = null): FoldRowChip {
   if (state === 'done') return { icon: CircleCheck, word: 'Done', tone: 'success' }
   // the word follows the step (an imported job still "Needs action"); the colour follows the tone (grey for an imported job)
   // the colour follows the word too: an imported job's "Needs action" is the usual amber chip (owner, audit 2)
-  if (state === 'current') return { ...CHIP[word], tone: CHIP_TONE[word] }
+  if (state === 'current') return { ...CHIP[word], ...(word === 'now' && action ? { word: action, heard: CHIP[word].word } : null), tone: CHIP_TONE[word] }
   if (state === 'future') return { icon: CircleDashed, word: 'Not yet', tone: 'neutral' }
   if (state === 'stopped') return { icon: CircleX, word: 'Not reached', tone: 'neutral' }
   if (state === 'office') return OFFICE_CHIP
@@ -298,7 +299,7 @@ const STATE: Record<StopState, { icon: LucideIcon; word: string; className: stri
  * the brand edge (a left bar on a phone, a ring on a computer); it is not moved and not opened. The ids (stage-N) stay with their rows,
  * so ?stage= links and the ruler still find them.
  */
-export function StageSections({ facts, data, model, ctx, open, onToggle, meta, tone = 'now', chip }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void; meta?: ReactNode; tone?: StepTone; chip?: StepTone }) {
+export function StageSections({ facts, data, model, ctx, open, onToggle, meta, tone = 'now', chip, action = null }: { facts: JobFacts; data: JobData; model: StageModel; ctx: JobContext; open: number | null; onToggle: (index: number) => void; meta?: ReactNode; tone?: StepTone; chip?: StepTone; /** The next step's button words, said on the current step's chip when the step is yours. */ action?: string | null }) {
   const [, setWon] = useWonDialog()
   const built = buildSections(facts, data, model, ctx, () => setWon(true), meta)
   // A job that began as an order has no enquiry and no quotation: one grey row says so, instead of two rows that each say it.
@@ -333,7 +334,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
             state={withOffice && !current ? OFFICE_STATE : STATE[s.state]}
             title={s.shown}
             summary={withOffice ? WITH_OFFICE : advance ? s.summary : s.state === 'future' ? 'Not yet' : s.summary}
-            chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : chipOf(s.state, tone, chip)}
+            chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : chipOf(s.state, tone, chip, action)}
             className={cn(CARD, current && 'relative before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-brand-500 md:before:hidden md:ring-2 md:ring-inset md:ring-brand-500')}
             muted={(s.state === 'future' && !advance) || none || s.state === 'stopped'}
             disabled={none}

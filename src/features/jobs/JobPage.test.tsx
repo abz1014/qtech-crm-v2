@@ -360,6 +360,16 @@ describe('Job page: the stage list', () => {
     expect(stages.queryAllByText('Done', { selector: '.sr-only' })).toHaveLength(0)
     expect(container.textContent).not.toMatch(/their ref|Goods to the customer/)
   })
+
+  it('the step that is yours names its action on its chip (owner, 16 Nov 2026: "Needs action for what?")', async () => {
+    const { container } = mount(job({ stage: 'enquiry', stageDetail: null, orderId: null }), 'admin')
+    await screen.findByRole('heading', { level: 1 })
+    const stages = stagesOf(container)
+    // drawn: the action; heard: Needs action (the row is not a second "Ask suppliers" button)
+    expect(stages.getByRole('button', { name: /^RFQ Now Needs action / })).toBeInTheDocument()
+    expect(stages.getByText('Ask suppliers')).toHaveAttribute('aria-hidden', 'true')
+    expect(stages.queryByRole('button', { name: /Ask suppliers/ })).toBeNull()
+  })
 })
 
 describe('Job page: owner and contact', () => {
