@@ -147,7 +147,10 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
   return { suggestions, currency, regret, declined, question, nothingFound: suggestions.length === 0 && !regret && declined.length === 0 && question === null }
 }
 
-/** The row's draft after accepting the selected suggestions. Currency, prices, and lead time and stock when the row had none. */
+/**
+ * The row's draft after accepting the selected suggestions: currency, prices, each item's stated lead time, weight and origin, and
+ * the row's lead time and stock when it had none. What the reply did not state is left for the person to add before saving.
+ */
 export function draftFromSuggestions(base: ReplyDraft, set: SuggestionSet, selectedKeys: ReadonlySet<string>): ReplyDraft {
   const chosen = set.suggestions.filter(s => s.selectable && selectedKeys.has(s.key) && s.itemId && s.unitPrice !== null)
   if (chosen.length === 0) return base
@@ -163,11 +166,16 @@ export function draftFromSuggestions(base: ReplyDraft, set: SuggestionSet, selec
       origin: s.origin ?? had?.origin ?? '',
     }
   }
+  // Each item takes the lead time its own line stated (the parser already spreads a lead time stated once for the whole reply). An
+  // item whose line said none keeps what it had, else stays empty to be asked for: it is never given another item's lead time.
+  const leadTimes: Record<string, string | undefined> = { ...base.leadTimes }
+  for (const s of chosen) leadTimes[s.itemId as string] = s.leadTimeText ?? base.leadTimes?.[s.itemId as string] ?? ''
   const stocks = new Set(chosen.map(s => s.inStock).filter((v): v is boolean => v !== null))
   return {
     currency: set.currency,
     prices,
     leadTime: base.leadTime.trim() || (chosen.find(s => s.leadTimeText)?.leadTimeText ?? ''),
+    ...(Object.keys(leadTimes).length > 0 ? { leadTimes } : {}),
     inStock: base.inStock ?? (stocks.size === 1 ? [...stocks][0] : null),
     ...(Object.keys(extras).length > 0 ? { extras } : {}),
   }

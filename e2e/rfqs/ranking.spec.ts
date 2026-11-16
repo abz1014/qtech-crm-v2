@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { axeViolations } from '../support/axe'
 import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { openStage } from '../support/job'
+import { fillReplyDetails } from '../support/replyDetails'
 
 /*
  * A8 (R25, R26) end to end, against the local CI stack: the supplier prices on the RFQ page (NOT ranked since the owner decision of
@@ -239,6 +240,7 @@ test.describe('R25 supplier prices on the RFQ page: listed by name, nothing mark
     const region = page.getByRole('dialog', { name: echo.name, exact: true })
     await region.getByRole('group', { name: `Currency for ${echo.name}` }).getByRole('button', { name: 'PKR' }).click()
     await region.getByLabel(`Price for item 1 from ${echo.name}`).fill('90')
+    await fillReplyDetails(region, echo.name, [1])
     await region.getByRole('button', { name: 'Save reply' }).click()
     await expect(art.locator('li[data-price-row]')).toHaveCount(5)
     // by name: Echo comes after Delta, and is not marked however low it is

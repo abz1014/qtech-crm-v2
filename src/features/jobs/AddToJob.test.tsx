@@ -148,12 +148,25 @@ describe('Add to this job: a supplier price', () => {
     expect(await screen.findByTestId('guess-line')).toHaveTextContent('Supplier price from Rhein Automation GmbH')
     const accept = await screen.findByRole('button', { name: /Accept \d+ prices?/ })
     await waitFor(() => expect(accept).toHaveTextContent('Accept 2 prices'))
+    // The lead time the message stated is filled in for each price; the weight it did not state is asked for before saving.
+    const lead1 = screen.getByRole('textbox', { name: 'Lead time, item 1 from Rhein Automation GmbH' })
+    expect(lead1).toHaveValue('8 weeks')
+    await user.click(accept)
+    const w1 = screen.getByRole('textbox', { name: 'Weight of one unit, item 1 from Rhein Automation GmbH' })
+    await waitFor(() => expect(w1).toHaveFocus())
+    expect(w1).toHaveAttribute('aria-invalid', 'true')
+    expect(w1).toHaveAccessibleDescription('Add the weight of one unit, above zero.')
+    expect(screen.getByText('2 prices still need a lead time or a weight. Add them, then accept.')).toBeInTheDocument()
+    expect(db.calls.some(c => c.target === 'supplier_quote_lines')).toBe(false)
+    await user.type(w1, '4.2')
+    await user.type(screen.getByRole('textbox', { name: 'Weight of one unit, item 2 from Rhein Automation GmbH' }), '900')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Weight unit, item 2 from Rhein Automation GmbH' }), 'g')
     await user.click(accept)
     await waitFor(() => expect(db.calls.some(c => c.target === 'supplier_quote_lines' && c.verb === 'upsert')).toBe(true))
-    const rows = opArgs(db.calls.find(c => c.target === 'supplier_quote_lines' && c.verb === 'upsert') as FakeCall, 'upsert')?.[0] as { inquiry_id: string; rfq_item_id: string; unit_price: number; currency: string }[]
-    expect(rows.map(r => [r.inquiry_id, r.rfq_item_id, r.unit_price, r.currency])).toEqual([
-      ['i-rhein', 'it-1', 3610, 'EUR'],
-      ['i-rhein', 'it-2', 980, 'EUR'],
+    const rows = opArgs(db.calls.find(c => c.target === 'supplier_quote_lines' && c.verb === 'upsert') as FakeCall, 'upsert')?.[0] as { inquiry_id: string; rfq_item_id: string; unit_price: number; currency: string; lead_time: string; weight: number; weight_unit: string }[]
+    expect(rows.map(r => [r.inquiry_id, r.rfq_item_id, r.unit_price, r.currency, r.lead_time, r.weight, r.weight_unit])).toEqual([
+      ['i-rhein', 'it-1', 3610, 'EUR', '8 weeks', 4.2, 'kg'],
+      ['i-rhein', 'it-2', 980, 'EUR', '8 weeks', 900, 'g'],
     ])
   })
 

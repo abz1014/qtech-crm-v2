@@ -6,6 +6,7 @@ import { db, SERVICE_KEY, USER } from '../../verify/support/db'
 import { company, karachiDay, order, post, postMany, quote, ref, rfq, supplier } from '../../verify/support/fixtures'
 import { blankCtx, ctxAs, layout, note, probe, probe as huntProbe, settle, shot, tag, visit, watch, type Viewport } from './support'
 import { openStage } from '../../support/job'
+import { fillReplyDetails } from '../../support/replyDetails'
 import type { Role } from '../../support/stack'
 
 /*
@@ -927,6 +928,7 @@ test('crosscut: offline saves keep the input, show a plain message, and Try agai
     const region = page.getByRole('dialog', { name: sup.name, exact: true })
     const price = region.getByLabel(`Price for item 1 from ${sup.name}`)
     await price.fill('4321')
+    await fillReplyDetails(region, sup.name, [1])
     await goOffline()
     await region.getByRole('button', { name: 'Save reply' }).click()
     await page.waitForTimeout(1200)

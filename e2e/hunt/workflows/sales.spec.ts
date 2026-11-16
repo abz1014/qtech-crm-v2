@@ -8,6 +8,7 @@ import { fetchStoredPdf, pdfIsValid, pdfText } from '../../support/pdf'
 import { readClipboardWhen, resetClipboard } from '../../support/clipboard'
 import { ctxAs, layout, note, probe, settle, shot, tag, visit, watch, type Viewport } from './support'
 import { chooseAllSuppliers } from '../../support/supplierChoice'
+import { fillReplyDetails } from '../../support/replyDetails'
 
 /*
  * Bug hunt, the sales workflow (SALES, admin where it matters), at 1366x768 and at 375x812 with touch. Every step is a probe: a
@@ -516,6 +517,8 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
     // The reply form is a dialog named after the supplier, opened from Suppliers asked (replyDialog); `price` reads the open one.
     const region = (s: Co) => page.getByRole('dialog', { name: s.name, exact: true })
     const price = (s: Co, n: number) => region(s).getByLabel(`Price for item ${n} from ${s.name}`)
+    // Every priced item needs its lead time and the weight of one unit before Save reply saves (16 Nov 2026).
+    const details = (s: Co, ns: number[]) => fillReplyDetails(region(s), s.name, ns)
     await layout(page, info, `${W} rfq page`)
     await shot(page, `${W}-rfq-page`)
 
@@ -527,6 +530,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await price(de, 2).fill('12,5')
       await price(de, 2).blur()
       const shown = [await price(de, 1).inputValue(), await price(de, 2).inputValue()]
+      await details(de, [1, 2])
       await region(de).getByRole('button', { name: 'Save reply' }).click()
       await expect(toast(page, 'Reply saved').first()).toBeVisible(T)
       await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBe(2)
@@ -563,6 +567,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await price(pk, 1).fill('1200')
       await price(pk, 2).fill('3500')
       await price(pk, 3).fill('95.5')
+      await details(pk, [1, 2, 3])
       await save.click()
       await expect.poll(async () => (await linesOf(r.rfq.id, pk.id)).length, T).toBe(3)
     })
@@ -576,6 +581,7 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
       await price(cn, 1).fill('2100')
       await price(cn, 2).fill('480')
       await price(cn, 3).fill('9')
+      await details(cn, [1, 2, 3])
       let posts = 0
       const onReq = (q: { url: () => string; method: () => string }) => {
         if (/supplier_quote_lines|rpc\/save_reply|rpc\/.*reply/.test(q.url()) && q.method() !== 'GET') posts++
@@ -624,6 +630,14 @@ for (const vp of ['desktop', 'phone'] as Viewport[]) {
         return
       }
       await accept.click()
+      // The reply stated lead times but no weights: the form asks for them before saving.
+      for (const n of [1, 2]) {
+        const w = region(de2).getByLabel(`Weight of one unit, item ${n} from ${de2.name}`, { exact: true })
+        if (await w.isVisible().catch(() => false)) await w.fill('1.5')
+        const l = region(de2).getByLabel(`Lead time, item ${n} from ${de2.name}`, { exact: true })
+        if ((await l.isVisible().catch(() => false)) && !(await l.inputValue())) await l.fill('4 weeks')
+      }
+      await region(de2).getByRole('button', { name: 'Save reply' }).click()
       await expect.poll(async () => (await linesOf(r.rfq.id, de2.id)).length, T).toBeGreaterThan(0)
       await page.waitForTimeout(1000)
       const lines = await linesOf(r.rfq.id, de2.id)
@@ -1173,6 +1187,7 @@ test('HW-1: typed comma-decimal supplier prices are stored wrong ("1.234,50" -> 
   const box = await replyDialog(page, de.name)
   await box.getByLabel(`Price for item 1 from ${de.name}`).fill('1.234,50')
   await box.getByLabel(`Price for item 2 from ${de.name}`).fill('12,5')
+  await fillReplyDetails(box, de.name, [1, 2])
   await box.getByRole('button', { name: 'Save reply' }).click()
   await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBe(2)
   const lines = await linesOf(r.rfq.id, de.id)
@@ -1248,6 +1263,10 @@ test('HW-5: a pasted reply line "price on request" is stored as a price (the "2"
   const panel = page.getByRole('region', { name: `Read from the reply of ${de.name}` })
   await expect(panel).toBeVisible(T)
   await panel.getByRole('button', { name: /^Accept \d+ prices?$/ }).click()
+  // The reply stated the lead time, not the weight: it is asked for before the reply is saved.
+  const form = page.getByRole('dialog', { name: de.name, exact: true })
+  await form.getByLabel(`Weight of one unit, item 1 from ${de.name}`, { exact: true }).fill('3')
+  await form.getByRole('button', { name: 'Save reply' }).click()
   await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBeGreaterThan(0)
   await page.waitForTimeout(1000)
   const lines = await linesOf(r.rfq.id, de.id)
