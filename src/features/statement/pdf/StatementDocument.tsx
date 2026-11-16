@@ -1,21 +1,21 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
-import type { QuotedRow, Statement } from '@/features/statement/model'
+import { longDay, splitDescription, type QuotedRow, type Statement } from '@/features/statement/model'
 
 /*
  * The Comparative Statement PDF (owner request, 2026-10-29; made simpler and clearer the same day). A4 LANDSCAPE, Geist, the company
  * letterhead (company_profile and the wordmark) like the invoice and the quotation.
  *
  * Per item: a bold heading band ("1. Pressure transmitter, Qty 12.5 m", the spec in smaller type under it), then one row per supplier that
- * quoted: Supplier | Unit cost | Total cost | Lead time | Weight (of one unit) | Country of origin. A note, when there is one, is a small
+ * quoted: Supplier | Unit cost | Total cost | Lead time | Unit weight | Total weight (quantity x unit weight) | Country of origin. A note, when there is one, is a small
  * grey line under its row. Suppliers that did not reply or did not quote are ONE compact grey line under the item. An item is kept on one
  * page where it fits, and has its own column headings, so every page has them. Money has thousands separators and exactly 2 decimals
  * (rounded for display only); the currency is in the column heading when every row shares it, else in each cell. Empty cells show a dash.
  * The sheet ends with "Totals by supplier" (supplier, currency, total cost of the items it quoted, items quoted X of Y), and every page
  * has "Page n of N".
  *
- * It selects nothing and says nothing about a better supplier: no "cheapest", no "recommended"; suppliers are in name order (or the order
- * the person had sorted the screen into). Costs are what the suppliers quoted, never a selling price.
+ * It selects nothing and says nothing about a better supplier: no "cheapest", no "recommended"; suppliers are in name order, the
+ * same order as the Excel file. Costs are what the suppliers quoted, never a selling price.
  *
  * This module imports @react-pdf/renderer, so it is only reached through generate.ts's dynamic import (its own chunk).
  * No lineHeight on the page: react-pdf drops render-prop text when a page sets one, and the page number needs it.
@@ -65,11 +65,12 @@ const s = StyleSheet.create({
   tr: { borderBottomWidth: 0.5, borderBottomColor: C.line, paddingVertical: 7 },
   trRow: { flexDirection: 'row' },
   rowNote: { fontSize: 9.5, color: C.soft, paddingLeft: 8, paddingTop: 2 },
-  cSup: { width: 210, paddingLeft: 8, paddingRight: 8 },
+  cSup: { width: 180, paddingLeft: 8, paddingRight: 8 },
   cUnit: { width: 112, textAlign: 'right', paddingRight: 14 },
   cTot: { width: 124, textAlign: 'right', paddingRight: 14 },
-  cLead: { width: 130, paddingRight: 8 },
+  cLead: { width: 110, paddingRight: 8 },
   cWt: { width: 84, textAlign: 'right', paddingRight: 14 },
+  cTw: { width: 88, textAlign: 'right', paddingRight: 14 },
   cOrg: { flex: 1, paddingRight: 8 },
   noQuote: { fontSize: 9.5, color: C.soft, paddingTop: 6, paddingLeft: 8 },
   secTitle: { fontSize: 12, fontWeight: 600, marginBottom: 6 },
@@ -84,19 +85,6 @@ const s = StyleSheet.create({
   foot: { position: 'absolute', left: 34, right: 34, bottom: 18, flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 0.5, borderTopColor: C.line, paddingTop: 5, fontSize: 9.5, color: C.soft },
 })
 
-const longDay = (iso: string): string => {
-  const [y, m, d] = iso.split('-').map(Number)
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  return `${d} ${months[m - 1]} ${y}`
-}
-
-/** The first line of a description is the item, any further lines are its spec. */
-function splitDescription(text: string): { title: string; spec: string | null } {
-  const [first, ...rest] = text.split(/\r?\n/)
-  const spec = rest.join(' ').trim()
-  return { title: first.trim(), spec: spec || null }
-}
-
 const DASH = '—'
 
 function SupplierRow({ r, shared }: { r: QuotedRow; shared: string | null }) {
@@ -109,6 +97,7 @@ function SupplierRow({ r, shared }: { r: QuotedRow; shared: string | null }) {
         <Text style={s.cTot}>{money(r.totalText)}</Text>
         <Text style={s.cLead}>{r.leadTime ?? DASH}</Text>
         <Text style={s.cWt}>{r.weightEachText ?? DASH}</Text>
+        <Text style={s.cTw}>{r.totalWeightText ?? DASH}</Text>
         <Text style={s.cOrg}>{r.origin ?? DASH}</Text>
       </View>
       {r.note ? <Text style={s.rowNote}>{r.note}</Text> : null}
@@ -186,7 +175,8 @@ export function StatementDocument({ data, profile, logoSrc }: { data: StatementP
                   <Text style={s.cUnit}>{`Unit cost${cur}`}</Text>
                   <Text style={s.cTot}>{`Total cost${cur}`}</Text>
                   <Text style={s.cLead}>Lead time</Text>
-                  <Text style={s.cWt}>Weight</Text>
+                  <Text style={s.cWt}>Unit weight</Text>
+                  <Text style={s.cTw}>Total weight</Text>
                   <Text style={s.cOrg}>Country of origin</Text>
                 </View>
               ) : (

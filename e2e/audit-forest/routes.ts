@@ -64,8 +64,7 @@ export const AUDIT_ROUTES: readonly AuditRoute[] = [
   { id: 'job-invoiced', path: '/jobs/{fx:invoiced}', roles: ALL },
   { id: 'job-paid', path: '/jobs/{fx:paid}', roles: ALL, light: true },
   { id: 'job-missing', path: '/jobs/9999999', roles: ALL, light: true, noStates: true },
-  { id: 'statement', path: '/jobs/{fx:compare}/statement', roles: AS, wide: true },
-  { id: 'statement-long', path: '/jobs/{long:job}/statement', roles: AS, wide: true, light: true },
+  // The comparative statement has no page since 2026-11-16 (Excel and PDF downloads on the job page; the old address opens the job).
   { id: 'issue-quotation', path: '/jobs/{fx:pricesIn}?issue=1', roles: AS, dialog: true },
   { id: 'mark-won', path: '/jobs/{fx:quoted}?won=1', roles: AS, dialog: true },
   { id: 'new-rfq', path: '/enquiries/new', roles: ALL },

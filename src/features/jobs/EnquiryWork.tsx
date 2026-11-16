@@ -25,6 +25,7 @@ import { useAskSuppliers, useLastAsk, type AskResult } from '@/features/rfqs/use
 import type { ChaseMode } from '@/features/rfqs/SuppliersAsked'
 import { useQuotations } from '@/features/quotations/hooks'
 import { useOrdersForRfq } from '@/features/orders/forRfq'
+import { StatementDownloads } from '@/features/statement/StatementDownloads'
 
 /*
  * The enquiry side of the job, on the job page (redesign P5-D1): ask suppliers, enter their prices, send the quotation, Mark won.
@@ -225,6 +226,7 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
           <SuppliersAsked rfq={rfq} items={itemList} inquiries={inquiryList} stats={stats.data} rates={rates} chase={chaseMode} onFloat={() => setFloating(true)} onReplyFrom={onReplyFrom} openFor={replyFor} onOpened={() => setReplyFor(null)} />
         )}
       </Suspense>
+      {prices && jobKey && inquiryList.some(i => i.lines.length > 0) ? <StatementDownloads jobKey={jobKey} rfqId={rfq.id} /> : null}
       <ItemsPanel
         rfq={rfq}
         items={itemList}
@@ -235,7 +237,6 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
         suggestions={suggestions}
         onAddItem={() => setAdding(true)}
         onCopyEnquiry={(s, item) => void askFrom([s], [item])}
-        statementTo={jobKey ? `/jobs/${encodeURIComponent(jobKey)}/statement` : undefined}
       />
       <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />

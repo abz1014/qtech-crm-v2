@@ -154,9 +154,11 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect(quoted).toContainText('Last quoted')
     await expect(quoted).toContainText('PKR 1,200')
     await expect(quoted).toContainText(/\(QT-\d\d-\d{4}\)/)
-    // The supplier's reply is not ranked or called "best": the line only says one supplier replied and links to the comparative statement.
-    await expect(dialog(page).getByTestId('supplier-replies-1')).toContainText('1 supplier reply')
-    await expect(dialog(page).getByTestId('supplier-replies-1').getByRole('link', { name: 'Compare them on the comparative statement' })).toHaveAttribute('href', /\/jobs\/\d+\/statement$/)
+    // The supplier's reply is not ranked or called "best": the line only says one supplier replied; the replies are compared in the
+    // comparative statement, downloaded as Excel or PDF from one line above the items (no link to a statement page any more).
+    await expect(dialog(page).getByTestId('supplier-replies-1')).toHaveText('1 supplier reply')
+    await expect(dialog(page).getByTestId('supplier-replies-1').getByRole('link')).toHaveCount(0)
+    await expect(dialog(page).getByTestId('statement-downloads').getByRole('button')).toHaveText(['Download Excel', 'Download PDF'])
     await expect(dialog(page).getByTestId('quote-line-1')).not.toContainText(/best|lowest|cheapest/i)
     // Include ticks: item 1 has price sources and starts ticked; item 2 has none, starts unticked and says why.
     await expect(dialog(page).getByRole('checkbox', { name: 'Include item 1' })).toBeChecked()

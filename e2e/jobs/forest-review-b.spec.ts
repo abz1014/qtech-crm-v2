@@ -218,15 +218,12 @@ test.describe('Forest review pictures (wave B)', () => {
       await page.goto(`/rfqs/${r.rfq.id}`)
       await page.locator('[data-stages]').waitFor()
       await openStage(page, 'Quotation')
-      await page.getByRole('link', { name: /comparative statement/i }).first().click()
-      await page.locator('#main').waitFor()
-      await page.waitForLoadState('networkidle')
-      await pic(page, 'statement')
+      // the comparative statement is two downloads on the job page (owner, 2026-11-16), no page of its own
+      const downloads = page.getByTestId('statement-downloads')
+      await expect(downloads.getByRole('button')).toHaveText(['Download Excel', 'Download PDF'])
+      await downloads.scrollIntoViewIfNeeded()
+      await pic(page, 'statement-downloads')
     }
-    await page.setViewportSize({ width: 768, height: 1024 })
-    await page.reload()
-    await page.waitForLoadState('networkidle')
-    await pic(page, 'statement')
   })
 
   test('Mark won, the Order and Supplier order stops, Issue PO, the Delivery stop (admin)', async ({ page }) => {

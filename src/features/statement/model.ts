@@ -4,14 +4,14 @@ import { parseLeadTime, type WeightUnit } from '@/features/rfqs/lib/replyParse'
 
 /*
  * The comparative statement of one RFQ / job: for each item, what every supplier that quoted it asked, with lead time, weight and
- * country of origin. Pure, so the screen, the PDF and the tests share one set of rules.
+ * country of origin. Pure, so the Excel file, the PDF and the tests share one set of rules (owner, 2026-11-16: the statement
+ * is only downloaded, as Excel or PDF; it is no longer drawn on screen).
  *
  * Rules (owner, 2026-10-29):
- *   - It selects nothing. No "cheapest", no "recommended", nothing ticked. The default order is the supplier's name, A to Z. A person
- *     may sort by a column on screen; that changes the order of the rows and nothing else.
+ *   - It selects nothing. No "cheapest", no "recommended", nothing ticked. The order is the supplier's name, A to Z.
  *   - A line total is quantity x unit cost. That is what we pay, not a selling price; the CRM works out no selling price and no margin.
  *   - Totals are per supplier and per currency. Amounts in different currencies are never added together.
- *   - Admin and sales only (the database refuses an engineer the prices; the page does not draw for one).
+ *   - Admin and sales only (the database refuses an engineer the prices; the download buttons are not drawn for one).
  */
 
 export type SortKey = 'supplier' | 'unit' | 'total' | 'lead' | 'weight' | 'origin'
@@ -44,6 +44,9 @@ export interface QuotedRow {
   weightEachText: string | null
   /** The same weight in kg, for sorting. */
   weightKg: number | null
+  /** Quantity x the weight of one unit, in the same unit ("10 kg"). Null: no weight stated. */
+  totalWeight: number | null
+  totalWeightText: string | null
   origin: string | null
   note: string | null
 }
@@ -120,6 +123,8 @@ function rowOf(item: RfqItemRow, inquiry: InquiryRow, l: QuoteLineRow): QuotedRo
     weightUnit: unit,
     weightEachText: each === null ? null : `${plainNumber(each)} ${unit}`,
     weightKg: each === null ? null : each * KG_PER[unit],
+    totalWeight: each === null ? null : item.qty * each,
+    totalWeightText: each === null ? null : `${plainNumber(item.qty * each)} ${unit}`,
     origin: l.origin?.trim() || null,
     note: l.notes?.trim() || null,
   }
@@ -228,19 +233,20 @@ export function buildStatement(items: readonly RfqItemRow[], inquiries: readonly
   return { sections, totals, noReplyCount: asked.filter(i => i.lines.length === 0).length }
 }
 
-const SORT_WORDS: Record<SortKey, string> = {
-  supplier: 'supplier name',
-  unit: 'unit cost',
-  total: 'line total',
-  lead: 'lead time',
-  weight: 'weight',
-  origin: 'country of origin',
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/** "2026-10-29" is "29 Oct 2026", on both files. */
+export function longDay(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${d} ${MONTHS[m - 1]} ${y}`
 }
 
-/** What the person is looking at, in words: printed on screen and on the PDF so an order is never read as a ranking. */
-/** Said on screen only when a person has sorted by a column: it is an order on the page and nothing more. */
-export function orderNote(sort: SortSpec): string | null {
-  if (sort.key === 'supplier' && sort.dir === 'asc') return null
-  const dir = sort.key === 'supplier' ? (sort.dir === 'asc' ? 'A to Z' : 'Z to A') : sort.dir === 'asc' ? 'low to high' : 'high to low'
-  return `Sorted by ${SORT_WORDS[sort.key]}, ${dir}${sort.key === 'unit' || sort.key === 'total' ? ' (within each currency)' : ''}. This only changes the order on the page.`
+/** The first line of a description is the item, any further lines are its spec. */
+export function splitDescription(text: string): { title: string; spec: string | null } {
+  const [first, ...rest] = text.split(/\r?\n/)
+  const spec = rest.join(' ').trim()
+  return { title: first.trim(), spec: spec || null }
 }
+
+/** "Comparative-statement-Job-139.pdf" / ".xlsx": both files of one job share the name. */
+export const statementFileName = (jobLabelText: string, ext: 'pdf' | 'xlsx'): string => `Comparative-statement-${jobLabelText.replace(/\s+/g, '-')}.${ext}`
