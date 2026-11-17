@@ -199,8 +199,9 @@ function Loaded({ company }: { company: CompanyDetail }) {
 
   const supplierSide = company.isSupplier
   const customerSide = company.isCustomer || !company.isSupplier
-  const rfqCount = history.data?.rfqs.length ?? 0
-  const orderCount = history.data?.orders.length ?? 0
+  // Company counts are stats, so they include the rows the lists hide in the Archive.
+  const rfqCount = (history.data?.rfqs.length ?? 0) + (history.data?.archived.rfqs ?? 0)
+  const orderCount = (history.data?.orders.length ?? 0) + (history.data?.archived.orders ?? 0)
   const lowData = (record.query.data?.inquiries.length ?? 0) < 3
   const sinceYear = earliestYear(record.query.data, company.createdAt)
   const meta = companyMeta({
@@ -303,6 +304,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
       companyId={company.id}
       sites={sites.data}
       history={history.data}
+      isAdmin={isAdmin}
       loading={sites.isPending || history.isPending}
       error={sites.isError || history.isError}
       onAddSite={() => setDialog('site')}

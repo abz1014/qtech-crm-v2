@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { hideArchived } from '@/lib/archive'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { toBusinessDate } from '@/lib/dates'
 import { PlainError } from '@/lib/errors/plainError'
@@ -602,6 +603,8 @@ export interface HistoryOrder {
 export interface CompanyHistory {
   rfqs: HistoryRfq[]
   orders: HistoryOrder[]
+  /** How many more RFQs and orders sit in the Archive (older or imported, hidden from the two lists). 0 while archiving is off. */
+  archived: { rfqs: number; orders: number }
 }
 
 /**
@@ -611,25 +614,30 @@ export interface CompanyHistory {
  */
 export async function getCompanyHistory(companyId: string, withPayment = false): Promise<CompanyHistory> {
   const db = requireSupabase()
-  const [rfqs, rfqState, orders, orderState] = await Promise.all([
-    db
-      .from('rfqs')
-      .select('id, number, site_id, received_on, due_on, customer_ref, close_reason')
-      .eq('company_id', companyId)
-      .order('received_on', { ascending: false }),
+  // The two lists drop archived rows (migration 0141). The company itself is never hidden, and its stats stay unfiltered.
+  // An engineer may not read `archived` on the orders table (42501), so the orders are told apart through v_order_state (all roles);
+  // the RFQs table has no such limit. The archived counts come from the same sources, head-only.
+  const [rfqs, rfqState, orders, orderState, archivedRfqs, archivedOrders] = await Promise.all([
+    hideArchived(db.from('rfqs').select('id, number, site_id, received_on, due_on, customer_ref, close_reason').eq('company_id', companyId)).order('received_on', {
+      ascending: false,
+    }),
     db.from('v_rfq_state').select('rfq_id, outcome').eq('company_id', companyId),
     db
       .from('orders')
       .select('id, number, site_id, ordered_on, rfq_id')
       .eq('company_id', companyId)
       .order('ordered_on', { ascending: false, nullsFirst: false }),
-    db.from('v_order_state').select('order_id, lifecycle, goods_state, invoicing_state').eq('company_id', companyId),
+    hideArchived(db.from('v_order_state').select('order_id, lifecycle, goods_state, invoicing_state').eq('company_id', companyId)),
+    db.from('rfqs').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('archived', true),
+    db.from('v_order_state').select('order_id', { count: 'exact', head: true }).eq('company_id', companyId).eq('archived', true),
   ])
   const outcomeBy = new Map(unwrap(rfqState).map(s => [s.rfq_id, s.outcome]))
   const stateBy = new Map(unwrap(orderState).map(s => [s.order_id, s]))
-  const orderRows = unwrap(orders)
+  const allOrderRows = unwrap(orders)
+  // an RFQ keeps the number of the order it became, archived or not
+  const orderNumberByRfq = new Map(allOrderRows.filter(o => o.rfq_id).map(o => [o.rfq_id as string, o.number]))
+  const orderRows = allOrderRows.filter(o => stateBy.has(o.id))
   const rfqRows = unwrap(rfqs)
-  const orderNumberByRfq = new Map(orderRows.filter(o => o.rfq_id).map(o => [o.rfq_id as string, o.number]))
 
   // "What": the first item of each RFQ and of each order (by position), with how many more there are.
   const [rfqItems, orderItems, receivables] = await Promise.all([
@@ -667,6 +675,7 @@ export async function getCompanyHistory(companyId: string, withPayment = false):
     for (const r of receivables.data ?? []) if (r.is_overdue && r.order_id) overdue.add(r.order_id)
   }
   return {
+    archived: { rfqs: archivedRfqs.count ?? 0, orders: archivedOrders.count ?? 0 },
     rfqs: rfqRows.map(r => ({
       id: r.id,
       number: r.number,
