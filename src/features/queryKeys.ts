@@ -334,6 +334,12 @@ function history() {
   return { all, record: (table: string, id: string) => [...all, table, id] as const }
 }
 
+/** Whether one record is in the Archive (the detail-page banner). */
+function archive() {
+  const all = root('archive')
+  return { all, state: (entity: string, id: string) => [...all, 'state', entity, id] as const }
+}
+
 /** Jobs (redesign phase 5): the read-only view v_jobs and what one job page reads. Any write in the app makes these stale (invalidateAfter). */
 function jobs() {
   const all = root('jobs')
@@ -373,6 +379,7 @@ export const qk = {
   reports: reports(),
   onboarding: onboarding(),
   history: history(),
+  archive: archive(),
 }
 
 export type QueryKeyRoot = keyof typeof qk
