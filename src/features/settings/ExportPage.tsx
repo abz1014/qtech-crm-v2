@@ -15,11 +15,12 @@ import { EXPORTS, downloadExport, type ExportId, type ExportKind } from '@/featu
  */
 export function ExportPage() {
   const toast = useToast()
+  const [includeArchive, setIncludeArchive] = useState(false)
   const [busy, setBusy] = useState<ExportId | null>(null)
   const go = async (kind: ExportKind) => {
     setBusy(kind.id)
     try {
-      const n = await downloadExport(kind, businessToday())
+      const n = await downloadExport(kind, businessToday(), includeArchive)
       toast.toast({ title: `${kind.label} exported`, body: `${n} ${n === 1 ? 'row' : 'rows'} in the file`, tone: 'success' })
     } catch (err) {
       toast.toast({ title: `Could not export ${kind.label.toLowerCase()}`, body: mapPgError(err, { entity: 'export' }).message, tone: 'danger' })
@@ -30,6 +31,12 @@ export function ExportPage() {
   return (
     <div className="grid content-start gap-card-gap" data-testid="export-page">
       <PageHeader title="Export data" lede={<span className="text-base">Download records as files that open in Excel. Nothing is changed.</span>} />
+      <label className="flex w-fit items-center gap-2 text-base" data-testid="export-include-archive">
+        <input type="checkbox" className="size-4" checked={includeArchive} onChange={e => setIncludeArchive(e.target.checked)} />
+        <span>
+          <b className="font-card">Include Archive</b> <span className="text-fg-muted">Also export old and imported records. Off: only current records.</span>
+        </span>
+      </label>
       <ul className={cn(CARD, 'divide-y overflow-hidden')}>
         {EXPORTS.map(k => (
           <li key={k.id} className="grid min-h-row grid-cols-1 items-center gap-x-6 gap-y-3 px-card py-4 sm:grid-cols-[minmax(0,1fr)_auto]" data-work={k === EXPORTS[0] ? '' : undefined}>

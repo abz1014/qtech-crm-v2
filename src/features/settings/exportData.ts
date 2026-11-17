@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase } from '@/lib/supabase'
+import { hideArchived } from '@/lib/archive'
 import { generateCSV, downloadCSV } from '@/lib/csvExport'
 
 /*
@@ -14,18 +15,28 @@ export interface ExportTable {
   rows: unknown[][]
 }
 
+/** Include Archive (archive feature): off by default, a transaction file holds only the rows that are not archived; on, every row. */
+export interface ExportOptions {
+  includeArchive: boolean
+}
+
 export interface ExportKind {
   id: ExportId
   label: string
   about: string
   file: string
-  run: () => Promise<ExportTable>
+  run: (opts: ExportOptions) => Promise<ExportTable>
 }
 
 type Rec = Record<string, unknown>
 const db = () => requireSupabase()
-const all = <T extends Rec>(table: string, columns: string, order: string): Promise<T[]> =>
-  fetchAll<T>((from, to) => db().from(table as never).select(columns).order(order).range(from, to) as unknown as PromiseLike<{ data: T[] | null; error: { code?: string; message: string } | null }>)
+type Archivable = { eq(column: 'archived', value: boolean): Archivable; order(column: string): { range(from: number, to: number): unknown } }
+/** `hide`: the transaction tables, when Include Archive is off. Reference lists (names, number lookups) are never filtered. */
+const all = <T extends Rec>(table: string, columns: string, order: string, hide = false): Promise<T[]> =>
+  fetchAll<T>((from, to) => {
+    const q = db().from(table as never).select(columns) as unknown as Archivable
+    return (hide ? hideArchived(q) : q).order(order).range(from, to) as unknown as PromiseLike<{ data: T[] | null; error: { code?: string; message: string } | null }>
+  })
 
 const nameMap = async (table: string, key = 'name'): Promise<Map<string, string>> => new Map((await all<Rec>(table, `id, ${key}`, 'id')).map(r => [String(r.id), String(r[key] ?? '')]))
 const num = (v: unknown): number | string => (v === null || v === undefined || v === '' ? '' : Number(v))
@@ -91,8 +102,8 @@ export const EXPORTS: readonly ExportKind[] = [
     label: 'RFQs and jobs',
     about: 'Every RFQ with its customer, dates, owner and why it closed.',
     file: 'rfqs',
-    run: async () => {
-      const [rows, companies, users] = await Promise.all([all('rfqs', 'number, company_id, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason, owner_id, is_priority', 'number'), nameMap('companies'), nameMap('users')])
+    run: async ({ includeArchive }) => {
+      const [rows, companies, users] = await Promise.all([all('rfqs', 'number, company_id, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason, owner_id, is_priority', 'number', !includeArchive), nameMap('companies'), nameMap('users')])
       return rfqsTable(rows, companies, users)
     },
   },
@@ -101,9 +112,9 @@ export const EXPORTS: readonly ExportKind[] = [
     label: 'Orders',
     about: 'Every order with what it is worth, what was received, what is still to collect and its due date.',
     file: 'orders',
-    run: async () => {
+    run: async ({ includeArchive }) => {
       const [rows, money, companies, users] = await Promise.all([
-        all('orders', 'id, number, company_id, customer_po_number, ordered_on, owner_id, cancelled_on', 'number'),
+        all('orders', 'id, number, company_id, customer_po_number, ordered_on, owner_id, cancelled_on', 'number', !includeArchive),
         all('v_order_money', 'order_id, gross_target, settled, receivable, payment_state, due_on', 'order_id'),
         nameMap('companies'),
         nameMap('users'),
@@ -116,9 +127,9 @@ export const EXPORTS: readonly ExportKind[] = [
     label: 'Invoices',
     about: 'Every invoice with its net, GST and filing details.',
     file: 'invoices',
-    run: async () => {
+    run: async ({ includeArchive }) => {
       const [rows, orders, companies] = await Promise.all([
-        all('invoices', 'number, invoice_date, company_id, order_id, net_amount, gst_amount, psid, tax_deposited_on', 'invoice_date'),
+        all('invoices', 'number, invoice_date, company_id, order_id, net_amount, gst_amount, psid, tax_deposited_on', 'invoice_date', !includeArchive),
         all<Rec>('orders', 'id, number', 'id').then(o => new Map(o.map(r => [txt(r.id), orderNo(r.number)]))),
         nameMap('companies'),
       ])
@@ -130,9 +141,9 @@ export const EXPORTS: readonly ExportKind[] = [
     label: 'Payments received',
     about: 'Every payment from a customer, including ones that were cancelled.',
     file: 'payments',
-    run: async () => {
+    run: async ({ includeArchive }) => {
       const [rows, orderRows, companies] = await Promise.all([
-        all('payments_in', 'received_on, order_id, amount, paid_via, reference, voided_at, void_reason', 'received_on'),
+        all('payments_in', 'received_on, order_id, amount, paid_via, reference, voided_at, void_reason', 'received_on', !includeArchive),
         all<Rec>('orders', 'id, number, company_id', 'id'),
         nameMap('companies'),
       ])
@@ -144,9 +155,9 @@ export const EXPORTS: readonly ExportKind[] = [
     label: 'Expenses',
     about: 'Every expense with its category, amount, GST paid on purchases and how it was paid.',
     file: 'expenses',
-    run: async () => {
+    run: async ({ includeArchive }) => {
       const [rows, categories, payees, orderRows] = await Promise.all([
-        all('expenses', 'paid_on, category_id, description, payee_id, order_id, amount_pkr, input_tax_pkr, paid_via, period', 'paid_on'),
+        all('expenses', 'paid_on, category_id, description, payee_id, order_id, amount_pkr, input_tax_pkr, paid_via, period', 'paid_on', !includeArchive),
         nameMap('expense_categories'),
         nameMap('companies'),
         all<Rec>('orders', 'id, number', 'id'),
@@ -157,8 +168,8 @@ export const EXPORTS: readonly ExportKind[] = [
 ]
 
 /** Builds the file and saves it: `qtech-<kind>-<date>.csv`. */
-export async function downloadExport(kind: ExportKind, today: string): Promise<number> {
-  const t = await kind.run()
+export async function downloadExport(kind: ExportKind, today: string, includeArchive = false): Promise<number> {
+  const t = await kind.run({ includeArchive })
   downloadCSV(generateCSV(t.headers, t.rows), `qtech-${kind.file}-${today}.csv`)
   return t.rows.length
 }
