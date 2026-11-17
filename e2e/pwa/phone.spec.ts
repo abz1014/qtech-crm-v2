@@ -124,6 +124,17 @@ test.describe('phone platform', () => {
   test('scroll: a new page starts at the top, Back returns to where the list was', async ({ page }) => {
     await signIn(page)
     const main = page.locator('main#main')
+    // Let Home finish loading first. Its cards (Late, the first-use card, the counts) arrive after the page, and a card that appears above
+    // the scrolled-to place pushes the scroller down by its height (the browser keeps what is in view in view), so 600 became 761 on a
+    // database whose data adds a Late card. The page is settled when its height is the same on three reads 400 ms apart.
+    await expect(async () => {
+      const heights: number[] = []
+      for (let i = 0; i < 3; i++) {
+        heights.push(await main.evaluate(el => el.scrollHeight))
+        await page.waitForTimeout(400)
+      }
+      expect(new Set(heights).size).toBe(1)
+    }).toPass({ timeout: 20_000 })
     // Make the scroller tall enough to scroll whatever the fixture data is. The spacer is not React's, so it stays across routes.
     await main.evaluate(el => {
       const spacer = document.createElement('div')
