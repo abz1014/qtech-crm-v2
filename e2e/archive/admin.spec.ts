@@ -91,7 +91,7 @@ test('the To collect figures are the same with archiving on and off', async ({ p
   await openAs(page, 'admin', '/money/receivables')
   const tile = page.getByLabel('Balance by status, includes GST').first()
   await expect(page.getByRole('row').filter({ hasText: f.company.name }).first()).toBeVisible()
-  const off = await settledText(() => tile.innerText())
+  const off = await settledText(async () => (await tile.textContent()) ?? '')
   await archiveOn()
   await page.goto('/money/receivables')
   await expect(page.getByRole('row').filter({ hasText: f.company.name }).first()).toBeVisible()
