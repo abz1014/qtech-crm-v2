@@ -23,7 +23,47 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "attachments": {
+            "archive_settings": {
+                  Row: {
+                    "cutoff": string,"enabled": boolean,"id": number,"updated_at": string,"updated_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "cutoff"?: string,"enabled"?: boolean,"id"?: number,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Update: {
+                    "cutoff"?: string,"enabled"?: boolean,"id"?: number,"updated_at"?: string,"updated_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "archive_settings_updated_by_fkey"
+      columns: ["updated_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"archive_unhidden": {
+                  Row: {
+                    "entity": string,"row_id": string,"unhidden_at": string,"unhidden_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "entity": string,"row_id": string,"unhidden_at"?: string,"unhidden_by"?: string | null
+                  }
+                  Update: {
+                    "entity"?: string,"row_id"?: string,"unhidden_at"?: string,"unhidden_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "archive_unhidden_unhidden_by_fkey"
+      columns: ["unhidden_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"attachments": {
                   Row: {
                     "bucket": string,"clarification_id": string | null,"created_at": string,"created_by": string | null,"expense_id": string | null,"file_name": string,"has_prices": boolean,"id": string,"invoice_id": string | null,"is_customer_po": boolean,"mime_type": string,"order_id": string | null,"path": string,"rfq_id": string | null,"size_bytes": number
                   }
@@ -153,7 +193,9 @@ isOneToOne: false
                   Row: {
                     "counted_on": string,"counted_pkr": number,"created_at": string,"created_by": string | null,"difference_pkr": number | null,"expected_pkr": number | null,"id": string,"is_opening": boolean,"note": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "counted_on"?: string,"counted_pkr": number,"created_at"?: string,"created_by"?: string | null,"difference_pkr"?: never,"expected_pkr"?: number | null,"id"?: string,"is_opening"?: boolean,"note"?: string | null
                   }
@@ -173,7 +215,9 @@ isOneToOne: false
                   Row: {
                     "amount_pkr": number,"created_at": string,"created_by": string | null,"drawn_on": string,"id": string,"note": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "amount_pkr": number,"created_at"?: string,"created_by"?: string | null,"drawn_on"?: string,"id"?: string,"note"?: string | null
                   }
@@ -213,7 +257,9 @@ isOneToOne: false
                   Row: {
                     "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"last_asked_by"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
@@ -849,7 +895,9 @@ isOneToOne: false
                   Row: {
                     "amount_pkr": number,"category_id": string | null,"created_at": string,"created_by": string | null,"decided_at": string | null,"decided_by": string | null,"expense_id": string | null,"id": string,"note": string | null,"order_id": string | null,"paid_how": string | null,"reject_reason": string | null,"rfq_id": string | null,"spent_on": string,"status": string,"visit_id": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "amount_pkr": number,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"rfq_id"?: string | null,"spent_on"?: string,"status"?: string,"visit_id"?: string | null
                   }
@@ -967,7 +1015,9 @@ isOneToOne: false
                   Row: {
                     "amount_pkr": number,"auto_booked": boolean,"bank_month": string | null,"category_id": string,"created_at": string,"created_by": string | null,"description": string | null,"fx_amount": number | null,"fx_currency": string | null,"id": string,"input_tax_pkr": number,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"paid_via": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"rfq_id": string | null,"supplier_order_id": string | null,"visit_id": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "amount_pkr": number,"auto_booked"?: boolean,"bank_month"?: string | null,"category_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via": string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"rfq_id"?: string | null,"supplier_order_id"?: string | null,"visit_id"?: string | null
                   }
@@ -1235,7 +1285,9 @@ isOneToOne: false
                   Row: {
                     "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"voided_gst": number | null,"voided_net": number | null,"wasif_receipt_on": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount": number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"voided_gst"?: number | null,"voided_net"?: number | null,"wasif_receipt_on"?: string | null
                   }
@@ -1601,7 +1653,9 @@ isOneToOne: false
                   Row: {
                     "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"commissioning_time": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string,"visit_type": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"commissioning_time"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string,"visit_type"?: string | null
                   }
@@ -1711,7 +1765,9 @@ isOneToOne: false
                   Row: {
                     "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"invoice_id": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"wht_amount": number,"wht_certificate_name": string | null,"wht_certificate_no": string | null,"wht_certificate_path": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"invoice_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"wht_amount"?: number,"wht_certificate_name"?: string | null,"wht_certificate_no"?: string | null,"wht_certificate_path"?: string | null
                   }
@@ -1809,7 +1865,9 @@ isOneToOne: false
                   Row: {
                     "created_at": string,"created_by": string | null,"currency": string,"delivery_terms": string | null,"id": string,"incoterm": string | null,"issued_on": string,"lines": NonNullable<Json>,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"ship_to": string | null,"signatory_id": string,"supplier_order_id": string,"total": number
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "created_at"?: string,"created_by"?: string | null,"currency": string,"delivery_terms"?: string | null,"id"?: string,"incoterm"?: string | null,"issued_on"?: string,"lines": NonNullable<Json>,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"ship_to"?: string | null,"signatory_id"?: string,"supplier_order_id": string,"total": number
                   }
@@ -1841,7 +1899,9 @@ isOneToOne: false
                   Row: {
                     "contact_id": string | null,"created_at": string,"created_by": string | null,"delivery_text": string | null,"gst_total": number,"id": string,"issued_on": string,"lines": NonNullable<Json>,"net_total": number,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"rfq_id": string,"signatory_id": string,"valid_until": string
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total": number,"id"?: string,"issued_on"?: string,"lines": NonNullable<Json>,"net_total": number,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"rfq_id": string,"signatory_id"?: string,"valid_until": string
                   }
@@ -1961,7 +2021,9 @@ isOneToOne: false
                   Row: {
                     "close_note": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_ref": string | null,"due_on": string | null,"due_time": string | null,"id": string,"is_priority": boolean,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"number": number,"owner_id": string | null,"quoted_on": string | null,"received_on": string,"site_id": string | null,"updated_at": string
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "close_note"?: string | null,"close_reason"?: string | null,"closed_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_ref"?: string | null,"due_on"?: string | null,"due_time"?: string | null,"id"?: string,"is_priority"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"number"?: never,"owner_id"?: string | null,"quoted_on"?: string | null,"received_on"?: string,"site_id"?: string | null,"updated_at"?: string
                   }
@@ -2043,7 +2105,9 @@ isOneToOne: false
                   Row: {
                     "asked_item_ids": (string)[] | null,"chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_confirmed_at": string | null,"sent_on": string | null,"supplier_id": string
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "asked_item_ids"?: (string)[] | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id": string
                   }
@@ -2105,7 +2169,9 @@ isOneToOne: false
                   Row: {
                     "cancelled_with_supplier_on": string | null,"chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_by": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Insert: {
                     "cancelled_with_supplier_on"?: string | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
                   }
@@ -2352,7 +2418,9 @@ isOneToOne: false
                   Row: {
                     "answers_to_relay": number | null,"blocked_state": string | null,"chase_count": number | null,"contact_state": string | null,"inquiry_id": string | null,"items_quoted": number | null,"items_total": number | null,"last_chased_on": string | null,"open_questions": number | null,"quote_received_on": string | null,"response_state": string | null,"rfq_id": string | null,"sent_on": string | null,"supplier_id": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Relationships: [
                     {
       foreignKeyName: "supplier_inquiries_rfq_id_fkey"
@@ -2396,7 +2464,9 @@ isOneToOne: false
                   Row: {
                     "company_id": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"last_reminded_on": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"reminder_count": number | null,"reminder_state": string | null,"void_reason": string | null,"voided_at": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Relationships: [
                     {
       foreignKeyName: "invoices_company_id_fkey"
@@ -2464,7 +2534,9 @@ isOneToOne: false
                   Row: {
                     "cancelled_orders": number | null,"company_id": string | null,"is_history": boolean | null,"items_summary": string | null,"job_key": string | null,"kind": string | null,"last_activity_on": string | null,"order_id": string | null,"owner_id": string | null,"repeat_of_job_key": string | null,"rfq_id": string | null,"site_id": string | null,"stage": string | null,"stage_detail": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Relationships: [
                     
                   ]
@@ -2632,7 +2704,9 @@ isOneToOne: false
                   Row: {
                     "commissioning_state": string | null,"company_id": string | null,"data_trust": string | null,"goods_state": string | null,"gross": number | null,"gst": number | null,"invoiced": number | null,"invoicing_state": string | null,"is_done": boolean | null,"lifecycle": string | null,"net": number | null,"number": number | null,"order_id": string | null,"owner_id": string | null,"rfq_id": string | null,"site_id": string | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Relationships: [
                     {
       foreignKeyName: "orders_company_id_fkey"
@@ -2770,7 +2844,9 @@ isOneToOne: false
                   Row: {
                     "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quotation_valid_until": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null
                   }
-                  ComputedFields: never
+                  ComputedFields: {
+                    "archived": boolean
+                  }
                   Relationships: [
                     {
       foreignKeyName: "rfqs_company_id_fkey"
@@ -2962,6 +3038,39 @@ isOneToOne: false
 "approve_expense_claim":
 { Args: { "p_category": string,"p_claim": string,"p_paid_how": string,"p_paid_on"?: string }; Returns: string
                            },
+"archive_hides":
+{ Args: { "p_date": string,"p_legacy": boolean }; Returns: boolean
+                           },
+"archive_list":
+{ Args: { "p_company_id"?: string,"p_entity"?: string,"p_limit"?: number,"p_offset"?: number,"p_search"?: string }; Returns: {
+              "amount": number,"company_id": string,"company_name": string,"doc_date": string,"entity": string,"id": string,"is_imported": boolean,"is_unhidden": boolean,"ref": string
+            }[]
+                           },
+"archive_preview":
+{ Args: { "p_cutoff"?: string }; Returns: {
+              "already_unhidden": number,"entity": string,"of_which_imported": number,"of_which_open": number,"open_amount_pkr": number,"would_hide": number
+            }[]
+                           },
+"archive_rehide":
+{ Args: { "p_entity": string,"p_id": string }; Returns: boolean
+                           },
+"archive_set":
+{ Args: { "p_cutoff"?: string,"p_enabled": boolean }; Returns: {
+              "cutoff": string,
+"enabled": boolean,
+"id": number,
+"updated_at": string,
+"updated_by": string | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "archive_settings"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
+"archive_unhide":
+{ Args: { "p_entity": string,"p_id": string }; Returns: boolean
+                           },
 "attachment_is_priced":
 { Args: { "p_bucket": string,"p_name": string }; Returns: boolean
                            },
@@ -3100,6 +3209,9 @@ isOneToOne: false
                            },
 "ingest_fx_response":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"is_archived":
+{ Args: { "p_entity": string,"p_id": string }; Returns: boolean
                            },
 "issue_purchase_order":
 { Args: { "p_delivery_terms"?: string,"p_expected_revision"?: number,"p_incoterm"?: string,"p_lines"?: Json,"p_notes"?: string,"p_payment_terms"?: string,"p_po_id": string,"p_ship_to"?: string,"p_supplier_order_id": string }; Returns: string
