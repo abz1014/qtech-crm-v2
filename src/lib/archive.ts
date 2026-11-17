@@ -9,6 +9,6 @@
  * An engineer cannot read `archived` on the base tables orders, quotations or purchase_orders (no column grant): filter through a
  * view (v_jobs, v_order_state, ...) for any read an engineer can make.
  */
-export function hideArchived<Q extends object>(q: Q): Q {
-  return (q as unknown as { eq(column: string, value: boolean): Q }).eq('archived', false)
+export function hideArchived<Q extends { eq(column: 'archived', value: boolean): Q }>(q: Q): Q {
+  return q.eq('archived', false)
 }
