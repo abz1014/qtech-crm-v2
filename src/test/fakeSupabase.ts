@@ -28,6 +28,26 @@ export function opArgs(call: FakeCall, name: string): unknown[] | undefined {
   return call.ops.find(([n]) => n === name)?.[1]
 }
 
+/**
+ * Whether a fixture row passes the eq / neq / is filters of a call, the way PostgREST would. A row with no `archived` field counts as
+ * archived = false (migration 0141), so older fixtures keep passing archive filters. Other filter kinds are ignored.
+ */
+export function rowMatchesFilters(row: Record<string, unknown>, call: FakeCall): boolean {
+  const val = (col: string) => (col in row ? row[col] : col === 'archived' ? false : undefined)
+  return call.ops.every(([name, args]) => {
+    const [col, v] = args as [string, unknown]
+    if (name === 'eq') return val(col) === v
+    if (name === 'neq') return val(col) !== v
+    if (name === 'is') return (val(col) ?? null) === v
+    return true
+  })
+}
+
+/** The rows of a fixture that pass the call's filters (see rowMatchesFilters). */
+export function filterRows<T extends Record<string, unknown>>(rows: readonly T[], call: FakeCall): T[] {
+  return rows.filter(r => rowMatchesFilters(r, call))
+}
+
 export function installFakeDb(respond: (call: FakeCall) => FakeResult | Promise<FakeResult>) {
   const calls: FakeCall[] = []
   const chain = (target: string, verb: FakeCall['verb'], first?: [string, unknown[]]) => {

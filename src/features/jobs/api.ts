@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import type { ViewRow } from '@/features/dbTypes'
 import { searchAll, type SearchHit } from '@/features/search/api'
+import { hideArchived } from '@/lib/archive'
 import { mergeMore } from '@/features/jobs/lib/listModel'
 
 /*
@@ -111,7 +112,7 @@ async function namesFor(rows: JobView[]): Promise<Names> {
 export async function listJobs(): Promise<JobRow[]> {
   const db = requireSupabase()
   const [views, companies, sites, users, engineers, impOrders, impRfqs] = await Promise.all([
-    fetchAll<JobView>((from, to) => db.from('v_jobs').select(JOB_COLUMNS).order('job_key').range(from, to) as unknown as Page<JobView>),
+    fetchAll<JobView>((from, to) => hideArchived(db.from('v_jobs').select(JOB_COLUMNS)).order('job_key').range(from, to) as unknown as Page<JobView>),
     fetchAll((from, to) => db.from('companies').select('id, name').order('id').range(from, to)),
     fetchAll((from, to) => db.from('company_sites').select('id, name').order('id').range(from, to)),
     db.from('users').select('id, name'),
@@ -218,7 +219,7 @@ export async function findJobs(text: string, signal?: AbortSignal, hits?: Search
   if (orderIds.size) clauses.push(`order_id.in.(${[...orderIds].join(',')})`)
   if (companyIds.size) clauses.push(`company_id.in.(${[...companyIds].slice(0, FETCH_LIMIT).join(',')})`)
   if (clauses.length === 0) return []
-  let req = db.from('v_jobs').select(JOB_COLUMNS).or(clauses.join(',')).limit(200)
+  let req = hideArchived(db.from('v_jobs').select(JOB_COLUMNS)).or(clauses.join(',')).limit(200)
   if (signal) req = req.abortSignal(signal)
   const rows = unwrap(await req) as JobView[]
   const names = await namesFor(rows)
