@@ -1,5 +1,6 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { toBusinessDate } from '@/lib/dates'
+import { hideArchived } from '@/lib/archive'
 import type { ViewRow } from '@/features/dbTypes'
 import { previousMonthStart, today1 } from '@/features/today/rules'
 import { getGstDeadlines } from '@/features/settings/gstApi'
@@ -78,7 +79,7 @@ export const withCity = (name: string, city: string | null | undefined): string 
 async function loadRfqs(): Promise<{ rfqs: RfqFact[]; open: Set<string> }> {
   const db = requireSupabase()
   const [states, refs] = await Promise.all([
-    fetchAll<RfqStateRow>((from, to) => db.from('v_rfq_state').select('*, companies(name, city)').eq('outcome', 'open').order('number').range(from, to) as unknown as Page<RfqStateRow>),
+    fetchAll<RfqStateRow>((from, to) => hideArchived(db.from('v_rfq_state').select('*, companies(name, city)').eq('outcome', 'open')).order('number').range(from, to) as unknown as Page<RfqStateRow>),
     fetchAll<{ id: string; customer_ref: string | null; due_time: string | null }>((from, to) => db.from('rfqs').select('id, customer_ref, due_time').is('closed_on', null).order('number').range(from, to)),
   ])
   const refBy = new Map(refs.map(r => [r.id, r.customer_ref]))
@@ -104,12 +105,14 @@ async function loadRfqs(): Promise<{ rfqs: RfqFact[]; open: Set<string> }> {
 async function loadClarifications(open: Set<string>): Promise<ClarificationFact[]> {
   const db = requireSupabase()
   const rows = await fetchAll((from, to) =>
-    db
-      .from('clarifications')
-      .select('id, rfq_id, question, rfq_item_id, first_asked_at, last_asked_at, last_asked_by, ask_count')
-      .is('answered_at', null)
-      .is('withdrawn_at', null)
-      .not('first_asked_at', 'is', null)
+    hideArchived(
+      db
+        .from('clarifications')
+        .select('id, rfq_id, question, rfq_item_id, first_asked_at, last_asked_at, last_asked_by, ask_count')
+        .is('answered_at', null)
+        .is('withdrawn_at', null)
+        .not('first_asked_at', 'is', null),
+    )
       .order('created_at')
       .range(from, to),
   )
@@ -135,8 +138,13 @@ async function loadClarifications(open: Set<string>): Promise<ClarificationFact[
  */
 async function loadInquiries(open: Set<string>): Promise<InquiryFact[]> {
   const db = requireSupabase()
-  const rows = await fetchAll((from, to) => db.rpc('today_inquiry_facts').range(from, to))
-  return rows.filter(r => r.rfq_id && open.has(r.rfq_id) && r.inquiry_id && r.supplier_id).map(toInquiryFact)
+  const [rows, live] = await Promise.all([
+    fetchAll((from, to) => db.rpc('today_inquiry_facts').range(from, to)),
+    // the RPC cannot say which enquiries are archived: ask the view for the ones that are not (a LIST read; the RPC's own numbers stay as they are)
+    fetchAll<{ inquiry_id: string | null }>((from, to) => hideArchived(db.from('v_inquiry_state').select('inquiry_id')).order('inquiry_id').range(from, to) as unknown as Page<{ inquiry_id: string | null }>),
+  ])
+  const liveIds = new Set(live.map(r => r.inquiry_id))
+  return rows.filter(r => r.rfq_id && open.has(r.rfq_id) && r.inquiry_id && r.supplier_id && liveIds.has(r.inquiry_id)).map(toInquiryFact)
 }
 
 type InquiryFactRow = {
@@ -201,6 +209,21 @@ async function importedOrderIds(orderIds: readonly string[]): Promise<Set<string
   return out
 }
 
+/**
+ * Which of these orders are NOT archived (archive feature): ids only, read through v_order_state, never the orders table, because an
+ * engineer has no column grant on orders.archived (42501) and these reads run for engineers too. In chunks of 100.
+ */
+async function liveOrderIds(orderIds: readonly string[]): Promise<Set<string>> {
+  const db = requireSupabase()
+  const ids = [...new Set(orderIds)]
+  const out = new Set<string>()
+  for (let i = 0; i < ids.length; i += 100) {
+    const found = unwrap(await hideArchived(db.from('v_order_state').select('order_id').in('order_id', ids.slice(i, i + 100)))) ?? []
+    for (const o of found) if (o.order_id) out.add(o.order_id)
+  }
+  return out
+}
+
 async function loadLegs(names: Map<string, string>, labels: Map<string, string>): Promise<LegFact[]> {
   const db = requireSupabase()
   const rows = await fetchAll<LegRow>(
@@ -210,12 +233,13 @@ async function loadLegs(names: Map<string, string>, labels: Map<string, string>)
         .select('id, order_id, supplier_id, reference, placed_on, expected_on, received_on, delivered_on, last_chased_on, last_chased_by, chase_count, orders!inner(number, owner_id, ordered_on, company_id, cancelled_on)')
         .is('orders.cancelled_on', null)
         .is('delivered_on', null)
+        .eq('archived', false) // the leg's own computed field (supplier_orders: no engineer limit); the order's is checked below via the view
         .order('created_at')
         .range(from, to) as unknown as Page<LegRow>,
   )
-  const imported = await importedOrderIds(rows.filter(l => l.orders).map(l => l.order_id))
+  const [imported, live] = await Promise.all([importedOrderIds(rows.filter(l => l.orders).map(l => l.order_id)), liveOrderIds(rows.filter(l => l.orders).map(l => l.order_id))])
   return rows
-    .filter(l => l.orders)
+    .filter(l => l.orders && live.has(l.order_id))
     .map(l => ({
       id: l.id,
       legacy: imported.has(l.order_id),
@@ -247,11 +271,13 @@ async function loadOrders(role: Role, names: Map<string, string>): Promise<Order
   const money = role === 'admin' || role === 'sales'
   const states = await fetchAll(
     (from, to) =>
-      db
-        .from('v_order_state')
-        // invoicing_state is money-gated: an engineer's request never names it
-        .select((money ? 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state, gross, invoiced' : 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state') as 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state, gross, invoiced')
-        .eq('lifecycle', 'active')
+      hideArchived(
+        db
+          .from('v_order_state')
+          // invoicing_state is money-gated: an engineer's request never names it
+          .select((money ? 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state, gross, invoiced' : 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state') as 'order_id, number, company_id, owner_id, lifecycle, goods_state, commissioning_state, invoicing_state, gross, invoiced')
+          .eq('lifecycle', 'active'),
+      )
         .or(money ? 'commissioning_state.eq.to_plan,goods_state.eq.to_source,invoicing_state.eq.not_invoiced,invoicing_state.eq.part' : 'commissioning_state.eq.to_plan,goods_state.eq.to_source')
         .order('number')
         .range(from, to),
@@ -331,7 +357,7 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
   for (let i = 0; i < ids.length; i += 100) {
     const chunk = ids.slice(i, i + 100)
     const [states, orders, legs, imported] = await Promise.all([
-      db.from('v_order_state').select('order_id, lifecycle, goods_state, commissioning_state, data_trust').in('order_id', chunk).eq('lifecycle', 'active'),
+      hideArchived(db.from('v_order_state').select('order_id, lifecycle, goods_state, commissioning_state, data_trust').in('order_id', chunk).eq('lifecycle', 'active')),
       db.from('orders').select('id, number, owner_id, company_id, commissioning_planned_on, visit_type, company_sites(name)').in('id', chunk) as unknown as PromiseLike<{ data: JobOrderRow[] | null; error: PgError | null }>,
       db.from('supplier_orders').select('order_id, delivered_on').in('order_id', chunk).not('delivered_on', 'is', null),
       // which of them came from the old CRM: the ids only (legacy_source itself may hold old prices, so it is never read here)
@@ -367,7 +393,10 @@ async function loadJobs(userId: string, names: Map<string, string>): Promise<Job
 
 /** Overdue orders only, filtered on the server (receivables_list 'overdue' = is_overdue) and paged, so none is lost past 1,000 rows. */
 async function loadReceivables(names: Map<string, string>): Promise<ReceivableFact[]> {
-  const rows = await fetchReceivablesList({ p_state: 'overdue' })
+  const all = await fetchReceivablesList({ p_state: 'overdue' })
+  // archive: the late-payment ALERT drops archived orders (through v_order_state); the Money tiles read receivables_summary and still count them
+  const live = await liveOrderIds(all.map(r => r.order_id))
+  const rows = all.filter(r => live.has(r.order_id))
   // owner decision 2026-10-22 (1): a late payment on an imported order waits in the Imported fold (ids only are read)
   const imported = await importedOrderIds(rows.map(r => r.order_id))
   return rows.map(r => ({ ...toReceivableFact(r, names), legacy: imported.has(r.order_id) }))
@@ -402,7 +431,8 @@ async function loadGst(today: string): Promise<GstFact> {
         .lt('invoice_date', today1(today))
         .gt('gst_amount', 0)
         .is('legacy_source', null)
-        .eq('settled_before_cutover', false),
+        .eq('settled_before_cutover', false)
+        .eq('archived', false), // archive: an archived invoice raises no GST alert (hideArchived, written inline in the chain)
     ) ?? []
   // the dates are the admin's settings (0110), not a fixed 15th and 18th
   const deadlines = await getGstDeadlines()
@@ -418,6 +448,7 @@ async function loadGst(today: string): Promise<GstFact> {
       .eq('settled_before_cutover', false)
       .is('tax_deposited_on', null)
       .not('invoice_date', 'is', null)
+      .eq('archived', false)
       .limit(5000),
   ) ?? []
   return {
@@ -466,7 +497,7 @@ async function loadHealth(): Promise<HealthFact | null> {
 /** P3-D, admin only: engineers' pending "I paid" claims (0087): how many, and the day the oldest was made. */
 async function loadClaims(): Promise<ClaimsFact> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('expense_claims').select('created_at').eq('status', 'pending').order('created_at').limit(500)) ?? []
+  const rows = unwrap(await hideArchived(db.from('expense_claims').select('created_at').eq('status', 'pending')).order('created_at').limit(500)) ?? []
   return claimsFactFrom(rows)
 }
 
@@ -506,6 +537,7 @@ async function loadCosts(): Promise<CostFact[]> {
   const ids = rows.map(r => r.order_id).filter((id): id is string => Boolean(id))
   const cancelled = new Set<string>()
   const imported = new Set<string>()
+  const live = await liveOrderIds(ids)
   for (let i = 0; i < ids.length; i += 150) {
     const slice = ids.slice(i, i + 150)
     const [found, old] = await Promise.all([
@@ -517,7 +549,7 @@ async function loadCosts(): Promise<CostFact[]> {
     for (const o of unwrap(old) ?? []) imported.add(o.id)
   }
   return rows
-    .filter(r => r.order_id)
+    .filter(r => r.order_id && live.has(r.order_id))
     .map(r => ({
       orderId: r.order_id as string,
       orderNumber: num(r.order_number),
@@ -536,9 +568,7 @@ async function loadInvoiceFacts(today: string): Promise<InvoiceFact[]> {
   const db = requireSupabase()
   const earliest = addDays(today, -60) ?? today
   const rows = await fetchAll((from, to) =>
-    db
-      .from('v_invoice_state')
-      .select('invoice_id, order_id, number, invoice_date, courier_state, fbr_state, fbr_exception, needs_fbr_attention')
+    hideArchived(db.from('v_invoice_state').select('invoice_id, order_id, number, invoice_date, courier_state, fbr_state, fbr_exception, needs_fbr_attention'))
       .or(`needs_fbr_attention.eq.true,fbr_exception.eq.true,and(courier_state.in.(not_started,copy_received),invoice_date.gte.${earliest})`)
       .order('invoice_date')
       .range(from, to),
