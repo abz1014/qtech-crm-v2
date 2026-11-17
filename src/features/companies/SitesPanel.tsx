@@ -10,6 +10,7 @@ import { removeErrorMessage } from '@/features/companies/removeError'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef, rfqRef } from '@/lib/refs'
+import { ArchiveLine } from '@/features/companies/ArchiveLine'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -97,6 +98,7 @@ export function SitesPanel({
   companyId,
   sites,
   history,
+  isAdmin = false,
   loading,
   error,
   onAddSite,
@@ -105,6 +107,8 @@ export function SitesPanel({
   companyId: string
   sites: readonly SiteRow[] | undefined
   history: CompanyHistory | undefined
+  /** Admin gets the archive line as a link to the Archive page; everyone else reads it as text. */
+  isAdmin?: boolean
   loading: boolean
   error: boolean
   onAddSite: () => void
@@ -192,6 +196,7 @@ export function SitesPanel({
           {unfiled.length > 0 ? <SiteBlock name="Not filed under a site" items={unfiled} today={today} muted /> : null}
         </div>
       )}
+      {!loading && !error && history ? <ArchiveLine companyId={companyId} count={history.archived.rfqs + history.archived.orders} isAdmin={isAdmin} /> : null}
     </Panel>
   )
 }
