@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase } from '@/lib/supabase'
+import { hideArchived } from '@/lib/archive'
 import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
@@ -42,18 +43,14 @@ export async function listReviewItems(): Promise<ReviewItem[]> {
   const [orders, invoices, receivables] = await Promise.all([
     fetchAll<OrderRow>(
       (from, to) =>
-        db
-          .from('orders')
-          .select('id, number, company_id, ordered_on, cancelled_on, customer_po_number, legacy_review')
+        hideArchived(db.from('orders').select('id, number, company_id, ordered_on, cancelled_on, customer_po_number, legacy_review'))
           .in('legacy_review', open)
           .order('number')
           .range(from, to) as unknown as PromiseLike<{ data: OrderRow[] | null; error: { code?: string; message: string } | null }>,
     ),
     fetchAll<InvoiceRow>(
       (from, to) =>
-        db
-          .from('invoices')
-          .select('id, number, invoice_date, net_amount, gst_amount, company_id, order_id, notes, legacy_review')
+        hideArchived(db.from('invoices').select('id, number, invoice_date, net_amount, gst_amount, company_id, order_id, notes, legacy_review'))
           .in('legacy_review', open)
           .order('invoice_date')
           .range(from, to) as unknown as PromiseLike<{ data: InvoiceRow[] | null; error: { code?: string; message: string } | null }>,

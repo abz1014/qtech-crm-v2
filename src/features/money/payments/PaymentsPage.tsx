@@ -18,7 +18,7 @@ import { isMonthKey } from '@/features/money/monthKey'
 import { PAID_VIA_LABEL, monthKeyLabel, shiftMonth, type PaidVia } from '@/features/money/expenses/model'
 import { useClosedMonths, usePnlMonths } from '@/features/money/monthEnd/hooks'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
-import { usePaymentsReceived } from '@/features/money/payments/hooks'
+import { usePaymentsReceived, usePaymentsReceivedTotal } from '@/features/money/payments/hooks'
 import { receivedTotal, type ReceivedPayment } from '@/features/money/payments/model'
 
 const RecordPaymentFlow = lazyDialog(() => import('@/features/money/payments/RecordPaymentFlow').then(m => m.RecordPaymentFlow))
@@ -52,7 +52,9 @@ export function PaymentsPage() {
   const pnl = usePnlMonths()
   const closed = useClosedMonths()
   const rows = useMemo(() => q.data ?? [], [q.data])
-  const sum = receivedTotal(rows)
+  // The month's total counts archived payments too, so it comes from its own unfiltered read, not from the listed rows.
+  const totalQ = usePaymentsReceivedTotal(month)
+  const sum = totalQ.data ?? receivedTotal(rows)
   const gst = pnl.data ? (pnl.data[month]?.gstIn ?? '0.00') : null
   const isClosed = (closed.data ?? []).some(c => c.key === month)
   const name = monthKeyLabel(month)
@@ -96,7 +98,7 @@ export function PaymentsPage() {
         <MonthPager month={month} thisMonth={thisMonth} go={go} />
         {isClosed ? <MonthStateChip closed /> : null}
       </div>
-      {q.isSuccess && rows.length > 0 ? (
+      {q.isSuccess && totalQ.isSuccess && sum.count > 0 ? (
         <SumBar
           label={`Received in ${name}, includes GST`}
           items={[
@@ -144,7 +146,7 @@ export function PaymentsPage() {
           </div>
         )}
       />
-      {q.isSuccess && rows.length > 0 ? (
+      {q.isSuccess && totalQ.isSuccess && sum.count > 0 ? (
         <p role="status" className="text-sm text-fg-2" data-testid="payments-count">
           {plural(sum.count)} in {name}, PKR {formatAmount(sum.total, 'never')} with GST. Voided payments are not listed.
         </p>
