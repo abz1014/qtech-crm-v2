@@ -1,9 +1,11 @@
 begin;
-select plan(4);
+select plan(7);
 
 -- R12 performance budget: search_all p95 < 300 ms server-side on 1,000 companies, 3,000 contacts and 1,000 RFQs.
 -- Timing is taken inside the test with clock_timestamp(), as the `authenticated` role, so row security (and its
 -- current_user_role() checks) is part of what is measured. The numbers are printed in the test descriptions.
+-- Archiving OFF is timed first (the default); then the same terms with archiving ON (0143, the production mode: the cutoff hides about 60% of the
+-- fixture's RFQs and orders, 50 rows are unhidden) against the same 300 ms p95 budget.
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
 
@@ -128,6 +130,72 @@ select ok((select bool_and(p95 < 300) from (select percentile_cont(0.95) within 
    from (select kind, percentile_cont(0.95) within group (order by ms) p95 from perf_runs where kind <> 'all' group by kind) x));
 select ok((select count(*) from public.search_all('indus', 8)) > 0 and (select count(*) from public.search_all('RFQ-' || lpad((select min(number)::text from public.rfqs where id::text like 'c9200000%'), 4, '0'), 8) where kind = 'rfq') > 0,
   'the fixture queries return rows (the timing is of real work)');
+
+-- ------------------------------------------------------------------ archiving ON (the production mode), same terms, same budget
+select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);
+select (public.archive_set(true, public.today_pkt() - 150)).enabled as archiving_on;
+insert into public.archive_unhidden (entity, row_id)
+select 'rfq', id from public.rfqs where id::text like 'c9200000%' and received_on < public.today_pkt() - 150 order by id limit 25;
+insert into public.archive_unhidden (entity, row_id)
+select 'order', id from public.orders where id::text like 'c9300000%' order by id limit 25;
+analyze public.archive_unhidden, public.archive_settings;
+
+create temp table perf_runs_on (kind text, ms numeric);
+grant all on perf_runs_on to authenticated;
+
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000003","role":"authenticated"}', true);
+do $$
+declare
+  t0 timestamptz;
+  r record;
+  ms numeric;
+begin
+  perform * from public.search_all('warm', 8);
+  for r in select kind, t from perf_terms loop
+    t0 := clock_timestamp();
+    perform * from public.search_all(r.t, 8);
+    ms := extract(epoch from clock_timestamp() - t0) * 1000;
+    insert into perf_runs_on values (r.kind, ms), ('all', ms);
+  end loop;
+end $$;
+
+select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000002","role":"authenticated"}', true);
+do $$
+declare
+  t0 timestamptz;
+  r record;
+  ms numeric;
+begin
+  perform * from public.search_all('warm', 8);
+  for r in select kind, t from perf_terms where kind in ('order', 'item', 'invoice') loop
+    t0 := clock_timestamp();
+    perform * from public.search_all(r.t, 8);
+    ms := extract(epoch from clock_timestamp() - t0) * 1000;
+    insert into perf_runs_on values ('sales ' || r.kind, ms), ('all', ms);
+  end loop;
+  -- the Closed search with archiving on
+  for r in select t from perf_terms where kind = 'rfq' loop
+    t0 := clock_timestamp();
+    perform * from public.search_closed_rfqs(r.t, 25, 0);
+    ms := extract(epoch from clock_timestamp() - t0) * 1000;
+    insert into perf_runs_on values ('closed', ms);
+  end loop;
+end $$;
+
+reset role;
+
+select ok((select percentile_cont(0.95) within group (order by ms) < 300 from perf_runs_on where kind = 'all'),
+  (select format('ARCHIVING ON: search_all (same fixture, cutoff hides ~60%% of RFQs and orders) p95 %s ms, median %s ms, max %s ms over %s calls (budget 300 ms)',
+                 round(percentile_cont(0.95) within group (order by ms)::numeric, 1),
+                 round(percentile_cont(0.5) within group (order by ms)::numeric, 1),
+                 round(max(ms), 1), count(*))
+   from perf_runs_on where kind = 'all'));
+select ok((select bool_and(p95 < 300) from (select percentile_cont(0.95) within group (order by ms) p95 from perf_runs_on where kind <> 'all' group by kind) x),
+  (select 'ARCHIVING ON, per kind of search, p95 ms: ' || string_agg(kind || ' ' || round(p95::numeric, 1), ', ' order by kind)
+   from (select kind, percentile_cont(0.95) within group (order by ms) p95 from perf_runs_on where kind <> 'all' group by kind) x));
+select ok((select count(*) from public.archive_unhidden) >= 50 and (select enabled from public.archive_settings where id = 1),
+  'archiving is really on during the ON timing, with unhidden rows present');
 
 select * from finish();
 rollback;
