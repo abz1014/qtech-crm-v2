@@ -41,6 +41,10 @@ export function useRecordPayment(orderId: string) {
  * Money > Payments: one month of payments received (admin; pass enabled = isAdmin). Keyed under the receivables, so recording,
  * voiding, correcting or restoring a payment (they all make qk.money.receivables.all stale) reads the month again.
  */
+export function usePaymentsReceivedTotal(month: string, enabled = true) {
+  return useQuery({ queryKey: [...qk.money.receivables.all, 'received-total', month], queryFn: () => api.listPaymentsReceivedTotal(month), enabled, staleTime: 0 })
+}
+
 export function usePaymentsReceived(month: string, enabled = true) {
   return useQuery({ queryKey: [...qk.money.receivables.all, 'received', month], queryFn: () => api.listPaymentsReceived(month), enabled, staleTime: 0 })
 }

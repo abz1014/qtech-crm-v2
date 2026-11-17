@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { hideArchived } from '@/lib/archive'
 import { businessDaysFromNow } from '@/lib/dates'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { PlainError } from '@/lib/errors/plainError'
@@ -84,7 +85,7 @@ export async function listExpensesBetween(fromMonth: string, toMonth: string): P
   const payeeIds = [...new Set(rows.map(r => r.payeeId).filter((x): x is string => !!x))]
   const orderIds = [...new Set(rows.map(r => r.orderId).filter((x): x is string => !!x))]
   const labels = await lookupLabels({ companies: payeeIds, orders: orderIds })
-  return { rows, payees: { ...labels.companies }, orders: orderRefsOf(labels) }
+  return { rows, hidden: [], payees: { ...labels.companies }, orders: orderRefsOf(labels) }
 }
 
 const toListed = (r: TableRow<'expenses'>): ListedExpense => ({
@@ -107,30 +108,40 @@ const toListed = (r: TableRow<'expenses'>): ListedExpense => ({
 
 export interface ExpenseListing {
   rows: ListedExpense[]
+  /**
+   * The month's archived expenses (dated before the archive cutoff, or imported), NOT in `rows`. They are not listed, but the page's
+   * totals still count them: a total is a NUMBER and archive never changes a number.
+   */
+  hidden: ListedExpense[]
   /** payee id to name, order id to "ORD-0038": the words the list shows beside a category. */
   payees: Record<string, string>
   orders: Record<string, string>
 }
 
-/** Expenses paid in one month ("2026-11"), newest first. */
+/**
+ * Expenses paid in one month ("2026-11"), newest first. A LIST: archived expenses drop out of `rows` (hideArchived). The same month's
+ * archived expenses come back apart in `hidden` (a second read with archived = true), so the page can keep counting them in its totals.
+ */
 export async function listExpenses(month: string): Promise<ExpenseListing> {
   const db = requireSupabase()
-  const raw = await fetchAll<TableRow<'expenses'>>((from, to) =>
-    db
-      .from('expenses')
-      .select('*')
-      .gte('paid_on', monthStart(month))
-      .lte('paid_on', monthEnd(month))
-      .order('paid_on', { ascending: false })
-      .order('created_at', { ascending: false })
-      .range(from, to),
-  )
+  const read = (archived: boolean) =>
+    fetchAll<TableRow<'expenses'>>((from, to) => {
+      const q = db.from('expenses').select('*')
+      return (archived ? q.eq('archived', true) : hideArchived(q))
+        .gte('paid_on', monthStart(month))
+        .lte('paid_on', monthEnd(month))
+        .order('paid_on', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, to)
+    })
+  const [raw, rawHidden] = await Promise.all([read(false), read(true)])
   const rows = raw.map(toListed)
+  const hidden = rawHidden.map(toListed)
   const payeeIds = [...new Set(rows.map(r => r.payeeId).filter((x): x is string => !!x))]
   const orderIds = [...new Set(rows.map(r => r.orderId).filter((x): x is string => !!x))]
   // payee names and order numbers in one lookup_labels call (ids in the body: no URL-length limit)
   const labels = await lookupLabels({ companies: payeeIds, orders: orderIds })
-  return { rows, payees: { ...labels.companies }, orders: orderRefsOf(labels) }
+  return { rows, hidden, payees: { ...labels.companies }, orders: orderRefsOf(labels) }
 }
 
 const orderRefsOf = (labels: Labels): Record<string, string> =>

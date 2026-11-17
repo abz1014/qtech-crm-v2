@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChartColumn, Ellipsis, History, Lock, Pencil, Receipt, Trash2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
@@ -81,13 +81,27 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const categories = useMemo(() => cats.data ?? [], [cats.data])
   const groups = groupsQ.data ?? NO_GROUPS
   const monthClosed = (closedQ.data ?? []).some(c => c.key === month)
-  const rows = useMemo(() => {
-    const kept = filterExpenses(list.data?.rows ?? [], filters, categories)
-    const found = q.trim() ? kept.filter(r => matchesAllWords(searchText(r, categories, list.data), q)) : kept
-    return bySection(found, categories, groups)
-  }, [list.data, filters, categories, groups, q])
-  const totals = listTotals(rows)
-  const sections = useMemo(() => sectionTotals(rows, categories, groups), [rows, categories, groups])
+  // The same filters and search, applied to the listed rows and to the month's archived rows (`hidden`, not listed). The totals count both
+  // (archive never changes a number); only the listed rows are drawn.
+  const pick = useCallback(
+    (all: readonly ListedExpense[]) => {
+      const kept = filterExpenses(all, filters, categories)
+      const found = q.trim() ? kept.filter(r => matchesAllWords(searchText(r, categories, list.data), q)) : kept
+      return bySection(found, categories, groups)
+    },
+    [filters, categories, groups, q, list.data],
+  )
+  const rows = useMemo(() => pick(list.data?.rows ?? []), [pick, list.data])
+  const hiddenCounted = useMemo(() => pick(list.data?.hidden ?? []), [pick, list.data])
+  const counted = useMemo(() => [...rows, ...hiddenCounted], [rows, hiddenCounted])
+  const totals = listTotals(counted)
+  const sections = useMemo(() => sectionTotals(counted, categories, groups), [counted, categories, groups])
+  /** The archived rows a footer or group subtotal must add to the drawn rows it is given (the footer is handed every drawn row). */
+  const extraFor = useCallback(
+    (shown: readonly ListedExpense[]) =>
+      shown.length === rows.length ? hiddenCounted : hiddenCounted.filter(h => sectionOf(h, categories, groups).key === (shown[0] ? sectionOf(shown[0], categories, groups).key : '')),
+    [rows.length, hiddenCounted, categories, groups],
+  )
   const showTax = rows.some(r => r.inputTax > 0)
   const filtersOn = filterLabels(filters, categories, groups)
   const filtered = filtersOn.length > 0 || q.trim() !== ''
@@ -100,9 +114,9 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
   const onDelete = deleteFlow.ask
 
   const columns = useMemo(
-    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete, onHistory: setHistory }),
+    () => buildColumns(categories, list.data, { showTax, locked: monthClosed, onEdit: setEditing, onDelete, onHistory: setHistory, extraFor }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [categories, list.data, showTax, monthClosed],
+    [categories, list.data, showTax, monthClosed, extraFor],
   )
 
   const isCurrent = month === monthKey(today)
@@ -169,6 +183,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     {/* the dot only beside the total: on a phone the count wraps under it, and a line never starts with "·" (audit 2) */}
                     <span className="num text-sm text-fg-2 max-sm:hidden">{' · '}</span>
                     <span className="num text-sm text-fg-2">{`${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}</span>
+                    {hiddenCounted.length > 0 ? <span className="num text-sm text-fg-2" data-testid="expenses-archived-note">{`(${hiddenCounted.length} in the Archive, not listed)`}</span> : null}
                     <InfoTip label="About this total" className="self-center">
                       What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or cash in hand). A monthly bill paid this month for last month is in this total. The Expenses report counts it in the month it is for.
                       {totals.inputTax > 0 ? ` GST paid on purchases, ${pkr(totals.inputTax)} of it, is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
@@ -314,7 +329,7 @@ function describe(r: ListedExpense, categories: readonly Category[], l: ExpenseL
 function buildColumns(
   categories: readonly Category[],
   listing: ExpenseListing | undefined,
-  act: { showTax: boolean; locked: boolean; onEdit: (r: ListedExpense) => void; onDelete: (r: ListedExpense) => void; onHistory: (r: ListedExpense) => void },
+  act: { showTax: boolean; locked: boolean; onEdit: (r: ListedExpense) => void; onDelete: (r: ListedExpense) => void; onHistory: (r: ListedExpense) => void; extraFor: (shown: readonly ListedExpense[]) => readonly ListedExpense[] },
 ): Column<ListedExpense>[] {
   const today = businessToday()
   const cols: Column<ListedExpense>[] = [
@@ -356,12 +371,15 @@ function buildColumns(
       value: r => (r.inputTax > 0 ? r.inputTax : null),
       // a group (or month) with no input tax shows a blank, not a 0
       total: list => {
-        const t = Math.round(list.reduce((s, r) => s + r.inputTax, 0) * 100) / 100
+        const t = Math.round([...list, ...act.extraFor(list)].reduce((s, r) => s + r.inputTax, 0) * 100) / 100
         return t > 0 ? <Money value={t} prefix={false} strong /> : null
       },
     })
   cols.push(
-    { id: 'amount', header: 'Amount (PKR)', kind: 'money', width: '9rem', sortable: true, value: r => r.amount, total: true },
+    { id: 'amount', header: 'Amount (PKR)', kind: 'money', width: '9rem', sortable: true, value: r => r.amount,
+      // the drawn rows plus the archived ones that belong to this group or footer: a total counts everything
+      total: list => <Money value={Math.round([...list, ...act.extraFor(list)].reduce((s, r) => s + r.amount * 100, 0)) / 100} prefix={false} strong />,
+    },
     {
       id: 'actions',
       header: 'Actions',

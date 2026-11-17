@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { ReviewImportedPage } from '@/features/money/review/ReviewImportedPage'
 import { countProposals, reviewProgress, sortReview, visibleProposals } from '@/features/money/review/model'
-import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
+import { filterRows, installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 describe('review model', () => {
@@ -34,17 +34,18 @@ describe('review model', () => {
 
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
-function mount() {
+/** `archived`: every queued record is old or imported, so the archive filter hides it (the queue reads must ask for archived = false). */
+function mount(archived = false) {
   const db = installFakeDb((c: FakeCall) => {
     switch (c.target) {
       case 'orders':
         return c.ops.some(([n, a]) => n === 'in' && Array.isArray(a[1]) && (a[0] as string) === 'id')
           ? { data: [{ id: 'o9', number: 22, ordered_on: '2024-03-01', customer_po_number: '4398', company_id: 'c1' }] }
-          : { data: [{ id: 'o1', number: 11, company_id: 'c1', ordered_on: '2024-02-01', cancelled_on: null, customer_po_number: null, legacy_review: 'to_review' }] }
+          : { data: filterRows([{ id: 'o1', number: 11, company_id: 'c1', ordered_on: '2024-02-01', cancelled_on: null, customer_po_number: null, legacy_review: 'to_review', archived }], c) }
       case 'invoices':
         return c.ops.some(([n, a]) => n === 'in' && (a[0] as string) === 'id')
           ? { data: [{ id: 'i1', number: '138', invoice_date: '2024-03-20', net_amount: 100000, gst_amount: 18000, company_id: 'c1' }] }
-          : { data: [{ id: 'i7', number: '145', invoice_date: '2024-08-11', net_amount: 252000, gst_amount: 45360, company_id: 'c1', order_id: null, notes: null, legacy_review: 'to_review' }] }
+          : { data: filterRows([{ id: 'i7', number: '145', invoice_date: '2024-08-11', net_amount: 252000, gst_amount: 45360, company_id: 'c1', order_id: null, notes: null, legacy_review: 'to_review', archived }], c) }
       case 'rpc:receivables_list':
         return { data: [{ order_id: 'o1', order_number: 11, company_id: 'c1', gross_target: 87303, settled: 73986, balance: 13317, invoice_numbers: ['124'], payment_state: 'part' }] }
       case 'rpc:lookup_labels':
@@ -148,5 +149,14 @@ describe('Review imported page', () => {
     await user.click(within(invoice).getByRole('button', { name: 'Settled, keep as history' }))
     await waitFor(() => expect(db.calls.filter(c => c.target === 'rpc:set_legacy_review')).toHaveLength(2))
     await waitFor(() => expect(screen.getAllByTestId('review-settled-here')).toHaveLength(2))
+  })
+
+  it('hides archived records: the queue reads ask for archived = false, and an empty queue is the normal empty state, not an error', async () => {
+    const { db } = mount(true)
+    expect(await screen.findByText('Nothing to review')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+    const queue = db.calls.filter(c => (c.target === 'orders' || c.target === 'invoices') && c.ops.some(([n, a]) => n === 'in' && a[0] === 'legacy_review'))
+    expect(queue.map(c => c.target).sort()).toEqual(['invoices', 'orders'])
+    for (const c of queue) expect(c.ops.find(([n, a]) => n === 'eq' && a[0] === 'archived')?.[1]).toEqual(['archived', false])
   })
 })

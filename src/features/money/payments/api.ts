@@ -1,7 +1,8 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { hideArchived } from '@/lib/archive'
 import { monthEnd, monthStart, type PaidVia } from '@/features/money/expenses/model'
 import { lookupLabels } from '@/features/money/lookupLabels'
-import type { PaymentState, PriorPayment, ReceivableRow, ReceivableTotals, ReceivedPayment } from '@/features/money/payments/model'
+import { receivedTotal, type PaymentState, type PriorPayment, type ReceivableRow, type ReceivableTotals, type ReceivedPayment } from '@/features/money/payments/model'
 
 /*
  * Payments in and receivables (M02): every database call for this area. Receivables come from receivables_list() and
@@ -145,11 +146,30 @@ export async function listHeldAdvances(): Promise<HeldAdvance[]> {
   }))
 }
 
+/**
+ * What the month's payments add up to, archived ones included (a NUMBER read: never filtered by archive). The same month window and
+ * the same "voided left out" rule as listPaymentsReceived, summed the way receivedTotal does (whole paisa).
+ */
+export async function listPaymentsReceivedTotal(month: string): Promise<{ total: number; count: number }> {
+  const db = requireSupabase()
+  const rows = await fetchAll<{ id: string; amount: number | string }>((from, to) =>
+    db
+      .from('payments_in')
+      .select('id, amount')
+      .is('voided_at', null)
+      .gte('received_on', monthStart(month))
+      .lte('received_on', monthEnd(month))
+      .order('id')
+      .range(from, to),
+  )
+  return receivedTotal(rows.map(r => ({ amount: num(r.amount) })))
+}
+
 export interface PaymentOrder {
   row: ReceivableRow
   prior: PriorPayment[]
   /** 0123: the order's invoices, so a payment can be tied to one of them ("this was for INV-12"). */
-  invoices?: Array<{ id: string; number: string | null; gross: number }>
+  invoices?: Array<{ id: string; number: string | null; gross: number; archived?: boolean }>
 }
 
 /** One order for the record-payment dialog: its balance (receivables_list for the order) and the payments already recorded (admin). */
@@ -158,14 +178,14 @@ export async function getPaymentOrder(orderId: string): Promise<PaymentOrder | n
   const [rows, payments, invoices] = await Promise.all([
     fetchReceivablesList({ p_order_id: orderId }),
     db.from('payments_in').select('received_on, amount').eq('order_id', orderId).is('voided_at', null).order('received_on'),
-    db.from('invoices').select('id, number, net_amount, gst_amount').eq('order_id', orderId).order('invoice_date').order('number'),
+    db.from('invoices').select('id, number, net_amount, gst_amount, archived').eq('order_id', orderId).order('invoice_date').order('number'),
   ])
   const raw = rows[0]
   if (!raw) return null
   return {
     row: toReceivableRow(raw, (await fetchImportedOrderIds()).has(raw.order_id)),
     prior: (unwrap(payments) ?? []).map(p => ({ receivedOn: p.received_on, amount: Number(p.amount) })),
-    invoices: (unwrap(invoices) ?? []).map(i => ({ id: i.id, number: i.number, gross: Number(i.net_amount) + Number(i.gst_amount) })),
+    invoices: (unwrap(invoices) ?? []).map(i => ({ id: i.id, number: i.number, gross: Number(i.net_amount) + Number(i.gst_amount), ...(i.archived === true ? { archived: true } : {}) })),
   }
 }
 
@@ -211,13 +231,13 @@ export async function recordPayment(v: PaymentInsert): Promise<void> {
  * Money > Payments (owner gate 2, 13 Nov 2026: the one new read): the payments received in one month ("2026-11"), every way they
  * were paid (bank, cash, ...), voided ones left out, newest first. A plain select on payments_in under its Row Level Security, so
  * only an admin gets rows; the customer and the order number come from lookup_labels() in one call. No figure is worked out here.
+ * A LIST: payments dated before the archive cutoff drop out (hideArchived). The month's total is NOT summed from these rows: it
+ * comes from listPaymentsReceivedTotal, which counts archived payments too.
  */
 export async function listPaymentsReceived(month: string): Promise<ReceivedPayment[]> {
   const db = requireSupabase()
   const rows = await fetchAll<{ id: string; received_on: string; amount: number | string; paid_via: string; reference: string | null; order_id: string | null }>((from, to) =>
-    db
-      .from('payments_in')
-      .select('id, received_on, amount, paid_via, reference, order_id')
+    hideArchived(db.from('payments_in').select('id, received_on, amount, paid_via, reference, order_id'))
       .is('voided_at', null)
       .gte('received_on', monthStart(month))
       .lte('received_on', monthEnd(month))
