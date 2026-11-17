@@ -49,17 +49,17 @@ insert into public.rfqs (id, company_id, owner_id, received_on, closed_on, close
   (pg_temp.f('11'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-16', '2026-11-20', 'price', null),
   (pg_temp.f('12'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-17', '2026-11-20', 'price', null),
   (pg_temp.f('13'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2020-03-01', '2026-11-20', 'price', null),
-  (pg_temp.f('14'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-12-01', '2026-12-02', 'price', 'imp143'),
+  (pg_temp.f('14'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-12-01', '2026-12-02', 'price', '{"s":"imp143"}'),
   (pg_temp.f('15'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-16', '2026-11-20', 'price', null),
   (pg_temp.f('16'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2027-02-01', '2027-02-02', 'price', null),
   (pg_temp.f('17'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-16', null, null, null),
-  (pg_temp.f('18'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2021-05-05', '2026-11-20', 'price', 'imp143');
+  (pg_temp.f('18'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2021-05-05', '2026-11-20', 'price', '{"s":"imp143"}');
 
 insert into public.orders (id, company_id, owner_id, rfq_id, ordered_on, legacy_flags, legacy_source) values
   (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, '2026-11-16', '{}', null),
   (pg_temp.f('22'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, '2026-11-17', '{}', null),
-  (pg_temp.f('23'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, '2026-11-17', '{}', 'imp143'),
-  (pg_temp.f('24'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, null, '{undated}', 'imp143'),
+  (pg_temp.f('23'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, '2026-11-17', '{}', '{"s":"imp143"}'),
+  (pg_temp.f('24'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, null, '{undated}', '{"s":"imp143"}'),
   (pg_temp.f('25'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, '2026-11-16', '{}', null),
   (pg_temp.f('26'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, '2027-03-03', '{}', null);
 insert into public.order_items (id, order_id, description, qty, unit_price_net)
@@ -70,7 +70,7 @@ select pg_temp.f('2' || n), 'a0000000-0000-4000-8000-000000000003' from generate
 insert into public.invoices (id, order_id, number, invoice_date, net_amount, gst_amount, legacy_flags, legacy_source) values
   (pg_temp.f('41'), pg_temp.f('21'), 'INV-ZQEQ143-1', '2026-11-16', 100, 18, '{}', null),
   (pg_temp.f('42'), pg_temp.f('22'), 'INV-ZQEQ143-2', '2026-11-17', 100, 18, '{}', null),
-  (pg_temp.f('43'), pg_temp.f('22'), 'INV-ZQEQ143-3', '2026-11-17', 100, 18, '{}', 'imp143'),
+  (pg_temp.f('43'), pg_temp.f('22'), 'INV-ZQEQ143-3', '2026-11-17', 100, 18, '{}', '{"s":"imp143"}'),
   (pg_temp.f('44'), pg_temp.f('21'), 'INV-ZQEQ143-4', '2026-11-16', 100, 18, '{}', null),
   (pg_temp.f('45'), pg_temp.f('22'), 'INV-ZQEQ143-5', '2027-01-10', 100, 18, '{}', null);
 
