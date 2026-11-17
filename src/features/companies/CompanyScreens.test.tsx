@@ -85,6 +85,8 @@ function supplierDb(c: FakeCall): FakeResult {
       return { data: [{ supplier_order_id: 'l1', number: 17, revision: 0, issued_on: day(-25) }] }
     case 'order_items':
       return { data: [{ rfq_item_id: 't1', orders: { number: 38, cancelled_on: null }, supplier_orders: { supplier_id: 's1' } }] }
+    case 'v_inquiry_state':
+      return { data: [{ inquiry_id: 'q1' }] }
     case 'v_supplier_activity':
       return { data: [{ inquiry_id: 'q1', rfq_id: 'r1', sent_on: day(-30), replied: true, quoted: true, no_offer: false, reply_days: 1, is_legacy: false }] }
     default:

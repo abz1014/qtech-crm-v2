@@ -16,6 +16,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
+import { withArchiveTag } from '@/features/money/lib/archiveLabel'
 import { applyDefault, applyNote, type ApplyTarget, type CreditSummary } from '@/features/money/credit/model'
 import { useApplyCredit, useApplyTargets } from '@/features/money/credit/hooks'
 
@@ -166,7 +167,7 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
                 f.onChange(e)
                 setAmountFor(e.target.value)
               }}
-              options={targets.map(t => ({ value: t.orderId, label: `${orderRef(t.orderNumber)} · due PKR ${formatAmount(t.balance)}` }))}
+              options={targets.map(t => ({ value: t.orderId, label: withArchiveTag(`${orderRef(t.orderNumber)} · due PKR ${formatAmount(t.balance)}`, t.archived) }))}
             />
           )}
         </FormField>

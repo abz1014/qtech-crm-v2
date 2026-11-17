@@ -78,7 +78,7 @@ export function PaymentsPage() {
         cell: r => <CustomerCell r={r} />,
       },
       { id: 'via', header: 'Paid via', value: r => viaWord(r.paidVia), cell: r => <ViaCell r={r} /> },
-      { id: 'amount', header: 'Amount received', kind: 'money', value: r => String(r.amount), total: true, cell: r => <Money value={r.amount} prefix={false} strong /> },
+      { id: 'amount', header: 'Amount received', kind: 'money', value: r => String(r.amount), cell: r => <Money value={r.amount} prefix={false} strong /> },
     ],
     [],
   )
@@ -115,7 +115,6 @@ export function PaymentsPage() {
         twoLine
         loading={q.isPending}
         error={q.isError ? { title: 'Payments did not load', message: 'Nothing was changed. Try again, and if it keeps failing, tell the admin.', onRetry: () => void q.refetch() } : null}
-        footerLabel={plural(rows.length)}
         empty={
           <EmptyState
             title={`No payments in ${name}`}

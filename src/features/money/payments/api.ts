@@ -54,7 +54,7 @@ export async function fetchReceivablesList(args: ReceivablesListArgs = {}): Prom
   )
 }
 
-export const toReceivableRow = (r: ReceivablesListRow, imported = false): ReceivableRow => ({
+export const toReceivableRow = (r: ReceivablesListRow, imported = false, archived = false): ReceivableRow => ({
   orderId: r.order_id,
   orderNumber: Number(r.order_number),
   companyId: r.company_id,
@@ -71,6 +71,7 @@ export const toReceivableRow = (r: ReceivablesListRow, imported = false): Receiv
   lastRemindedOn: r.last_reminded_on,
   reminderCount: num(r.reminder_count),
   imported,
+  ...(archived ? { archived: true } : {}),
 })
 
 /**
@@ -79,8 +80,31 @@ export const toReceivableRow = (r: ReceivablesListRow, imported = false): Receiv
  * real; owner decision 2026-10-19), so this list and Today's "payment overdue" agree.
  */
 export async function listReceivables(): Promise<ReceivableRow[]> {
-  const [rows, imported] = await Promise.all([fetchReceivablesList({ p_with_value: true }), fetchImportedOrderIds()])
-  return rows.map(r => toReceivableRow(r, imported.has(r.order_id)))
+  const [rows, imported, archived] = await Promise.all([fetchReceivablesList({ p_with_value: true }), fetchImportedOrderIds(), fetchArchivedOrderIds()])
+  return rows.map(r => toReceivableRow(r, imported.has(r.order_id), archived.has(r.order_id)))
+}
+
+/**
+ * Which orders the archive hides (archive feature): ids only, read through v_order_state, never the orders table (an engineer has no
+ * column grant on orders.archived). With `orderIds`, only those are asked about (chunks of 100, so a long list never makes a long
+ * address); without, every archived order, in 1,000-row pages. A row set the caller already holds is never narrowed by this: it
+ * only says which ones to tag or drop.
+ */
+export async function fetchArchivedOrderIds(orderIds?: readonly string[]): Promise<Set<string>> {
+  const db = requireSupabase()
+  const out = new Set<string>()
+  type Page = PromiseLike<{ data: { order_id: string | null }[] | null; error: { code?: string; message: string } | null }>
+  if (!orderIds) {
+    const rows = await fetchAll<{ order_id: string | null }>((from, to) => db.from('v_order_state').select('order_id').eq('archived', true).order('order_id').range(from, to) as unknown as Page)
+    for (const r of rows) if (r.order_id) out.add(r.order_id)
+    return out
+  }
+  const ids = [...new Set(orderIds)]
+  for (let i = 0; i < ids.length; i += 100) {
+    const found = unwrap(await db.from('v_order_state').select('order_id').eq('archived', true).in('order_id', ids.slice(i, i + 100))) ?? []
+    for (const r of found) if (r.order_id) out.add(r.order_id)
+  }
+  return out
 }
 
 /** Ids of orders imported from the old CRM (legacy_source set), id only: their invoices are not linked to them yet (owner decision 1b). */

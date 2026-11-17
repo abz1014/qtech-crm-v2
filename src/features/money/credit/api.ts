@@ -1,7 +1,7 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
 import type { PaidVia } from '@/features/money/expenses/model'
 import { lookupLabels } from '@/features/money/lookupLabels'
-import { fetchReceivablesList } from '@/features/money/payments/api'
+import { fetchArchivedOrderIds, fetchReceivablesList } from '@/features/money/payments/api'
 import { orderRef } from '@/lib/refs'
 import { NO_CREDIT, type ApplyTarget, type CreditApplication, type CreditRefund, type CreditSummary } from '@/features/money/credit/model'
 
@@ -58,15 +58,18 @@ export async function getCompanyCredit(companyId: string): Promise<CompanyCredit
 /** The customer's orders that still owe money, oldest first: where credit can be put. */
 export async function listApplyTargets(companyId: string): Promise<ApplyTarget[]> {
   const rows = await fetchReceivablesList({ p_company_id: companyId })
+  // A picker for collecting money: an archived order stays on offer, tagged "In Archive".
+  const archived = await fetchArchivedOrderIds(rows.map(r => r.order_id))
   return rows
     .filter(r => num(r.balance) > 0)
-    .map(r => ({ orderId: r.order_id, orderNumber: Number(r.order_number), balance: num(r.balance) }))
+    .map(r => ({ orderId: r.order_id, orderNumber: Number(r.order_number), balance: num(r.balance), archived: archived.has(r.order_id) }))
 }
 
 /** The customer's orders (any state), for "this refund is for order ..." (optional). */
-export async function listCompanyOrders(companyId: string): Promise<{ orderId: string; orderNumber: number }[]> {
+export async function listCompanyOrders(companyId: string): Promise<{ orderId: string; orderNumber: number; archived: boolean }[]> {
   const rows = await fetchReceivablesList({ p_company_id: companyId })
-  return rows.map(r => ({ orderId: r.order_id, orderNumber: Number(r.order_number) }))
+  const archived = await fetchArchivedOrderIds(rows.map(r => r.order_id))
+  return rows.map(r => ({ orderId: r.order_id, orderNumber: Number(r.order_number), archived: archived.has(r.order_id) }))
 }
 
 export interface RefundInsert {

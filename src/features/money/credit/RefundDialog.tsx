@@ -19,6 +19,7 @@ import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { PAID_VIA_LABEL, type PaidVia } from '@/features/money/expenses/model'
 import { refundDefault, refundNote, type CreditSummary } from '@/features/money/credit/model'
+import { withArchiveTag } from '@/features/money/lib/archiveLabel'
 import { useCompanyOrders, useRecordRefund } from '@/features/money/credit/hooks'
 
 /*
@@ -179,7 +180,7 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
         {showOrder ? (
           <FormField<Values, 'orderId'> name="orderId" label="Paid back from order" requirement="optional" help="Which order's overpayment is refunded. Left empty, the oldest order that holds enough is used.">
             {f => (
-              <Select {...f} options={[{ value: '', label: 'Oldest order that holds enough' }, ...(orders.data ?? []).map(o => ({ value: o.orderId, label: orderRef(o.orderNumber) }))]} />
+              <Select {...f} options={[{ value: '', label: 'Oldest order that holds enough' }, ...(orders.data ?? []).map(o => ({ value: o.orderId, label: withArchiveTag(orderRef(o.orderNumber), o.archived) }))]} />
             )}
           </FormField>
         ) : null}

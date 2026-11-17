@@ -39,6 +39,8 @@ export interface ApplyTarget {
   orderId: string
   orderNumber: number
   balance: number
+  /** In the Archive: still offered (it owes money), tagged "In Archive". */
+  archived?: boolean
 }
 
 const p = (n: number): bigint => toPaisa(n)

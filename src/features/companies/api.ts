@@ -369,7 +369,7 @@ export interface SupplierEnquiry {
 /** The supplier's sent enquiries of the last 24 months (v_supplier_activity), newest first, with the RFQ number. */
 export async function getSupplierActivity(companyId: string): Promise<SupplierEnquiry[]> {
   const db = requireSupabase()
-  const rows = unwrap(
+  let rows = unwrap(
     await db
       .from('v_supplier_activity')
       .select('inquiry_id, rfq_id, sent_on, replied, quoted, no_offer, reply_days, is_legacy')
@@ -377,6 +377,13 @@ export async function getSupplierActivity(companyId: string): Promise<SupplierEn
       .order('sent_on', { ascending: false })
       .limit(50),
   )
+  // Archive: only enquiries the archive leaves visible (v_inquiry_state, readable by every role).
+  const liveRows = rows.length
+    ? new Set(
+        unwrap(await hideArchived(db.from('v_inquiry_state').select('inquiry_id').in('inquiry_id', rows.map(r => r.inquiry_id).filter((x): x is string => !!x)))).map(r => r.inquiry_id),
+      )
+    : new Set<string | null>()
+  rows = rows.filter(r => liveRows.has(r.inquiry_id))
   const rfqIds = [...new Set(rows.map(r => r.rfq_id).filter((x): x is string => !!x))]
   const numbers = rfqIds.length ? unwrap(await db.from('rfqs').select('id, number').in('id', rfqIds)) : []
   const numberBy = new Map(numbers.map(n => [n.id, n.number]))
@@ -474,6 +481,13 @@ export async function getSupplierRecord(companyId: string, prices = true): Promi
   }
   const legRows = unwrap(legRes) as unknown as LegRow[]
   const rfqIds = [...new Set(inquiries.map(i => i.rfqId))]
+  // Archive: which of these fetched enquiries and legs the lists may show. The raw rows stay complete for the counts and the span.
+  const [liveInqRows, liveLegRows] = await Promise.all([
+    inquiries.length ? hideArchived(db.from('supplier_inquiries').select('id').eq('supplier_id', companyId).in('id', inquiries.map(i => i.id))) : { data: [], error: null },
+    legRows.length ? hideArchived(db.from('supplier_orders').select('id').eq('supplier_id', companyId).in('id', legRows.map(l => l.id))) : { data: [], error: null },
+  ])
+  const liveInquiryIds = (unwrap(liveInqRows as never) as { id: string }[]).map(r => r.id)
+  const liveLegIds = (unwrap(liveLegRows as never) as { id: string }[]).map(r => r.id)
 
   const [lineRows, itemRows, rfqRows, poRows] = await Promise.all([
     inBatches(
@@ -569,7 +583,7 @@ export async function getSupplierRecord(companyId: string, prices = true): Promi
       po: latestPo.get(l.id) ?? null,
     }
   })
-  return { supplierId: companyId, inquiries, lines, items, rfqs, orderItems, legs }
+  return { supplierId: companyId, inquiries, lines, items, rfqs, orderItems, legs, liveInquiryIds, liveLegIds }
 }
 
 export interface HistoryRfq {

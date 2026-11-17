@@ -121,15 +121,16 @@ export async function findMatches(): Promise<ProposalView[]> {
   const invoiceIds = [...new Set(rows.map(r => r.invoice_id))]
   const orderIds = [...new Set(rows.map(r => r.order_id))]
   const [invoices, orders] = await Promise.all([
-    db.from('invoices').select('id, number, invoice_date, net_amount, gst_amount, company_id').in('id', invoiceIds),
-    db.from('orders').select('id, number, ordered_on, customer_po_number, company_id').in('id', orderIds),
+    // Archive: a proposal naming an archived invoice or order is dropped below. Admin only, so the base orders read may name `archived`.
+    hideArchived(db.from('invoices').select('id, number, invoice_date, net_amount, gst_amount, company_id').in('id', invoiceIds)),
+    hideArchived(db.from('orders').select('id, number, ordered_on, customer_po_number, company_id').in('id', orderIds)),
   ])
   if (invoices.error) throw invoices.error
   if (orders.error) throw orders.error
   const labels = await lookupLabels({ companies: [...(invoices.data ?? []).map(i => i.company_id), ...(orders.data ?? []).map(o => o.company_id)].filter((x): x is string => !!x) })
   const inv = new Map((invoices.data ?? []).map(i => [i.id, i]))
   const ord = new Map((orders.data ?? []).map(o => [o.id, o]))
-  return rows.map(r => {
+  return rows.filter(r => inv.has(r.invoice_id) && ord.has(r.order_id)).map(r => {
     const i = inv.get(r.invoice_id)
     const o = ord.get(r.order_id)
     return {
