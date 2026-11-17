@@ -40,11 +40,11 @@ function mount(archived = false) {
     switch (c.target) {
       case 'orders':
         return c.ops.some(([n, a]) => n === 'in' && Array.isArray(a[1]) && (a[0] as string) === 'id')
-          ? { data: [{ id: 'o9', number: 22, ordered_on: '2024-03-01', customer_po_number: '4398', company_id: 'c1' }] }
+          ? { data: filterRows([{ id: 'o9', number: 22, ordered_on: '2024-03-01', customer_po_number: '4398', company_id: 'c1' }, { id: 'o1', number: 11, ordered_on: '2024-02-01', customer_po_number: null, company_id: 'c1' }], c) }
           : { data: filterRows([{ id: 'o1', number: 11, company_id: 'c1', ordered_on: '2024-02-01', cancelled_on: null, customer_po_number: null, legacy_review: 'to_review', archived }], c) }
       case 'invoices':
         return c.ops.some(([n, a]) => n === 'in' && (a[0] as string) === 'id')
-          ? { data: [{ id: 'i1', number: '138', invoice_date: '2024-03-20', net_amount: 100000, gst_amount: 18000, company_id: 'c1' }] }
+          ? { data: filterRows([{ id: 'i1', number: '138', invoice_date: '2024-03-20', net_amount: 100000, gst_amount: 18000, company_id: 'c1' }, { id: 'i7', number: '145', invoice_date: '2024-08-11', net_amount: 252000, gst_amount: 45360, company_id: 'c1' }], c) }
           : { data: filterRows([{ id: 'i7', number: '145', invoice_date: '2024-08-11', net_amount: 252000, gst_amount: 45360, company_id: 'c1', order_id: null, notes: null, legacy_review: 'to_review', archived }], c) }
       case 'rpc:receivables_list':
         return { data: [{ order_id: 'o1', order_number: 11, company_id: 'c1', gross_target: 87303, settled: 73986, balance: 13317, invoice_numbers: ['124'], payment_state: 'part' }] }

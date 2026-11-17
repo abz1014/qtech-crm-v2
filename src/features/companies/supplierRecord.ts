@@ -77,6 +77,12 @@ export interface SupplierRecordRaw {
   rfqs: RawRfq[]
   orderItems: RawOrderItem[]
   legs: RawLeg[]
+  /**
+   * Archive (migration 0141): the ids of the fetched enquiries and legs that are NOT archived. The panels list only these; `inquiries`
+   * and `legs` stay complete, so the span, the first year and the low-data test still count everything. Absent = nothing hidden.
+   */
+  liveInquiryIds?: readonly string[]
+  liveLegIds?: readonly string[]
 }
 
 // ------------------------------------------------------------------------------------------------ output
@@ -177,7 +183,16 @@ export const DELIVERY_ROWS_SHOWN = 8
 
 // ------------------------------------------------------------------------------------------------ the builder
 
-export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): SupplierRecord {
+export function buildSupplierRecord(full: SupplierRecordRaw, today: string): SupplierRecord {
+  // The lists show only what the archive leaves visible; the span (a statement about everything we hold) reads `full`.
+  const liveInq = full.liveInquiryIds ? new Set(full.liveInquiryIds) : null
+  const liveLeg = full.liveLegIds ? new Set(full.liveLegIds) : null
+  const raw: SupplierRecordRaw = {
+    ...full,
+    inquiries: liveInq ? full.inquiries.filter(i => liveInq.has(i.id)) : full.inquiries,
+    lines: liveInq ? full.lines.filter(l => liveInq.has(l.inquiryId)) : full.lines,
+    legs: liveLeg ? full.legs.filter(l => liveLeg.has(l.id)) : full.legs,
+  }
   const inqById = new Map(raw.inquiries.map(i => [i.id, i]))
   const itemById = new Map(raw.items.map(i => [i.id, i]))
   const rfqById = new Map(raw.rfqs.map(r => [r.id, r]))
@@ -356,8 +371,8 @@ export function buildSupplierRecord(raw: SupplierRecordRaw, today: string): Supp
     else units.ontime += 1
   }
   const allDates = [
-    ...raw.inquiries.map(i => i.sentOn),
-    ...raw.legs.flatMap(l => [l.placedOn, l.expectedOn, l.receivedOn]),
+    ...full.inquiries.map(i => i.sentOn),
+    ...full.legs.flatMap(l => [l.placedOn, l.expectedOn, l.receivedOn]),
   ].filter((d): d is string => Boolean(d))
   allDates.sort()
 

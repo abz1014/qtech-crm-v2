@@ -91,6 +91,8 @@ describe('Money > Payments', () => {
     const table = await screen.findByRole('table', { name: /Payments received in/ })
     expect(await within(table).findByText('TT-88')).toBeInTheDocument()
     expect(within(table).queryByText('OLD-1')).not.toBeInTheDocument()
+    // the table has no footer total of its own: the SumBar and the status line carry the true month total, so the two never disagree
+    expect(table.querySelector('tfoot')).toBeNull()
     const archivedArg = (c: FakeCall) => c.ops.some(([op, a]) => op === 'eq' && a[0] === 'archived')
     expect(calls.some(c => c.target === 'payments_in' && archivedArg(c))).toBe(true)
     await waitFor(() => expect(screen.getByTestId('payments-count')).toHaveTextContent('3 payments in'))

@@ -12,6 +12,7 @@ import { Money } from '@/ui/Money'
 import { Skeleton } from '@/ui/Skeleton'
 import { StatusText } from '@/ui/StatusText'
 import { TableFilter } from '@/ui/TableFilter'
+import { withArchiveTag } from '@/features/money/lib/archiveLabel'
 import { useReceivables } from '@/features/money/payments/hooks'
 import { filterReceivables, isInvoiced, receivableNextStep, receivableSearchText, sortReceivables, type ReceivableRow } from '@/features/money/payments/model'
 
@@ -127,7 +128,7 @@ function OrderButton({ r, today, onPick }: { r: ReceivableRow; today: string; on
         </span>
         <span className="num text-sm text-fg-2">
           <span className="whitespace-nowrap">{orderRef(r.orderNumber)}</span>
-          {isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ' · not invoiced yet'}
+          {withArchiveTag(isInvoiced(r) ? ` · ${r.invoiceNumbers.join(', ')}` : ' · not invoiced yet', r.archived)}
         </span>
         <StatusText tone={s.tone} detail={s.detail}>
           {s.label}
