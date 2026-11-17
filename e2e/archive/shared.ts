@@ -17,11 +17,17 @@ export async function todayRowsFor(page: Page, rfqNumber: number) {
   return page.locator('li[data-rule]').filter({ hasText: rfqRef(rfqNumber) })
 }
 
-/** The number on Home in the top bar ("Home, 3 due now"); 0 when there is none. */
+/**
+ * The number on Home in the top bar ("Home, 3 due now"). It loads after the page, so it is read the way the counters spec does: Today's own
+ * "N need you" is the figure it must show, and the link is waited for until it says so (the one number, three places).
+ */
 export async function homeBadge(page: Page): Promise<number> {
+  const header = page.locator('[data-needs-you-count]')
+  await expect(header).toBeVisible()
+  const n = Number(await header.innerText())
   const link = page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: /^Home/ }).first()
-  await expect(link).toBeVisible()
-  return Number(/(\d+)/.exec((await link.textContent()) ?? '')?.[1] ?? 0)
+  await expect(link).toHaveAccessibleName(n > 0 ? new RegExp(String.raw`^Home\s?, ${n} due now$`) : /^Home$/, { timeout: 15_000 })
+  return n
 }
 
 export { dueRows }
