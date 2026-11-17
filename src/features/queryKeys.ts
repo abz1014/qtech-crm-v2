@@ -178,6 +178,11 @@ function settings() {
     activeCategories: () => [...all, 'categories', 'active'] as const,
     /** C4: the product categories (families) with their curated flag and tagged suppliers. */
     productCategories: () => [...all, 'product-categories'] as const,
+    /** 0141: the archive setting, the preview for one cutoff and one page of the browse list. */
+    archiveSetting: () => [...all, 'archive', 'setting'] as const,
+    archivePreview: (cutoff: string) => [...all, 'archive', 'preview', cutoff] as const,
+    archiveList: (entity: string, companyId: string, search: string, limit: number, offset: number) =>
+      [...all, 'archive', 'list', entity, companyId, search, limit, offset] as const,
   }
 }
 
