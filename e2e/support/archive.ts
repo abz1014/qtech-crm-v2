@@ -70,6 +70,6 @@ export async function seedArchive(owner: string = ADMIN_ID): Promise<ArchiveFixt
 
 /** Job row names on the Jobs list. */
 export const jobRowName = {
-  rfq: (n: number) => new RegExp(`Job ${n}\b`),
-  order: (n: number) => new RegExp(`Job O-${n}\b`),
+  rfq: (n: number) => new RegExp(String.raw`Job ${n}\b`),
+  order: (n: number) => new RegExp(String.raw`Job O-${n}\b`),
 }
