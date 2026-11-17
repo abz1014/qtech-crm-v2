@@ -13,6 +13,7 @@ import { useBrands, useCompany, useCompanyContacts, useCompanySites } from '@/fe
 import type { FloatInput, SavedRfq } from '@/features/rfqs/api'
 import { uploadAttachment } from '@/features/rfqs/api'
 import { deleteCapture, safely } from '@/lib/capture/store'
+import { ArchivedDuplicateRef } from '@/features/rfqs/api'
 import { findRfqByCustomerRef, useDraftCheck, useFloatRfq, useFloatToSupplier, useSetRfqFloated, useSupplierCandidates, useSupplierMemory, type DraftCheck } from '@/features/rfqs/hooks'
 import {
   computeReplyBy,
@@ -642,6 +643,10 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
   const explain = async (err: unknown) => {
     if (err instanceof AlreadySaved) {
       setError({ message: `Already saved as ${rfqRef(err.rfq.number)}`, existing: err.rfq, already: true })
+      return
+    }
+    if (err instanceof ArchivedDuplicateRef) {
+      setError({ message: err.message, existing: err.existing, customerRef: true })
       return
     }
     if (err instanceof QtyTooLarge) {
