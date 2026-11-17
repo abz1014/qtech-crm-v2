@@ -431,7 +431,8 @@ async function loadGst(today: string): Promise<GstFact> {
         .lt('invoice_date', today1(today))
         .gt('gst_amount', 0)
         .is('legacy_source', null)
-        .eq('settled_before_cutover', false),
+        .eq('settled_before_cutover', false)
+        .eq('archived', false), // archive: an archived invoice raises no GST alert (hideArchived, written inline in the chain)
     ) ?? []
   // the dates are the admin's settings (0110), not a fixed 15th and 18th
   const deadlines = await getGstDeadlines()
@@ -447,6 +448,7 @@ async function loadGst(today: string): Promise<GstFact> {
       .eq('settled_before_cutover', false)
       .is('tax_deposited_on', null)
       .not('invoice_date', 'is', null)
+      .eq('archived', false)
       .limit(5000),
   ) ?? []
   return {

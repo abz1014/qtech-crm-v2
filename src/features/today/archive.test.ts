@@ -26,6 +26,10 @@ const data: Record<string, Record<string, unknown>[]> = {
     { invoice_id: 'v1', order_id: 'o1', needs_fbr_attention: true },
     { invoice_id: 'v2', order_id: 'o2', needs_fbr_attention: true, archived: true },
   ],
+  invoices: [
+    { id: 'g1', invoice_date: '2026-10-12', gst_amount: 100, legacy_source: null, settled_before_cutover: false, tax_deposited_on: null },
+    { id: 'g2', invoice_date: '2026-10-05', gst_amount: 100, legacy_source: null, settled_before_cutover: false, tax_deposited_on: null, archived: true },
+  ],
   expense_claims: [{ created_at: '2026-11-18T05:00:00Z' }, { created_at: '2026-09-01T05:00:00Z', archived: true }],
   order_engineers: [{ order_id: 'o1' }, { order_id: 'o2' }],
   orders: [{ id: 'o1', number: 10, company_id: 'c1' }, { id: 'o2', number: 11, company_id: 'c1' }],
@@ -59,13 +63,24 @@ describe('Today: archived records are not listed', () => {
     expect(d.claims?.pending).toBe(1)
   })
 
+  it('an archived invoice raises no GST alert; a current one still does', async () => {
+    setupDone = install()
+    const d = await loadTodayData({ id: 'u1', role: 'admin' }, '2026-11-05')
+    expect(d.gst?.invoices).toBe(1)
+    expect(d.gst?.undeposited).toBe(1)
+    const calls = setupDone.calls.filter(c => c.target === 'invoices' && c.ops.some(([n, a]) => n === 'gt' && a[0] === 'gst_amount'))
+    expect(calls.length).toBe(2)
+    expect(calls.every(touchesArchived)).toBe(true)
+    expect(calls.every(c => c.ops.some(([n, a]) => n === 'is' && a[0] === 'legacy_source'))).toBe(true)
+  })
+
   it('the filter is on every list read, and absent from the number reads', async () => {
     setupDone = install()
     await loadTodayData({ id: 'u1', role: 'admin' }, TODAY)
     const filtered = new Set(setupDone.calls.filter(touchesArchived).map(c => c.target))
     for (const t of ['v_rfq_state', 'v_order_state', 'v_invoice_state', 'v_inquiry_state', 'expense_claims', 'clarifications', 'supplier_orders']) expect(filtered.has(t), t).toBe(true)
     // numbers and reference reads stay whole: receivables total, cash, targets, GST, month end, recurring check, users, companies
-    for (const t of ['invoices', 'expenses', 'companies', 'users', 'rpc:month_end_status', 'rpc:my_target_progress', 'recurring_expenses']) expect(filtered.has(t), t).toBe(false)
+    for (const t of ['expenses', 'companies', 'users', 'rpc:month_end_status', 'rpc:my_target_progress', 'recurring_expenses']) expect(filtered.has(t), t).toBe(false)
   })
 
   it('nav badges count only what the filtered Today lists hold', async () => {
