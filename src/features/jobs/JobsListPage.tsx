@@ -19,9 +19,11 @@ import type { JobRow } from '@/features/jobs/api'
 import { StageLine, StageMini } from '@/features/jobs/StageBar'
 import { StageFilter } from '@/features/jobs/StageFilter'
 import { jobNext } from '@/features/jobs/lib/nextStep'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, isLane, itemsSummary, jobLabel, laneOfJob, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type JobLane, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, isLane, isPersons, itemsSummary, jobLabel, laneOfJob, normalizePerson, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type JobLane, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
 import { stageModel } from '@/features/jobs/lib/stages'
 import { lazyShown } from '@/lib/lazyDialog'
+import { Select } from '@/ui/form/Select'
+import { useTeam } from '@/features/settings/hooks'
 
 // Downloaded the first time it opens (+ New > Order without enquiry arrives as /orders?new=1, which the old-address redirect carries here).
 const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog').then(m => m.NewOrderDialog))
@@ -42,6 +44,10 @@ const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog'
  * the search (which still looks in every list) and an "All jobs" link to the bare /jobs, which shows every job as before. A job opened
  * from a lane carries it (?from=sell) so the shell can say where the person came from. Sell is for admin and sales: an engineer who
  * lands on it is sent to Jobs; an engineer's ?lane=deliver is their Jobs list.
+ *
+ * The admin's person filter (owner 2026-11-17): ?person=<user id> narrows every chip and stage to one team member's jobs (owned, or put
+ * on as the engineer). Home's Team panel links here ("See all 4 open jobs"); the toolbar's Person select picks anyone. With a person
+ * picked the chips are Open and History (Mine is the admin's own). Sales and engineers never get it: the value is ignored for them.
  */
 const LABEL: Record<Chip, string> = { mine: 'Mine', open: 'Open', history: 'History' }
 
@@ -175,7 +181,10 @@ function JobsList() {
 
   const text = params.get('q') ?? ''
   const chipParam = params.get('chip')
-  const chip: Chip = isChip(chipParam) ? chipParam : defaultChip(role)
+  const person = normalizePerson(params.get('person'), role)
+  const chipRaw: Chip = isChip(chipParam) ? chipParam : defaultChip(role)
+  // Mine is the admin's own list; with a person picked it is that person's Open.
+  const chip: Chip = person && chipRaw === 'mine' ? 'open' : chipRaw
   // The lens (Sell or Deliver) is the office's: an engineer's Jobs is every job they are put on, whatever the address says.
   const laneParam = params.get('lane')
   const lane: JobLane | null = role !== 'engineer' && isLane(laneParam) ? laneParam : null
@@ -192,7 +201,15 @@ function JobsList() {
   const pos = useCustomerPos(money)
   const poOf = (j: JobRow) => (j.orderId ? pos.data?.get(j.orderId) : undefined)
 
-  const all = useMemo(() => (jobs.data ?? []).filter(j => lane === null || laneOfJob(j) === lane), [jobs.data, lane])
+  const all = useMemo(() => (jobs.data ?? []).filter(j => (lane === null || laneOfJob(j) === lane) && (person === null || isPersons(j, person))), [jobs.data, lane, person])
+  // The Person select's names: the admin-users list (admin only; nobody else makes the request). A person no longer in it (or not yet
+  // loaded) is named from the jobs they own.
+  const team = useTeam(role === 'admin')
+  const people = useMemo(
+    () => (team.data ?? []).filter(m => m.deactivated_at === null || m.id === person).map(m => ({ value: m.id, label: m.name })).sort((a, b) => a.label.localeCompare(b.label)),
+    [team.data, person],
+  )
+  const personName = person ? (people.find(p => p.value === person)?.label ?? jobs.data?.find(j => j.ownerId === person)?.ownerName ?? 'This person') : null
   const counts = useMemo(() => chipCounts(all, who), [all, who])
   const searching = text.trim() !== ''
   const found = useJobSearch(text)
@@ -258,7 +275,7 @@ function JobsList() {
   const loading = jobs.isPending || (searching && found.isPending)
   const error = jobs.isError ? jobs : searching && found.isError ? found : null
   const lede = jobs.isSuccess
-    ? `${counts.open} open · ${counts.history} in history`
+    ? `${person ? `${personName} · ` : ''}${counts.open} open · ${counts.history} in history`
     : lane === 'sell'
       ? 'RFQs and quotations, until the order arrives.'
       : lane === 'deliver'
@@ -273,6 +290,14 @@ function JobsList() {
 
   const empty = searching ? (
     <NoResults query={text} scope="every job (open and history)" fields="job number, customer, item, RFQ, order, quotation, PO and invoice number" onClear={() => change({ q: null })} />
+  ) : person && stage === null && chip === 'open' ? (
+    <EmptyState
+      mood="goal"
+      title={`${personName} has no open jobs`}
+      actions={<Button onClick={() => change({ person: null })}>Show all open jobs</Button>}
+    >
+      Jobs they own or are put on as the engineer appear here.
+    </EmptyState>
   ) : chip === 'mine' && stage === null && counts.open > 0 ? (
     <EmptyState
       mood="goal"
@@ -287,7 +312,7 @@ function JobsList() {
     </EmptyState>
   ) : stage !== null ? (
     <EmptyState
-      title={chip === 'history' ? 'No orders in history' : `No ${chip === 'mine' ? 'jobs of yours' : 'open jobs'} ${STAGE_EMPTY[stage]}`}
+      title={chip === 'history' ? 'No orders in history' : `No ${chip === 'mine' ? 'jobs of yours' : person ? `open jobs of ${personName}` : 'open jobs'} ${STAGE_EMPTY[stage]}`}
       actions={<Button onClick={() => change({ stage: null })}>{chip === 'history' ? 'Show all history' : chip === 'mine' ? 'Show all my jobs' : 'Show all open jobs'}</Button>}
     >
       {`Nothing is at "${STAGE_LABEL[stage]}" right now.`}
@@ -346,15 +371,28 @@ function JobsList() {
         onRowOpen={j => navigate(`/jobs/${encodeURIComponent(j.key)}${lane ? `?from=${lane}` : ''}`)}
         loading={loading}
         error={error ? { title: "Jobs could not be loaded", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void error.refetch() } : null}
-        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${stage ? ` · ${STAGE_LABEL[stage]}` : ''}`) : undefined}
+        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${person ? ` of ${personName}` : ''}${stage ? ` · ${STAGE_LABEL[stage]}` : ''}`) : undefined}
         toolbar={
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
             <SegmentedControl
               aria-label="Which jobs"
               value={searching ? '' : chip}
               onValueChange={v => change({ chip: v === defaultChip(role) ? null : v, stage: normalizeStage(params.get('stage'), role, v as Chip, lane) })}
-              options={(['mine', 'open', 'history'] as const).map(c => ({ value: c, label: LABEL[c] }))}
+              options={(person ? (['open', 'history'] as const) : (['mine', 'open', 'history'] as const)).map(c => ({ value: c, label: LABEL[c] }))}
             />
+            {role === 'admin' ? (
+              <label className="flex min-w-0 items-center gap-2 max-sm:basis-full max-sm:[&>span:last-child]:flex-1">
+                <span className="shrink-0 text-sm font-medium text-fg-2">Person</span>
+                <Select
+                  data-testid="person-filter"
+                  aria-label="Person"
+                  className="min-w-[12rem] max-sm:min-w-0"
+                  value={person ?? ''}
+                  onChange={e => change({ person: e.target.value || null, chip: null })}
+                  options={[{ value: '', label: 'Everyone' }, ...(person && !people.some(p => p.value === person) ? [{ value: person, label: personName ?? 'This person' }] : []), ...people]}
+                />
+              </label>
+            ) : null}
             <TableFilter
               label="Search jobs"
               hint="Finds a job by its number, customer, item, RFQ, order, quotation, PO or invoice number, in every list. Ctrl K finds the same jobs."

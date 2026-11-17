@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JobRow } from '@/features/jobs/api'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isLane, isStageFilter, itemsSummary, laneOfJob, mergeMore, normalizeStage, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, defaultChip, inChip, inStage, isLane, isStageFilter, itemsSummary, laneOfJob, mergeMore, normalizePerson, normalizeStage, openJobsOf, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
 
 const job = (over: Partial<JobRow>): JobRow => ({
   key: '1', kind: 'enquiry', rfqId: 'r', orderId: null, companyId: 'c', companyName: 'Customer', siteName: null, ownerId: 'u1', ownerName: 'A', items: 'x',
@@ -171,5 +171,25 @@ describe('mergeMore', () => {
     expect(mergeMore('Flow meter +1 more')).toBe('Flow meter +1 more')
     expect(mergeMore('Flow meter')).toBe('Flow meter')
     expect(mergeMore(null)).toBe('')
+  })
+})
+
+describe('Person filter (admin)', () => {
+  it("is the admin's alone", () => {
+    expect(normalizePerson('u2', 'admin')).toBe('u2')
+    expect(normalizePerson('u2', 'sales')).toBeNull()
+    expect(normalizePerson('u2', 'engineer')).toBeNull()
+    expect(normalizePerson(null, 'admin')).toBeNull()
+    expect(normalizePerson('', 'admin')).toBeNull()
+  })
+  it("a person's open jobs: owned or put on as engineer, never history, newest first", () => {
+    const all = [
+      job({ key: '1', ownerId: 'u2', lastActivityOn: '2026-10-01' }),
+      job({ key: '2', ownerId: 'u2', isHistory: true }),
+      job({ key: '3', ownerId: 'u1', engineerIds: ['u2'], lastActivityOn: '2026-10-05' }),
+      job({ key: '4', ownerId: 'u1' }),
+    ]
+    expect(openJobsOf(all, 'u2').map(j => j.key)).toEqual(['3', '1'])
+    expect(openJobsOf(all, 'u9')).toEqual([])
   })
 })

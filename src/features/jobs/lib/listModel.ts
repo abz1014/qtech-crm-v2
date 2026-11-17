@@ -34,6 +34,19 @@ export function chipCounts(all: readonly JobRow[], who: Who): Record<Chip, numbe
   return { mine: all.filter(j => inChip(j, 'mine', who)).length, open: all.filter(j => inChip(j, 'open', who)).length, history: all.filter(j => j.isHistory).length }
 }
 
+/*
+ * The admin's person filter (?person=<user id>, owner 2026-11-17): one team member's jobs, the ones they own or are put on as the
+ * engineer, the same test as Mine for that person. Admin only: for anyone else the value is ignored (sales and engineers keep Mine).
+ */
+export const normalizePerson = (param: string | null, role: Who['role']): string | null => (role === 'admin' && param ? param : null)
+
+export const isPersons = (j: JobRow, personId: string): boolean => isMine(j, { userId: personId, role: '' })
+
+/** A team member's open jobs (not history), newest activity first: what Home's Team panel lists and /jobs?person= shows. */
+export function openJobsOf(all: readonly JobRow[], personId: string): JobRow[] {
+  return all.filter(j => !j.isHistory && isPersons(j, personId)).sort(byRecent)
+}
+
 /** Newest activity first; ties by the newer job number. */
 export function byRecent(a: JobRow, b: JobRow): number {
   return (b.lastActivityOn ?? '').localeCompare(a.lastActivityOn ?? '') || b.key.localeCompare(a.key, undefined, { numeric: true })
