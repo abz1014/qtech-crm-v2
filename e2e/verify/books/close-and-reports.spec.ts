@@ -248,7 +248,8 @@ test('we owe a supplier: the leg total in USD at the rate, less the supplier pay
   const admin = await signedIn(browser, info, 'admin')
   const page = await open(admin, `/orders/${seed.order.id}`)
   await expect(page.getByTestId('leg-A-total')).toContainText(amount(2033.25))
-  await expect(page.getByTestId('leg-A')).toContainText(amount(569818))
+  // The supplier order shows only its own currency: no PKR estimate unless asked for (owner, 17 Nov 2026).
+  await expect(page.getByTestId('leg-A')).not.toContainText(amount(569818))
 
   // Pay <supplier> in the supplier order's menu is the one door for a supplier payment (redesign phase 1, 0087): what was paid in
   // the supplier's currency, the PKR the bank debited, and the bank charges as their own line.
