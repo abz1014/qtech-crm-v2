@@ -335,7 +335,9 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
             title={s.shown}
             summary={withOffice ? WITH_OFFICE : advance ? s.summary : s.state === 'future' ? 'Not yet' : s.summary}
             chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : chipOf(s.state, tone, chip, action)}
-            className={cn(CARD, current && 'relative before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-brand-500 md:before:hidden md:ring-2 md:ring-inset md:ring-brand-500')}
+            cardFrom="md"
+            // The green outline is drawn over the row (after:), so the header's hover shade cannot cover it.
+            className={cn(CARD, current && 'relative before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-brand-500 md:before:hidden md:after:pointer-events-none md:after:absolute md:after:inset-0 md:after:rounded-[calc(var(--radius-card)-1px)] md:after:ring-2 md:after:ring-inset md:after:ring-brand-500')}
             muted={(s.state === 'future' && !advance) || none || s.state === 'stopped'}
             disabled={none}
             open={isOpen}
