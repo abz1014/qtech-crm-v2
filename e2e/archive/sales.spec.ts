@@ -25,8 +25,7 @@ async function pickCompany(page: Page, name: string): Promise<void> {
   await expect(page.getByText(name).first()).toBeVisible()
 }
 
-const ENQUIRY = ['Dear Sir, please quote the following for our plant:', '1) Zetaflow QZ4821 electromagnetic flow meter DN50 - 2 nos', '2) Pressure gauge 0-10 bar - 4 nos', 'Regards, Kamran Zafar'].join('
-')
+const ENQUIRY = ['Dear Sir, please quote the following for our plant:', '1) Zetaflow QZ4821 electromagnetic flow meter DN50 - 2 nos', '2) Pressure gauge 0-10 bar - 4 nos', 'Regards, Kamran Zafar'].join(String.fromCharCode(10))
 
 test('with archiving on, the old jobs leave the Jobs list and Today and the number on Home drops; the tax register still lists the old invoice', async ({ page }) => {
   test.setTimeout(180_000)
