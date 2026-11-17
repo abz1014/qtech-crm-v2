@@ -444,3 +444,13 @@ export async function listImportedNotes(parentIds: string[]): Promise<ImportedNo
   const rows = unwrap(await requireSupabase().from('imported_notes').select('table_name, row_id, note').in('parent_id', parentIds).order('stored_at').order('row_id'))
   return rows.flatMap(r => (r.table_name === 'orders' || r.table_name === 'rfqs' || r.table_name === 'order_items' || r.table_name === 'rfq_items' ? [{ kind: r.table_name, rowId: r.row_id, note: r.note }] : []))
 }
+
+/**
+ * The admin's Person filter on Jobs: everyone active, by name (owners and engineers). Read from users on the app's own origin, not the
+ * admin-users function: a second origin costs a new connection, which on a slow phone delayed the list's first paint (perf, LCP).
+ */
+export async function listJobPeople(): Promise<{ id: string; name: string }[]> {
+  const rows = unwrap(await requireSupabase().from('users').select('id, name').is('deactivated_at', null).order('name'))
+  return (rows ?? []).map(u => ({ id: u.id, name: u.name }))
+}
+

@@ -14,7 +14,7 @@ import { StatusText } from '@/ui/StatusText'
 import { TableFilter } from '@/ui/TableFilter'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
-import { useCustomerPos, useJobSearch, useJobsList } from '@/features/jobs/hooks'
+import { useCustomerPos, useJobPeople, useJobSearch, useJobsList } from '@/features/jobs/hooks'
 import type { JobRow } from '@/features/jobs/api'
 import { StageLine, StageMini } from '@/features/jobs/StageBar'
 import { StageFilter } from '@/features/jobs/StageFilter'
@@ -23,7 +23,6 @@ import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, isLane, isP
 import { stageModel } from '@/features/jobs/lib/stages'
 import { lazyShown } from '@/lib/lazyDialog'
 import { Select } from '@/ui/form/Select'
-import { useTeam } from '@/features/settings/hooks'
 
 // Downloaded the first time it opens (+ New > Order without enquiry arrives as /orders?new=1, which the old-address redirect carries here).
 const NewOrderDialog = lazyShown(() => import('@/features/orders/NewOrderDialog').then(m => m.NewOrderDialog))
@@ -202,13 +201,10 @@ function JobsList() {
   const poOf = (j: JobRow) => (j.orderId ? pos.data?.get(j.orderId) : undefined)
 
   const all = useMemo(() => (jobs.data ?? []).filter(j => (lane === null || laneOfJob(j) === lane) && (person === null || isPersons(j, person))), [jobs.data, lane, person])
-  // The Person select's names: the admin-users list (admin only; nobody else makes the request). A person no longer in it (or not yet
+  // The Person select's names: everyone active (admin only; nobody else makes the request). A person no longer active (or not yet
   // loaded) is named from the jobs they own. Asked only once the jobs are in, so it never slows the list's first paint.
-  const team = useTeam(role === 'admin' && jobs.isSuccess)
-  const people = useMemo(
-    () => (team.data ?? []).filter(m => m.deactivated_at === null || m.id === person).map(m => ({ value: m.id, label: m.name })).sort((a, b) => a.label.localeCompare(b.label)),
-    [team.data, person],
-  )
+  const team = useJobPeople(role === 'admin' && jobs.isSuccess)
+  const people = useMemo(() => (team.data ?? []).map(m => ({ value: m.id, label: m.name })), [team.data])
   const personName = person ? (people.find(p => p.value === person)?.label ?? jobs.data?.find(j => j.ownerId === person)?.ownerName ?? 'This person') : null
   const counts = useMemo(() => chipCounts(all, who), [all, who])
   const searching = text.trim() !== ''

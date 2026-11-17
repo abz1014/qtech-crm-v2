@@ -49,3 +49,9 @@ export const importedNotesQuery = (ids: string[]) => ({ queryKey: qk.jobs.import
 export function useImportedNotes(ids: string[], enabled: boolean) {
   return useQuery({ ...importedNotesQuery(ids), enabled: enabled && ids.length > 0, staleTime: 5 * 60_000 })
 }
+
+/** The Person filter's names (admin only; asked once the jobs are in). Keyed under the team, so a team change refreshes it. */
+export function useJobPeople(enabled: boolean) {
+  return useQuery({ queryKey: [...qk.settings.team(), 'job-people'] as const, queryFn: () => api.listJobPeople(), enabled, staleTime: 60_000 })
+}
+
