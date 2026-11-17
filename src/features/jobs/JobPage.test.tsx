@@ -542,3 +542,15 @@ describe('Job page: the More menu', () => {
     }
   })
 })
+
+describe('Job page: archive banner', () => {
+  it('shows "In Archive" for an archived enquiry job (asked by its RFQ id) and nothing when it is not', async () => {
+    mount(job({}), 'sales', c => c.setQueryData(qk.archive.state('rfq', 'r1'), { archived: true, cutoff: '2026-11-17' }))
+    expect(await screen.findByText(/It still counts in all totals\./)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Unarchive' })).toBeNull()
+    cleanup()
+    mount(job({}), 'sales', c => c.setQueryData(qk.archive.state('rfq', 'r1'), { archived: false, cutoff: null }))
+    await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
+    expect(screen.queryByText(/It still counts in all totals\./)).toBeNull()
+  })
+})
