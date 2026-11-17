@@ -7,23 +7,25 @@ import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import type { ArchiveEntity } from '@/features/archive/api'
-import { useArchiveState, useUnhideRecord } from '@/features/archive/hooks'
+import { useArchiveParts, useUnhideRecord, type ArchivePart } from '@/features/archive/hooks'
 
 /** "In Archive" strip for the top of a detail page. Nothing at all unless the record is archived; only an admin can bring it back. */
-export function ArchiveBanner({ entity, id }: { entity: ArchiveEntity; id: string | null | undefined }) {
-  const state = useArchiveState(entity, id)
+export function ArchiveBanner({ entity, id, also }: { entity: ArchiveEntity; id: string | null | undefined; also?: ArchivePart | null }) {
+  // `also` is a second record that makes up the same thing (a job's order): the banner shows only when both are archived.
+  const parts: ArchivePart[] = id ? [{ entity, id }, ...(also ? [also] : [])] : []
+  const state = useArchiveParts(parts)
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
   const unhide = useUnhideRecord()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  if (!id || !state.data?.archived) return null
-  const date = formatDateText(state.data.cutoff)
+  if (!id || !state.archived) return null
+  const date = formatDateText(state.cutoff)
   const text = `This is in the Archive${date ? ` (dated before ${date})` : ''}. It still counts in all totals.`
   const run = async () => {
     setError(null)
     try {
-      await unhide.mutateAsync({ entity, id })
+      await unhide.mutateAsync(parts)
       setOpen(false)
     } catch (e) {
       setError(mapPgError(e).message)

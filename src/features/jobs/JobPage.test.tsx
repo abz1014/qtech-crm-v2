@@ -2,9 +2,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import { ToastProvider } from '@/ui/Toast'
+import { setSupabaseForTests, type Db } from '@/lib/supabase'
 import { qk } from '@/features/queryKeys'
 import type { JobFacts, JobRow } from '@/features/jobs/api'
 import JobsScreen from '@/features/jobs/JobsScreen'
@@ -544,13 +545,43 @@ describe('Job page: the More menu', () => {
 })
 
 describe('Job page: archive banner', () => {
-  it('shows "In Archive" for an archived enquiry job (asked by its RFQ id) and nothing when it is not', async () => {
-    mount(job({}), 'sales', c => c.setQueryData(qk.archive.state('rfq', 'r1'), { archived: true, cutoff: '2026-11-17' }))
-    expect(await screen.findByText(/It still counts in all totals\./)).toBeInTheDocument()
+  const st = (c: QueryClient, entity: 'rfq' | 'order', id: string, archived: boolean) =>
+    c.setQueryData(qk.archive.state(entity, id), { archived, cutoff: archived ? '2026-11-17' : null })
+  const NOTE = /It still counts in all totals\./
+
+  it('old RFQ and old order: shows "In Archive"; sales has no Unarchive button', async () => {
+    mount(job({}), 'sales', c => { st(c, 'rfq', 'r1', true); st(c, 'order', 'o1', true) })
+    expect(await screen.findByText(NOTE)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Unarchive' })).toBeNull()
-    cleanup()
-    mount(job({}), 'sales', c => c.setQueryData(qk.archive.state('rfq', 'r1'), { archived: false, cutoff: null }))
+  })
+
+  it('old RFQ with a new order: the job is visible in lists, so there is no banner', async () => {
+    mount(job({}), 'sales', c => { st(c, 'rfq', 'r1', true); st(c, 'order', 'o1', false) })
     await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })
-    expect(screen.queryByText(/It still counts in all totals\./)).toBeNull()
+    expect(screen.queryByText(NOTE)).toBeNull()
+  })
+
+  it('an RFQ with no live order shows when the RFQ is archived; a direct job when its order is', async () => {
+    mount(job({ orderId: null }), 'sales', c => st(c, 'rfq', 'r1', true))
+    expect(await screen.findByText(NOTE)).toBeInTheDocument()
+    cleanup()
+    mount(job({ key: 'O-45', kind: 'direct', rfqId: null, orderId: 'o1' }), 'sales', c => st(c, 'order', 'o1', true))
+    expect(await screen.findByText(NOTE)).toBeInTheDocument()
+  })
+
+  it('admin: Unarchive brings back both the RFQ and the order', async () => {
+    const user = userEvent.setup()
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null })
+    setSupabaseForTests({ rpc } as unknown as Db)
+    try {
+      mount(job({}), 'admin', c => { st(c, 'rfq', 'r1', true); st(c, 'order', 'o1', true) })
+      await user.click(await screen.findByRole('button', { name: 'Unarchive' }))
+      const buttons = await screen.findAllByRole('button', { name: 'Unarchive' })
+      await user.click(buttons[buttons.length - 1])
+      await waitFor(() => expect(rpc).toHaveBeenCalledWith('archive_unhide', { p_entity: 'order', p_id: 'o1' }))
+      expect(rpc).toHaveBeenCalledWith('archive_unhide', { p_entity: 'rfq', p_id: 'r1' })
+    } finally {
+      setSupabaseForTests(null)
+    }
   })
 })

@@ -236,8 +236,12 @@ function JobView({ facts }: { facts: JobFacts }) {
   return (
     <Shell bar>
       {role === 'engineer' || !button ? <NoPrimary /> : null}
-      {/* an enquiry job is keyed by its RFQ, a direct job by its order (v_jobs); both are safe for an engineer to ask */}
-      {job.rfqId ? <ArchiveBanner entity="rfq" id={job.rfqId} /> : <ArchiveBanner entity="order" id={job.orderId} />}
+      {/* a job is archived when its RFQ and its live order both are (the v_jobs rule); only 'rfq' and 'order' are asked, safe for an engineer */}
+      {job.rfqId ? (
+        <ArchiveBanner entity="rfq" id={job.rfqId} also={job.orderId ? { entity: 'order', id: job.orderId } : null} />
+      ) : (
+        <ArchiveBanner entity="order" id={job.orderId} />
+      )}
       <DetailHeader
         name={job.companyName}
         nameHref={`/companies/${job.companyId}`}
