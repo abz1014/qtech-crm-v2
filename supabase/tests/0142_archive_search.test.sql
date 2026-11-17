@@ -50,10 +50,10 @@ insert into public.companies (id, name) values (pg_temp.f('01'), 'Zqsearch142 Cu
 insert into public.contacts (id, company_id, name, email) values (pg_temp.f('03'), pg_temp.f('01'), 'Zqsearch142 Person', 'zq142@example.test');
 
 -- RFQs: 11 on 16 Nov (hidden), 12 on 17 Nov (shown), 13 on 16 Nov (hidden, to be unhidden); all closed so the Closed search sees them
-insert into public.rfqs (id, company_id, owner_id, received_on, closed_on, legacy_source) values
-  (pg_temp.f('11'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-16', '2026-11-20', null),
-  (pg_temp.f('12'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-17', '2026-11-20', null),
-  (pg_temp.f('13'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-16', '2026-11-20', null);
+insert into public.rfqs (id, company_id, owner_id, received_on, closed_on, close_reason, legacy_source) values
+  (pg_temp.f('11'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-16', '2026-11-20', 'price', null),
+  (pg_temp.f('12'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-17', '2026-11-20', 'price', null),
+  (pg_temp.f('13'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', '2026-11-16', '2026-11-20', 'price', null);
 
 insert into public.orders (id, company_id, owner_id, rfq_id, ordered_on, legacy_flags, legacy_source) values
   (pg_temp.f('21'), pg_temp.f('01'), 'a0000000-0000-4000-8000-000000000002', null, '2026-11-16', '{}', null),
