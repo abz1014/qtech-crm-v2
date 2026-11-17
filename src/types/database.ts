@@ -191,11 +191,9 @@ isOneToOne: false
                   ]
                 },"cash_counts": {
                   Row: {
-                    "counted_on": string,"counted_pkr": number,"created_at": string,"created_by": string | null,"difference_pkr": number | null,"expected_pkr": number | null,"id": string,"is_opening": boolean,"note": string | null
+                    "counted_on": string,"counted_pkr": number,"created_at": string,"created_by": string | null,"difference_pkr": number | null,"expected_pkr": number | null,"id": string,"is_opening": boolean,"note": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "counted_on"?: string,"counted_pkr": number,"created_at"?: string,"created_by"?: string | null,"difference_pkr"?: never,"expected_pkr"?: number | null,"id"?: string,"is_opening"?: boolean,"note"?: string | null
                   }
@@ -213,11 +211,9 @@ isOneToOne: false
                   ]
                 },"cash_topups": {
                   Row: {
-                    "amount_pkr": number,"created_at": string,"created_by": string | null,"drawn_on": string,"id": string,"note": string | null
+                    "amount_pkr": number,"created_at": string,"created_by": string | null,"drawn_on": string,"id": string,"note": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "amount_pkr": number,"created_at"?: string,"created_by"?: string | null,"drawn_on"?: string,"id"?: string,"note"?: string | null
                   }
@@ -255,11 +251,9 @@ isOneToOne: false
                   ]
                 },"clarifications": {
                   Row: {
-                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null
+                    "answer": string | null,"answered_at": string | null,"ask_count": number,"created_at": string,"created_by": string | null,"first_asked_at": string | null,"id": string,"last_asked_at": string | null,"last_asked_by": string | null,"question": string,"raised_by_inquiry_id": string | null,"rfq_id": string,"rfq_item_id": string | null,"withdrawn_at": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "answer"?: string | null,"answered_at"?: string | null,"ask_count"?: number,"created_at"?: string,"created_by"?: string | null,"first_asked_at"?: string | null,"id"?: string,"last_asked_at"?: string | null,"last_asked_by"?: string | null,"question": string,"raised_by_inquiry_id"?: string | null,"rfq_id": string,"rfq_item_id"?: string | null,"withdrawn_at"?: string | null
                   }
@@ -893,11 +887,9 @@ isOneToOne: false
                   ]
                 },"expense_claims": {
                   Row: {
-                    "amount_pkr": number,"category_id": string | null,"created_at": string,"created_by": string | null,"decided_at": string | null,"decided_by": string | null,"expense_id": string | null,"id": string,"note": string | null,"order_id": string | null,"paid_how": string | null,"reject_reason": string | null,"rfq_id": string | null,"spent_on": string,"status": string,"visit_id": string | null
+                    "amount_pkr": number,"category_id": string | null,"created_at": string,"created_by": string | null,"decided_at": string | null,"decided_by": string | null,"expense_id": string | null,"id": string,"note": string | null,"order_id": string | null,"paid_how": string | null,"reject_reason": string | null,"rfq_id": string | null,"spent_on": string,"status": string,"visit_id": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "amount_pkr": number,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"decided_at"?: string | null,"decided_by"?: string | null,"expense_id"?: string | null,"id"?: string,"note"?: string | null,"order_id"?: string | null,"paid_how"?: string | null,"reject_reason"?: string | null,"rfq_id"?: string | null,"spent_on"?: string,"status"?: string,"visit_id"?: string | null
                   }
@@ -1013,11 +1005,9 @@ isOneToOne: false
                   ]
                 },"expenses": {
                   Row: {
-                    "amount_pkr": number,"auto_booked": boolean,"bank_month": string | null,"category_id": string,"created_at": string,"created_by": string | null,"description": string | null,"fx_amount": number | null,"fx_currency": string | null,"id": string,"input_tax_pkr": number,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"paid_via": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"rfq_id": string | null,"supplier_order_id": string | null,"visit_id": string | null
+                    "amount_pkr": number,"auto_booked": boolean,"bank_month": string | null,"category_id": string,"created_at": string,"created_by": string | null,"description": string | null,"fx_amount": number | null,"fx_currency": string | null,"id": string,"input_tax_pkr": number,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string | null,"paid_on": string,"paid_via": string,"payee_id": string | null,"period": string | null,"recurring_id": string | null,"reference": string | null,"rfq_id": string | null,"supplier_order_id": string | null,"visit_id": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "amount_pkr": number,"auto_booked"?: boolean,"bank_month"?: string | null,"category_id": string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"fx_amount"?: number | null,"fx_currency"?: string | null,"id"?: string,"input_tax_pkr"?: number,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id"?: string | null,"paid_on"?: string,"paid_via": string,"payee_id"?: string | null,"period"?: string | null,"recurring_id"?: string | null,"reference"?: string | null,"rfq_id"?: string | null,"supplier_order_id"?: string | null,"visit_id"?: string | null
                   }
@@ -1283,11 +1273,9 @@ isOneToOne: false
                   ]
                 },"invoices": {
                   Row: {
-                    "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"voided_gst": number | null,"voided_net": number | null,"wasif_receipt_on": string | null
+                    "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"voided_gst": number | null,"voided_net": number | null,"wasif_receipt_on": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "client_received_on"?: string | null,"company_id"?: string | null,"copy_received_on"?: string | null,"created_at"?: string,"created_by"?: string | null,"gst_amount": number,"id"?: string,"invoice_date"?: string | null,"last_reminded_on"?: string | null,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"net_amount": number,"notes"?: string | null,"number"?: string | null,"order_id"?: string | null,"psid"?: string | null,"reminder_count"?: number,"settled_before_cutover"?: boolean,"tax_bank_month"?: string | null,"tax_deposit_amount"?: number | null,"tax_deposited_on"?: string | null,"tcs_number"?: string | null,"tcs_sent_on"?: string | null,"updated_at"?: string,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"voided_gst"?: number | null,"voided_net"?: number | null,"wasif_receipt_on"?: string | null
                   }
@@ -1651,11 +1639,9 @@ isOneToOne: false
                   ]
                 },"orders": {
                   Row: {
-                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"commissioning_time": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string,"visit_type": string | null
+                    "cancel_reason": string | null,"cancelled_on": string | null,"commissioning_done_on": string | null,"commissioning_planned_on": string | null,"commissioning_time": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_po_number": string | null,"id": string,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"needs_commissioning": boolean,"notes": string | null,"number": number,"ordered_on": string | null,"owner_id": string | null,"payment_terms_days": number | null,"repeat_of_order_id": string | null,"rfq_id": string | null,"site_id": string | null,"updated_at": string,"visit_type": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "cancel_reason"?: string | null,"cancelled_on"?: string | null,"commissioning_done_on"?: string | null,"commissioning_planned_on"?: string | null,"commissioning_time"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_po_number"?: string | null,"id"?: string,"legacy_flags"?: (string)[],"legacy_review"?: string | null,"legacy_source"?: Json | null,"needs_commissioning"?: boolean,"notes"?: string | null,"number"?: never,"ordered_on"?: string | null,"owner_id"?: string | null,"payment_terms_days"?: number | null,"repeat_of_order_id"?: string | null,"rfq_id"?: string | null,"site_id"?: string | null,"updated_at"?: string,"visit_type"?: string | null
                   }
@@ -1763,11 +1749,9 @@ isOneToOne: false
                   ]
                 },"payments_in": {
                   Row: {
-                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"invoice_id": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"wht_amount": number,"wht_certificate_name": string | null,"wht_certificate_no": string | null,"wht_certificate_path": string | null
+                    "amount": number,"bank_month": string | null,"corrects_payment_id": string | null,"created_at": string,"created_by": string | null,"credited_user_id": string | null,"id": string,"invoice_id": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"paid_via": string,"received_on": string,"reference": string | null,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"wht_amount": number,"wht_certificate_name": string | null,"wht_certificate_no": string | null,"wht_certificate_path": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "amount": number,"bank_month"?: string | null,"corrects_payment_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"credited_user_id"?: string | null,"id"?: string,"invoice_id"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"paid_via"?: string,"received_on"?: string,"reference"?: string | null,"void_reason"?: string | null,"voided_at"?: string | null,"voided_by"?: string | null,"wht_amount"?: number,"wht_certificate_name"?: string | null,"wht_certificate_no"?: string | null,"wht_certificate_path"?: string | null
                   }
@@ -1863,11 +1847,9 @@ isOneToOne: false
                   ]
                 },"purchase_orders": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"currency": string,"delivery_terms": string | null,"id": string,"incoterm": string | null,"issued_on": string,"lines": NonNullable<Json>,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"ship_to": string | null,"signatory_id": string,"supplier_order_id": string,"total": number
+                    "created_at": string,"created_by": string | null,"currency": string,"delivery_terms": string | null,"id": string,"incoterm": string | null,"issued_on": string,"lines": NonNullable<Json>,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"ship_to": string | null,"signatory_id": string,"supplier_order_id": string,"total": number,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "created_at"?: string,"created_by"?: string | null,"currency": string,"delivery_terms"?: string | null,"id"?: string,"incoterm"?: string | null,"issued_on"?: string,"lines": NonNullable<Json>,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"ship_to"?: string | null,"signatory_id"?: string,"supplier_order_id": string,"total": number
                   }
@@ -1897,11 +1879,9 @@ isOneToOne: false
                   ]
                 },"quotations": {
                   Row: {
-                    "contact_id": string | null,"created_at": string,"created_by": string | null,"delivery_text": string | null,"gst_total": number,"id": string,"issued_on": string,"lines": NonNullable<Json>,"net_total": number,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"rfq_id": string,"signatory_id": string,"valid_until": string
+                    "contact_id": string | null,"created_at": string,"created_by": string | null,"delivery_text": string | null,"gst_total": number,"id": string,"issued_on": string,"lines": NonNullable<Json>,"net_total": number,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"rfq_id": string,"signatory_id": string,"valid_until": string,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total": number,"id"?: string,"issued_on"?: string,"lines": NonNullable<Json>,"net_total": number,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"rfq_id": string,"signatory_id"?: string,"valid_until": string
                   }
@@ -2019,11 +1999,9 @@ isOneToOne: false
                   ]
                 },"rfqs": {
                   Row: {
-                    "close_note": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_ref": string | null,"due_on": string | null,"due_time": string | null,"id": string,"is_priority": boolean,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"number": number,"owner_id": string | null,"quoted_on": string | null,"received_on": string,"site_id": string | null,"updated_at": string
+                    "close_note": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string,"contact_id": string | null,"created_at": string,"created_by": string | null,"customer_ref": string | null,"due_on": string | null,"due_time": string | null,"id": string,"is_priority": boolean,"legacy_flags": (string)[],"legacy_source": Json | null,"notes": string | null,"number": number,"owner_id": string | null,"quoted_on": string | null,"received_on": string,"site_id": string | null,"updated_at": string,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "close_note"?: string | null,"close_reason"?: string | null,"closed_on"?: string | null,"company_id": string,"contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"customer_ref"?: string | null,"due_on"?: string | null,"due_time"?: string | null,"id"?: string,"is_priority"?: boolean,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"notes"?: string | null,"number"?: never,"owner_id"?: string | null,"quoted_on"?: string | null,"received_on"?: string,"site_id"?: string | null,"updated_at"?: string
                   }
@@ -2103,11 +2081,9 @@ isOneToOne: false
                   ]
                 },"supplier_inquiries": {
                   Row: {
-                    "asked_item_ids": (string)[] | null,"chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_confirmed_at": string | null,"sent_on": string | null,"supplier_id": string
+                    "asked_item_ids": (string)[] | null,"chase_count": number,"created_at": string,"created_by": string | null,"id": string,"last_chased_by": string | null,"last_chased_on": string | null,"last_relayed_at": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"no_offer_on": string | null,"no_offer_reason": string | null,"notes": string | null,"rfq_id": string,"sent_confirmed_at": string | null,"sent_on": string | null,"supplier_id": string,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "asked_item_ids"?: (string)[] | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"id"?: string,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"last_relayed_at"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"no_offer_on"?: string | null,"no_offer_reason"?: string | null,"notes"?: string | null,"rfq_id": string,"sent_confirmed_at"?: string | null,"sent_on"?: string | null,"supplier_id": string
                   }
@@ -2167,11 +2143,9 @@ isOneToOne: false
                   ]
                 },"supplier_orders": {
                   Row: {
-                    "cancelled_with_supplier_on": string | null,"chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_by": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string
+                    "cancelled_with_supplier_on": string | null,"chase_count": number,"created_at": string,"created_by": string | null,"currency": string | null,"delivered_on": string | null,"expected_on": string | null,"id": string,"inquiry_id": string | null,"last_chased_by": string | null,"last_chased_on": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"order_id": string,"placed_on": string | null,"received_on": string | null,"reference": string | null,"supplier_id": string,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Insert: {
                     "cancelled_with_supplier_on"?: string | null,"chase_count"?: number,"created_at"?: string,"created_by"?: string | null,"currency"?: string | null,"delivered_on"?: string | null,"expected_on"?: string | null,"id"?: string,"inquiry_id"?: string | null,"last_chased_by"?: string | null,"last_chased_on"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"order_id": string,"placed_on"?: string | null,"received_on"?: string | null,"reference"?: string | null,"supplier_id": string
                   }
@@ -2416,11 +2390,9 @@ isOneToOne: false
                   ]
                 },"v_inquiry_state": {
                   Row: {
-                    "answers_to_relay": number | null,"blocked_state": string | null,"chase_count": number | null,"contact_state": string | null,"inquiry_id": string | null,"items_quoted": number | null,"items_total": number | null,"last_chased_on": string | null,"open_questions": number | null,"quote_received_on": string | null,"response_state": string | null,"rfq_id": string | null,"sent_on": string | null,"supplier_id": string | null
+                    "answers_to_relay": number | null,"blocked_state": string | null,"chase_count": number | null,"contact_state": string | null,"inquiry_id": string | null,"items_quoted": number | null,"items_total": number | null,"last_chased_on": string | null,"open_questions": number | null,"quote_received_on": string | null,"response_state": string | null,"rfq_id": string | null,"sent_on": string | null,"supplier_id": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Relationships: [
                     {
       foreignKeyName: "supplier_inquiries_rfq_id_fkey"
@@ -2462,11 +2434,9 @@ isOneToOne: false
                   ]
                 },"v_invoice_state": {
                   Row: {
-                    "company_id": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"last_reminded_on": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"reminder_count": number | null,"reminder_state": string | null,"void_reason": string | null,"voided_at": string | null
+                    "company_id": string | null,"courier_state": string | null,"fbr_exception": boolean | null,"fbr_state": string | null,"gross_amount": number | null,"gst_amount": number | null,"invoice_date": string | null,"invoice_id": string | null,"last_reminded_on": string | null,"needs_fbr_attention": boolean | null,"net_amount": number | null,"number": string | null,"order_id": string | null,"reminder_count": number | null,"reminder_state": string | null,"void_reason": string | null,"voided_at": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Relationships: [
                     {
       foreignKeyName: "invoices_company_id_fkey"
@@ -2532,11 +2502,9 @@ isOneToOne: false
                   ]
                 },"v_jobs": {
                   Row: {
-                    "cancelled_orders": number | null,"company_id": string | null,"is_history": boolean | null,"items_summary": string | null,"job_key": string | null,"kind": string | null,"last_activity_on": string | null,"order_id": string | null,"owner_id": string | null,"repeat_of_job_key": string | null,"rfq_id": string | null,"site_id": string | null,"stage": string | null,"stage_detail": string | null
+                    "cancelled_orders": number | null,"company_id": string | null,"is_history": boolean | null,"items_summary": string | null,"job_key": string | null,"kind": string | null,"last_activity_on": string | null,"order_id": string | null,"owner_id": string | null,"repeat_of_job_key": string | null,"rfq_id": string | null,"site_id": string | null,"stage": string | null,"stage_detail": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Relationships: [
                     
                   ]
@@ -2702,11 +2670,9 @@ isOneToOne: false
                   ]
                 },"v_order_state": {
                   Row: {
-                    "commissioning_state": string | null,"company_id": string | null,"data_trust": string | null,"goods_state": string | null,"gross": number | null,"gst": number | null,"invoiced": number | null,"invoicing_state": string | null,"is_done": boolean | null,"lifecycle": string | null,"net": number | null,"number": number | null,"order_id": string | null,"owner_id": string | null,"rfq_id": string | null,"site_id": string | null
+                    "commissioning_state": string | null,"company_id": string | null,"data_trust": string | null,"goods_state": string | null,"gross": number | null,"gst": number | null,"invoiced": number | null,"invoicing_state": string | null,"is_done": boolean | null,"lifecycle": string | null,"net": number | null,"number": number | null,"order_id": string | null,"owner_id": string | null,"rfq_id": string | null,"site_id": string | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Relationships: [
                     {
       foreignKeyName: "orders_company_id_fkey"
@@ -2842,11 +2808,9 @@ isOneToOne: false
                   ]
                 },"v_rfq_state": {
                   Row: {
-                    "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quotation_valid_until": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null
+                    "bid_state": string | null,"clarification_state": string | null,"close_reason": string | null,"closed_on": string | null,"company_id": string | null,"days_to_due": number | null,"due_on": string | null,"floated": number | null,"is_overdue": boolean | null,"is_priority": boolean | null,"items_quoted": number | null,"items_total": number | null,"items_uncovered": number | null,"number": number | null,"outcome": string | null,"outcome_clash": boolean | null,"owner_id": string | null,"quotation_valid_until": string | null,"quoted_on": string | null,"received_on": string | null,"responders": number | null,"rfq_id": string | null,"sourcing_state": string | null,"to_ask": number | null,"to_relay": number | null,"waiting": number | null,"waiting_days": number | null,"archived": boolean | null
                   }
-                  ComputedFields: {
-                    "archived": boolean
-                  }
+                  ComputedFields: "archived"
                   Relationships: [
                     {
       foreignKeyName: "rfqs_company_id_fkey"
@@ -3070,6 +3034,43 @@ isOneToOne: false
       } },
 "archive_unhide":
 { Args: { "p_entity": string,"p_id": string }; Returns: boolean
+                           },
+"archived":
+{ Args: { "a": Omit<Database["public"]['Tables']["cash_counts"]['Row'], Database["public"]['Tables']["cash_counts"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["cash_topups"]['Row'], Database["public"]['Tables']["cash_topups"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["clarifications"]['Row'], Database["public"]['Tables']["clarifications"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["expense_claims"]['Row'], Database["public"]['Tables']["expense_claims"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["expenses"]['Row'], Database["public"]['Tables']["expenses"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["invoices"]['Row'], Database["public"]['Tables']["invoices"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["orders"]['Row'], Database["public"]['Tables']["orders"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["payments_in"]['Row'], Database["public"]['Tables']["payments_in"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["purchase_orders"]['Row'], Database["public"]['Tables']["purchase_orders"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["quotations"]['Row'], Database["public"]['Tables']["quotations"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["rfqs"]['Row'], Database["public"]['Tables']["rfqs"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["supplier_inquiries"]['Row'], Database["public"]['Tables']["supplier_inquiries"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "a": Omit<Database["public"]['Tables']["supplier_orders"]['Row'], Database["public"]['Tables']["supplier_orders"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(a => rfqs), public.archived(a => supplier_inquiries), public.archived(a => clarifications), public.archived(a => orders), public.archived(a => supplier_orders), public.archived(a => invoices), public.archived(a => payments_in), public.archived(a => expenses), public.archived(a => quotations), public.archived(a => purchase_orders), public.archived(a => expense_claims), public.archived(a => cash_topups), public.archived(a => cash_counts). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "v": Omit<Database["public"]['Views']["v_inquiry_state"]['Row'], Database["public"]['Views']["v_inquiry_state"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(v => v_rfq_state), public.archived(v => v_inquiry_state), public.archived(v => v_invoice_state), public.archived(v => v_order_state), public.archived(v => v_jobs). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "v": Omit<Database["public"]['Views']["v_invoice_state"]['Row'], Database["public"]['Views']["v_invoice_state"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(v => v_rfq_state), public.archived(v => v_inquiry_state), public.archived(v => v_invoice_state), public.archived(v => v_order_state), public.archived(v => v_jobs). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "v": Omit<Database["public"]['Views']["v_jobs"]['Row'], Database["public"]['Views']["v_jobs"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(v => v_rfq_state), public.archived(v => v_inquiry_state), public.archived(v => v_invoice_state), public.archived(v => v_order_state), public.archived(v => v_jobs). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "v": Omit<Database["public"]['Views']["v_order_state"]['Row'], Database["public"]['Views']["v_order_state"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(v => v_rfq_state), public.archived(v => v_inquiry_state), public.archived(v => v_invoice_state), public.archived(v => v_order_state), public.archived(v => v_jobs). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
+                           } |
+{ Args: { "v": Omit<Database["public"]['Views']["v_rfq_state"]['Row'], Database["public"]['Views']["v_rfq_state"]['ComputedFields']> }; Returns: { error: true } & "Could not choose the best candidate function between: public.archived(v => v_rfq_state), public.archived(v => v_inquiry_state), public.archived(v => v_invoice_state), public.archived(v => v_order_state), public.archived(v => v_jobs). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
                            },
 "attachment_is_priced":
 { Args: { "p_bucket": string,"p_name": string }; Returns: boolean
