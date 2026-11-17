@@ -295,15 +295,11 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     </>
   )
 
-  /** What we pay for the line, in the quote's currency, then PKR. */
+  /** What we pay for the line, in the currency the supplier quoted (no PKR estimate: the owner asked for PKR only on request). */
   const supplierCell = (q: RankedQuote | undefined) => (
     <div className="num text-sm lg:text-right">
       {q ? (
-        <>
-          {priceTexts(q).price}
-          <br />
-          <span className="text-xs text-fg-muted">{priceTexts(q).pkr}</span>
-        </>
+        priceTexts(q).price
       ) : (
         // No supplier chosen yet: nothing to show (a lone dash under the select read as a missing value). Screen readers still hear it.
         <span className="sr-only">No supplier chosen yet</span>

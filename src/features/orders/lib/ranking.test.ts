@@ -55,7 +55,7 @@ describe('the quotes of an item (no rank, no reason)', () => {
   })
   it('prices', () => {
     const [a] = mapRankRows([row({})], names)
-    expect(priceTexts(a)).toEqual({ price: 'USD 412.00', pkr: '≈ PKR 114,701' })
-    expect(priceTexts({ ...a, currency: 'PKR' }).pkr).toBe('no conversion')
+    expect(priceTexts(a)).toEqual({ price: 'USD 412.00' })
+    expect(priceTexts({ ...a, currency: 'PKR' }).price).toMatch(/^PKR /)
   })
 })

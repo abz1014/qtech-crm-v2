@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { FileCheck2, FileText, Lock, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
-import { convertToPaisa, formatAmount, formatPaisa, formatRate } from '@/lib/money'
-import { formatDay } from '@/lib/formatDay'
+import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
@@ -20,7 +19,6 @@ import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
-import { useFxLatest } from '@/features/rfqs/hooks'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { profileGaps } from '@/features/quotations/lib/profileGaps'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
@@ -78,7 +76,6 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
   const existing = useLegPo(leg.id)
   const nextNumber = useNextPoNumber(existing.isSuccess && !existing.data)
   const profileQ = useCompanyProfile()
-  const fx = useFxLatest()
   const issue = useIssuePo(order.id)
   const storePdf = useStorePoPdf(order.id)
   const setCurrency = useSetLegCurrency(order.id)
@@ -123,8 +120,6 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
   const loading = prefill.isPending || last.isPending || existing.isPending || profileQ.isPending
   const loadFailed = prefill.isError || last.isError || existing.isError
   const ready = !loading && !loadFailed && ccy !== null && rows.length > 0 && missing.length === 0
-  const rate = ccy && ccy !== 'PKR' ? (fx.data ?? []).find(r => r.currency === ccy) : undefined
-  const pkr = rate && rate.staleness !== 'unusable' ? convertToPaisa(total, rate.ratePkr) : null
   const busy = issue.isPending || storePdf.isPending
   const source = (field: 'incoterm' | 'delivery' | 'payment' | 'shipTo') => {
     const d = { incoterm: defaults.incoterm, delivery: defaults.delivery, payment: defaults.payment, shipTo: defaults.shipTo }[field]
@@ -300,13 +295,6 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       width: 150,
     },
   ]
-  const conversion =
-    pkr !== null && rate ? (
-      <span>
-        Total in {ccy} · ≈ PKR <span className="num">{formatPaisa(pkr, 'auto')}</span> at <span className="num">{formatRate(rate.ratePkr)}</span>, {rate.source === 'manual' ? 'manual' : 'auto'} rate of{' '}
-        {formatDay(rate.asOf).replace(/^\w{3} /, '')}
-      </span>
-    ) : undefined
 
   return (
     <Dialog open busy={busy} onOpenChange={o => (o ? null : onClose())}>
@@ -415,7 +403,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
                 twoLine
               />
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-control bg-sunken px-4 py-3 text-sm text-fg-2">
-                <span>{conversion ?? `Total in ${ccy ?? '—'}`}</span>
+                <span>{`Total in ${ccy ?? '—'}`}</span>
                 <span className="num text-base font-semibold text-fg" data-testid="po-total">
                   {ccy ?? ''} {formatAmount(total, 'always')}
                 </span>
