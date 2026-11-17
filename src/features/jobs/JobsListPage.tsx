@@ -203,8 +203,8 @@ function JobsList() {
 
   const all = useMemo(() => (jobs.data ?? []).filter(j => (lane === null || laneOfJob(j) === lane) && (person === null || isPersons(j, person))), [jobs.data, lane, person])
   // The Person select's names: the admin-users list (admin only; nobody else makes the request). A person no longer in it (or not yet
-  // loaded) is named from the jobs they own.
-  const team = useTeam(role === 'admin')
+  // loaded) is named from the jobs they own. Asked only once the jobs are in, so it never slows the list's first paint.
+  const team = useTeam(role === 'admin' && jobs.isSuccess)
   const people = useMemo(
     () => (team.data ?? []).filter(m => m.deactivated_at === null || m.id === person).map(m => ({ value: m.id, label: m.name })).sort((a, b) => a.label.localeCompare(b.label)),
     [team.data, person],
