@@ -10,6 +10,9 @@
 --   item            the item's parent ORDER (is_archived('order', i.order_id)); an item is hidden with its order
 --   po              and not coalesce(public.is_archived('purchase_order', q0.id), false)
 --   invoice         and not coalesce(public.is_archived('invoice', v.id), false)
+-- Each condition is `(not x.arch_on or not coalesce(public.is_archived(...), false))`: x.arch_on is the archive setting read once, so while archiving is
+-- OFF (the default) no per-row call is made and search costs what it did before (the R12 search timing budget holds). While ON, each candidate
+-- row is checked by is_archived.
 -- The condition sits inside each branch BEFORE its `limit`, so a hidden row never takes a result slot. is_archived() (not archived(<row>)) is used
 -- on purpose: archived(orders|purchase_orders) is refused to an engineer (42501), is_archived works for every role. Signature, result columns,
 -- security invoker, search_path, grants: unchanged.
@@ -35,7 +38,8 @@ as $$
            case when t ~* '^(ord[-[:space:]]*)?[0-9]{1,9}$' then regexp_replace(t, '\D', '', 'g')::bigint end as ordnum,
            case when t ~* '^po[-[:space:]]*([0-9]{2}[-[:space:]]*)?[0-9]{1,6}$' then (regexp_match(t, '([0-9]+)$'))[1]::integer end as ponum,
            (t ~ '^[0-9+()[:space:]-]+$' and length(regexp_replace(regexp_replace(t, '\D', '', 'g'), '^(0092|92|0)', '')) >= 3) as phoneish,
-           public.current_user_role() in ('admin', 'sales') as money_ok
+           public.current_user_role() in ('admin', 'sales') as money_ok,
+           coalesce((select a.enabled from public.archive_settings a where a.id = 1), false) as arch_on
     from p
     where btrim(coalesce(q, '')) <> '' and length(btrim(coalesce(q, ''))) <= 100 and public.current_user_role() is not null
   ), cm as materialized (
@@ -63,7 +67,7 @@ as $$
     where ((x.num is not null and r.number = x.num)
        or r.customer_ref ilike x.pat
        or r.company_id in (select id from (select id from cm order by score desc, name limit 25) top))
-      and not coalesce(public.is_archived('rfq', r.id), false)
+      and (not x.arch_on or not coalesce(public.is_archived('rfq', r.id), false))
     order by score desc, r.number desc
     limit (select n from x)
   ), od as (
@@ -79,7 +83,7 @@ as $$
     cross join x
     where ((x.ordnum is not null and o.number = x.ordnum)
        or (x.money_ok and op.customer_po_number ilike x.pat))
-      and not coalesce(public.is_archived('order', o.id), false)
+      and (not x.arch_on or not coalesce(public.is_archived('order', o.id), false))
     order by score desc, o.number desc
     limit (select n from x)
   ), it as (
@@ -87,7 +91,7 @@ as $$
            (case when lower(i.description) = lower(x.t) then 3 when i.description ilike x.pre then 2 else 1 end)::real as score
     from public.order_items i, x
     where length(x.t) >= 3 and i.description ilike x.pat
-      and not coalesce(public.is_archived('order', i.order_id), false)
+      and (not x.arch_on or not coalesce(public.is_archived('order', i.order_id), false))
     order by score desc, i.created_at desc, i.id
     limit (select n from x)
   ), po as (
@@ -97,7 +101,7 @@ as $$
     join public.supplier_orders so on so.id = q0.supplier_order_id
     left join public.purchase_orders r0 on r0.number = q0.number and r0.revision = 0, x
     where x.money_ok and x.ponum is not null and q0.number = x.ponum
-      and not coalesce(public.is_archived('purchase_order', q0.id), false)
+      and (not x.arch_on or not coalesce(public.is_archived('purchase_order', q0.id), false))
     order by q0.revision desc
     limit 1
   ), iv as (
@@ -105,7 +109,7 @@ as $$
            (case when lower(v.number) = lower(x.t) then 3 when v.number ilike x.pre then 2 else 1 end)::real as score
     from public.invoices v, x
     where x.money_ok and v.number ilike x.pat
-      and not coalesce(public.is_archived('invoice', v.id), false)
+      and (not x.arch_on or not coalesce(public.is_archived('invoice', v.id), false))
     order by score desc, v.invoice_date desc nulls last, v.number desc
     limit (select n from x)
   )
@@ -169,7 +173,7 @@ as $$
     join public.companies c on c.id = r.company_id
     where (r.closed_on is not null
        or exists (select 1 from public.orders o where o.rfq_id = r.id and o.cancelled_on is null))
-      and not coalesce(public.is_archived('rfq', r.id), false)
+      and (not (select a.enabled from public.archive_settings a where a.id = 1) or not coalesce(public.is_archived('rfq', r.id), false))
   ),
   hits as (
     select k.id, k.received_on, k.number
