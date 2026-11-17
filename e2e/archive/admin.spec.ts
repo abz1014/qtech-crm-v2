@@ -94,7 +94,9 @@ test('the To collect figures are the same with archiving on and off', async ({ p
   const off = await settledText(async () => (await tile.textContent()) ?? '')
   await archiveOn()
   await page.goto('/money/receivables')
-  await expect(page.getByRole('row').filter({ hasText: f.company.name }).first()).toBeVisible()
+  await expect(page.getByRole('row').filter({ hasText: f.newOrder.invoiceNumber })).not.toHaveCount(0)
+  // the old job's row is hidden from the list, yet the figures above did not move
+  await expect(page.getByRole('row').filter({ hasText: f.oldOrder.invoiceNumber })).toHaveCount(0)
   await expect(tile).toHaveText(off)
 })
 
