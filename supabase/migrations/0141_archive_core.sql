@@ -39,6 +39,7 @@
 --                             the one place that lists the thirteen entities for archive_preview and archive_list; not granted to anyone.
 -- Every new object is granted to qtech_engineer too (0081's coverage test fails otherwise). The engineer reads the setting, the overrides and
 -- the yes/no answers; they cannot call the five admin RPCs, and nothing here returns a price to them.
+-- archived(orders|quotations|purchase_orders row) is refused to an engineer (42501). An engineer's lists must use archived(v_jobs) / archived(v_order_state), or is_archived('order', id).
 --
 -- DROPPING OR REPLACING A VIEW. The five archived(v_...) functions take the view's row type as their argument, so they DEPEND on the views
 -- v_jobs, v_rfq_state, v_order_state, v_invoice_state and v_inquiry_state. `create or replace view` that keeps the existing columns (and
@@ -135,8 +136,7 @@ grant execute on function public.archive_hides(date, boolean) to authenticated, 
 -- ================================================================ is_archived(entity, id)
 -- The rule for one row by name, the override included. An unknown entity, a missing row or a caller with no role gives NULL. It reads the row's
 -- date and legacy_source only (columns, never the whole row). It is plpgsql on purpose: only the branch for the asked kind runs, so only that
--- table's privilege is checked. An engineer (no access to invoices, payments or expenses) can ask about an RFQ or an order, and is refused
--- (42501) if they ask about an invoice, as they are refused the invoice itself.
+-- table's privilege is checked. An engineer asking about an invoice, payment or expense gets NULL, because row security shows them nothing.
 create function public.is_archived(p_entity text, p_id uuid)
 returns boolean
 language plpgsql
@@ -432,7 +432,7 @@ language sql
 stable
 set search_path = ''
 as $$
-  with rcv as (
+  with rcv as materialized (
     select r.order_id, r.balance, r.payment_state from public.order_receivables() r
   )
   select 'rfq'::text, a.id, case when a.legacy_source is null then coalesce(a.received_on, (a.created_at at time zone 'Asia/Karachi')::date) else a.received_on end, a.legacy_source is not null, a.company_id, a.number::text, null::numeric, null::uuid,

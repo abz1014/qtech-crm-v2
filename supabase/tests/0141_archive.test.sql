@@ -99,8 +99,9 @@ insert into public.expense_claims (id, created_by, spent_on, amount_pkr, note) v
   (pg_temp.f('62'), 'a0000000-0000-4000-8000-000000000001', '2026-11-17', 7, '0141 claim new');
 insert into public.cash_topups (id, drawn_on, amount_pkr) values
   (pg_temp.f('63'), '2026-11-16', 5), (pg_temp.f('64'), '2026-11-17', 5);
-insert into public.cash_counts (id, counted_on, counted_pkr) values
-  (pg_temp.f('65'), '2026-11-16', 5), (pg_temp.f('66'), '2026-11-17', 5);
+-- Both are opening counts: cash_counts_prepare (0087) keeps an opening's date and forces every other count to today, so only openings give fixed dates.
+insert into public.cash_counts (id, counted_on, counted_pkr, is_opening) values
+  (pg_temp.f('65'), '2026-11-16', 5, true), (pg_temp.f('66'), '2026-11-17', 5, true);
 
 insert into public.quotations (id, rfq_id, number, revision, issued_on, valid_until, lines) values
   (pg_temp.f('71'), pg_temp.f('11'), 914101, 0, '2026-11-16', '2027-01-01', '[{"qty":1,"unit_price_net":1,"gst_rate":0}]'),
@@ -421,10 +422,13 @@ select is(pg_temp.as_('engineer', $q$select public.archived(s)::text from public
 select is(pg_temp.as_('engineer', $q$select public.archived(s)::text from public.v_inquiry_state s where s.inquiry_id = 'b9141000-0000-4000-8000-0000000000a1'$q$), 'true', 'engineer: archived(v_inquiry_state)');
 select is(pg_temp.as_('engineer', $q$select count(*)::text from public.v_order_state s where public.archived(s) and s.gross is not null$q$), '0',
   'engineer: no order total comes back with archived(v_order_state) (the totals stay NULL for an engineer)');
-select is(pg_temp.as_('engineer', $q$select public.archived(i)::text from public.invoices i limit 1$q$), 'E:42501', 'engineer: an invoice cannot be read, so archived(invoices row) is refused, not answered');
-select is(pg_temp.as_('engineer', $q$select public.is_archived('invoice', 'b9141000-0000-4000-8000-000000000031')::text$q$), 'E:42501', 'engineer: nor is_archived(invoice)');
-select is(pg_temp.as_('engineer', $q$select public.is_archived('payment', 'b9141000-0000-4000-8000-000000000041')::text$q$), 'E:42501', 'engineer: nor is_archived(payment)');
-select is(pg_temp.as_('engineer', $q$select public.is_archived('expense', 'b9141000-0000-4000-8000-000000000051')::text$q$), 'E:42501', 'engineer: nor is_archived(expense)');
+select is(pg_temp.as_('engineer', $q$select public.archived(i)::text from public.invoices i limit 1$q$), '<none>', 'engineer: archived(invoices row) gets no row (row security shows an engineer no invoice): no information');
+select is(pg_temp.as_('engineer', $q$select public.is_archived('invoice', 'b9141000-0000-4000-8000-000000000031')::text$q$), '<null>', 'engineer: is_archived(invoice) gets NULL: no information');
+select is(pg_temp.as_('engineer', $q$select public.is_archived('payment', 'b9141000-0000-4000-8000-000000000041')::text$q$), '<null>', 'engineer: is_archived(payment) gets NULL: no information');
+select is(pg_temp.as_('engineer', $q$select public.is_archived('expense', 'b9141000-0000-4000-8000-000000000051')::text$q$), '<null>', 'engineer: is_archived(expense) gets NULL: no information');
+select is(pg_temp.as_('engineer', $q$select public.archived(o)::text from public.orders o limit 1$q$), 'E:42501', 'engineer: archived(orders row) is refused (column grants); the lists use archived(v_order_state)');
+select is(pg_temp.as_('engineer', $q$select public.archived(q)::text from public.quotations q limit 1$q$), 'E:42501', 'engineer: archived(quotations row) is refused (column grants)');
+select is(pg_temp.as_('engineer', $q$select public.archived(po)::text from public.purchase_orders po limit 1$q$), 'E:42501', 'engineer: archived(purchase_orders row) is refused (column grants)');
 select ok(has_table_privilege('qtech_engineer', 'public.archive_settings', 'select') and has_table_privilege('qtech_engineer', 'public.archive_unhidden', 'select'),
   'qtech_engineer reads both tables');
 select ok(not has_table_privilege('qtech_engineer', 'public.archive_settings', 'update') and not has_table_privilege('qtech_engineer', 'public.archive_settings', 'insert')
