@@ -308,6 +308,13 @@ describe('supplier flow D: items a supplier was asked about (0140)', () => {
     expect(screen.getByRole('button', { name: 'Hide items' })).toHaveAttribute('aria-expanded', 'true')
   })
 
+  it('more than two items nobody priced: one line over the list, no red box on each item', () => {
+    const four = Array.from({ length: 4 }, (_, n) => ({ ...item, id: `it-${n + 1}`, number: n + 1, description: `Part ${n + 1}` }))
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])], four)
+    expect(document.querySelector('[data-many-uncovered]')).toHaveTextContent('3 of 4 items have no price.')
+    expect(screen.queryByText(/None of the 1 supplier who replied quoted this item/)).toBeNull()
+  })
+
   it('a whole "cannot quote" from a supplier asked about item 1 only is not shown on item 2', () => {
     const no: InquiryRow = { ...inquiry('n', 'Midlands Valves', []), noOfferOn: '2026-11-21', noOfferReason: 'no_brand', responseState: 'no_offer', itemsQuoted: 0, askedItemIds: ['it-1'] }
     renderPanel([no], three.slice(0, 2))

@@ -379,6 +379,19 @@ export function ItemsPanel({
   const waitedOn = (itemId: string) => inquiries.some(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[itemId] && askedAbout(i, itemId))
   const allWaiting = !nobodyAsked && items.length > 0 && items.every(it => !hasBody(it.id) && waitedOn(it.id))
   const [showItems, setShowItems] = useState(false)
+  // Items no supplier who replied has priced. Past two, one line over the list says it, not a red box on every item (owner, 18 Nov 2026).
+  const uncoveredIds = new Set(
+    items
+      .filter(it => {
+        const n = inquiries.reduce((k, i) => k + i.lines.filter(l => l.itemId === it.id).length, 0)
+        const waits = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[it.id] && askedAbout(i, it.id)).length
+        const resp = responders.filter(i => askedAbout(i, it.id) || i.lines.some(l => l.itemId === it.id)).length
+        const askedFor = inquiries.filter(i => (i.sentOn || i.noOfferOn) && askedAbout(i, it.id)).length
+        return itemCoverage(n, waits, resp, askedFor).kind === 'uncovered'
+      })
+      .map(it => it.id),
+  )
+  const manyUncovered = uncoveredIds.size > 2
   const listFolded = allWaiting && items.length > FOLD_FROM && !showItems
   return (
     <DetailPanel
@@ -433,6 +446,14 @@ export function ItemsPanel({
               {showItems ? 'Hide items' : 'Show items'}
             </Button>
           ) : null}
+        </div>
+      ) : null}
+      {manyUncovered ? (
+        <div role="status" className="mt-3 flex items-start gap-3 rounded-control border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3" data-many-uncovered={uncoveredIds.size}>
+          <Icon icon={TriangleAlert} className="mt-1 text-tone-danger-fg" />
+          <p className="text-fg-2">
+            <b className="font-semibold text-fg">{`${uncoveredIds.size} of ${items.length} items have no price.`}</b> The suppliers who replied did not quote them. Ask another supplier before the quotation is due.
+          </p>
         </div>
       ) : null}
       {items.length === 0 ? (
@@ -520,7 +541,7 @@ export function ItemsPanel({
 
                 {folded ? null : (
                   <div id={bodyId}>
-                    {cov.kind === 'uncovered' ? (
+                    {cov.kind === 'uncovered' && !manyUncovered ? (
                       <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-0 px-0">
                         <div role="status" className={cn('flex items-start gap-3 border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3', forThis.length > 0 ? 'rounded-t-control' : 'rounded-control')}>
                           <Icon icon={TriangleAlert} className="mt-1 text-tone-danger-fg" />
