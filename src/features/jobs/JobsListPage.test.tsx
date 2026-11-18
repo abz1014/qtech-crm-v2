@@ -360,4 +360,42 @@ describe('Jobs list', () => {
     expect(container.textContent).toContain('Delivered · With the office')
     expect(container.textContent).not.toMatch(/\bpaid\b|stages done/i)
   })
+
+  describe('Person filter (admin, owner 2026-11-17)', () => {
+    it("?person= shows only that person's open jobs, says whose they are, and offers Open and History only", async () => {
+      installFakeDb(fake)
+      const { container } = mount('admin', '/jobs?person=other')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      expect(screen.getAllByRole('row', { name: /Job O-45/ }).length).toBeGreaterThan(0)
+      // Job O-45 says "Repeat of Job 139", so the row's name is matched from its start
+      expect(screen.queryAllByRole('row', { name: /^Job 139\b/ })).toHaveLength(0)
+      expect(container).toHaveTextContent('Showing 2 open jobs of Hammad')
+      expect(screen.queryByRole('radio', { name: 'Mine' })).toBeNull()
+      expect(screen.getByRole('radio', { name: 'Open' })).toBeChecked()
+      // the same Where it stands words as the whole list
+      expect(container).toHaveTextContent('Supplier order · to source')
+      expect((screen.getByTestId('person-filter') as HTMLSelectElement).value).toBe('other')
+    })
+
+    it('picking Everyone in the Person select clears the filter', async () => {
+      installFakeDb(fake)
+      mount('admin', '/jobs?person=other')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      await userEvent.selectOptions(screen.getByTestId('person-filter'), '')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    })
+
+    it('a person with no open jobs gets a calm empty state with the way back to everyone', async () => {
+      installFakeDb(fake)
+      mount('admin', '/jobs?person=nobody')
+      expect(await screen.findByRole('button', { name: 'Show all open jobs' })).toBeInTheDocument()
+    })
+
+    it('sales and engineers have no Person select and ?person= changes nothing for them', async () => {
+      installFakeDb(fake)
+      mount('sales', '/jobs?person=other&chip=open')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      expect(screen.queryByTestId('person-filter')).toBeNull()
+    })
+  })
 })
