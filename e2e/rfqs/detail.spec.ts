@@ -474,7 +474,8 @@ test.describe('chase (FE-2: 1 tap)', () => {
   test('one tap copies the approved text and stamps the chase together', async ({ page }) => {
     const s = await seed({ dueInDays: 8 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    const card = page.locator(`[data-chase-card="${s.china.id}"]`) // the supplier shown in the Suppliers asked card
+    await page.getByRole('button', { name: `Show message, ${s.china.name}` }).click() // the message opens on request (owner, 18 Nov 2026)
+    const card = page.locator(`[data-chase-card="${s.china.id}"]`)
     await resetClipboard(page)
     await card.getByRole('button', { name: 'Copy and record follow-up' }).click() // the one tap
     await expect(page.getByRole('status').filter({ hasText: 'Follow-up text copied' })).toBeVisible()
@@ -648,8 +649,9 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const one = page.getByRole('article', { name: 'Item 1' })
-    await expect(one.locator('[data-waiting]')).toHaveCount(1)
-    await expect(one.locator('[data-waiting]')).toHaveText('Waiting on 3 suppliers')
+    // Nothing back on any item yet: the panel says it once, no item repeats it (owner, 18 Nov 2026).
+    await expect(page.locator('[data-all-waiting]')).toBeVisible()
+    await expect(page.locator('[data-waiting]')).toHaveCount(0)
     await expect(one.getByRole('button', { name: /Add reply|Enter reply|Cannot quote/ })).toHaveCount(0)
     // No price boxes until a supplier's Enter reply is tapped.
     await expect(page.getByLabel(`Price for item 1 from ${s.germany.name}`)).toHaveCount(0)

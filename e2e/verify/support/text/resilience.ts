@@ -26,7 +26,7 @@ export const RESILIENCE = {
     openOrder: /Open ORD-\d{4}/,
     /** With one supplier to chase, the Suppliers asked card offers the chase text and this button (src/features/rfqs/SuppliersAsked.tsx). */
     chaseSlot: 'suppliers-asked',
-    chaseCopy: 'Copy and record follow-up',
+    chaseCopy: /^Follow up with /, // the 1-tap Follow up on the supplier's row (the message itself opens only on Show message)
     chaseCopied: 'Follow-up text copied',
   },
   company: {

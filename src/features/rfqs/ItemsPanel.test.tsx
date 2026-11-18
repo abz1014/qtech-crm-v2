@@ -292,7 +292,27 @@ describe('supplier flow D: items a supplier was asked about (0140)', () => {
     const old: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }
     renderPanel([old], three)
     expect(screen.queryByText('No supplier has been asked about this item.')).toBeNull()
-    for (const n of [1, 2, 3]) expect(within(screen.getByRole('article', { name: `Item ${n}` })).getByText('Keller GmbH')).toBeInTheDocument()
+    // Nothing back on any item: the panel says so once, and no item repeats "Waiting on Keller GmbH" (owner, 18 Nov 2026).
+    expect(document.querySelector('[data-all-waiting]')).toHaveTextContent('All 3 items are waiting on the suppliers asked')
+    expect(document.querySelectorAll('[data-waiting]')).toHaveLength(0)
+  })
+
+  it('a long list with nothing back yet starts folded behind Show items, and the items carry no chip of their own', async () => {
+    const user = userEvent.setup()
+    const six = Array.from({ length: 6 }, (_, n) => ({ ...item, id: `it-${n + 1}`, number: n + 1, description: `Part ${n + 1}` }))
+    renderPanel([{ ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0 }], six)
+    expect(screen.queryByRole('article', { name: 'Item 1' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Show items' }))
+    expect(screen.getAllByRole('article')).toHaveLength(6)
+    expect(screen.queryByText('Waiting for prices')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Hide items' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('more than two items nobody priced: one line over the list, no red box on each item', () => {
+    const four = Array.from({ length: 4 }, (_, n) => ({ ...item, id: `it-${n + 1}`, number: n + 1, description: `Part ${n + 1}` }))
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])], four)
+    expect(document.querySelector('[data-many-uncovered]')).toHaveTextContent('3 of 4 items have no price.')
+    expect(screen.queryByText(/None of the 1 supplier who replied quoted this item/)).toBeNull()
   })
 
   it('a whole "cannot quote" from a supplier asked about item 1 only is not shown on item 2', () => {

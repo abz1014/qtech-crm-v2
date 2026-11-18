@@ -87,6 +87,7 @@ test.describe('supplier flow D: asking about some items', () => {
     await expect(asked).toContainText(s.supplier.name)
     await expect(asked).not.toContainText('Asked about items')
     await expect(page.getByText('No supplier has been asked about this item.')).toHaveCount(0)
-    for (const n of [1, 2, 3]) await expect(page.getByRole('article', { name: `Item ${n}` })).toContainText(s.supplier.name)
+    // Nothing back yet on any item, all asked: the panel says so once (owner, 18 Nov 2026), and no item reads "not asked".
+    await expect(page.locator('[data-all-waiting]')).toContainText('All 3 items are waiting on the suppliers asked')
   })
 })

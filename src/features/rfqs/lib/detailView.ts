@@ -67,9 +67,9 @@ export function supplierMemoryLine(stats: SupplierFacts | null | undefined, wait
   const repliesText = replied === 0 ? 'no reply' : replied === 1 ? '1 reply' : `${replied} replies`
   if (asked < 3) return { text: `Asked ${timesWord(asked)}, ${repliesText}. Not enough history to say more.`, late: false }
   const median = stats?.median_reply_days
-  if (median === null || median === undefined) return { text: `Has replied to ${replied} of the ${asked} requests we sent them.`, late: false }
+  if (median === null || median === undefined) return { text: `Past requests: replied to ${replied} of ${asked}.`, late: false }
   const usual = Math.max(0, Math.round(median))
-  let text = `Has replied to ${replied} of the ${asked} requests we sent them · usually answers ${usual < 1 ? 'the same day' : `in ~${daysWord(usual)}`}`
+  let text = `Past requests: replied to ${replied} of ${asked} · usually answers ${usual < 1 ? 'the same day' : `in ~${daysWord(usual)}`}`
   let late = false
   if (waitingDays !== null) {
     text += `, now ${daysWord(waitingDays)}`
