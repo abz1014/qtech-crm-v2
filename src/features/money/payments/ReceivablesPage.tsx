@@ -118,13 +118,13 @@ export function ReceivablesPage() {
   const today = businessToday()
 
   const rows = useMemo(() => q.data ?? [], [q.data])
-  // The four figures are counted on the server (receivables_summary, the same rules); until it answers, from the rows.
-  const summary = useReceivablesSummary(today)
-  const local = useMemo(() => receivableTotals(rows, today), [rows, today])
-  // Not invoiced and Imported come from the rows (all of them are loaded): the server's summary counts an imported order as not invoiced.
-  const totals = { ...(summary.data ?? local), notInvoicedCount: local.notInvoicedCount, notInvoiced: local.notInvoiced, importedCount: local.importedCount, imported: local.imported }
-  // The LIST drops archived orders (archive feature); the figures above and the pickers keep every row.
+  // Archived orders (archive feature) leave the list AND To collect (owner decision 18 Nov 2026); the pickers still keep every row.
   const listed = useMemo(() => rows.filter(r => !r.archived), [rows])
+  // The four figures are counted on the server (receivables_summary, which leaves archived orders out); until it answers, from the live rows.
+  const summary = useReceivablesSummary(today)
+  const local = useMemo(() => receivableTotals(listed, today), [listed, today])
+  // Not invoiced and Imported come from the rows (all of them are loaded, archived ones dropped): the server's summary counts an imported order as not invoiced.
+  const totals = { ...(summary.data ?? local), notInvoicedCount: local.notInvoicedCount, notInvoiced: local.notInvoiced, importedCount: local.importedCount, imported: local.imported }
   const byState = useMemo(() => filterReceivables(listed, filter), [listed, filter])
   const shown = useMemo(() => sortReceivables(byState.filter(r => matchesAllWords(receivableSearchText(r), search))), [byState, search])
   // The panel follows the picked row; before a pick (or when it leaves the list) it follows the most overdue row (E-MN-03), else the first.

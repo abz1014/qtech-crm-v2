@@ -10,6 +10,7 @@ import { listTotals } from '@/features/money/expenses/model'
 import { Select } from '@/ui/form/Select'
 import { withArchiveTag } from '@/features/money/lib/archiveLabel'
 
+/* (Since 0144 the SERVER leaves archived orders out of receivables_summary, the To collect figure; the client still never filters a number itself.) */
 /* Archive (0141) in the money area: LIST reads drop archived rows; NUMBER reads never carry the filter; pickers keep archived items and say so. */
 
 afterEach(() => installFakeDb(() => ({})).uninstall())

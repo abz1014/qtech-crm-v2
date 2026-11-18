@@ -122,7 +122,8 @@ export async function fetchImportedOrderIds(): Promise<Set<string>> {
 
 /**
  * The To collect figures (receivableTotals' rules) in one row from receivables_summary() (0076: 7 working days). Null when the
- * function answers no row (a deactivated user): the page then counts from the rows it has.
+ * function answers no row (a deactivated user): the page then counts from the rows it has. With archiving on, the server leaves
+ * archived orders out (0144, owner decision 18 Nov 2026); every other receivables read still counts them.
  */
 export async function getReceivablesSummary(today: string): Promise<ReceivableTotals | null> {
   const db = requireSupabase()
