@@ -7,7 +7,8 @@ select * from no_plan();
 --       row with no date falls back to created_at (never for an imported row); a setting that is off hides nothing
 --   (b) the list views: archived(v_jobs) (an old RFQ with a new order is visible), v_rfq_state, v_order_state, v_invoice_state, v_inquiry_state
 --   (c) unhide and rehide; unhiding a row of a CLOSED month touches no business row (no UPDATE on invoices, payments_in, expenses)
---   (d) the numbers are the same with archiving on and off (view and function results compared row for row)
+--   (d) the numbers are the same with archiving on and off (view and function results compared row for row); receivables_summary is NOT among
+--       them since 0144 (To collect leaves archived orders out, see 0144_to_collect_archive.test.sql)
 --   (e) the five RPCs refuse sales, an engineer and a deactivated person (42501); the setting and the overrides cannot be written directly
 --   (f) archive_preview (on or off, any cutoff) and archive_list (company, search, paging)
 --   (g) an engineer reads the yes/no answers and no money
@@ -292,7 +293,6 @@ begin
   insert into snap select 'v_cash_month', p_step, coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text), '[]') from public.v_cash_month t;
   insert into snap select 'v_order_state', p_step, coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text), '[]') from public.v_order_state t;
   insert into snap select 'v_jobs', p_step, coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text), '[]') from public.v_jobs t;
-  insert into snap select 'receivables_summary', p_step, coalesce(jsonb_agg(to_jsonb(t)), '[]') from public.receivables_summary() t;
   insert into snap select 'order_receivables', p_step, coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text), '[]') from public.order_receivables() t;
   insert into snap select 'supplier_item_memory', p_step, coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text), '[]')
     from public.supplier_item_memory(array[pg_temp.f('02'), pg_temp.f('03')], null, null, 'Fixture item') t;
@@ -302,14 +302,13 @@ select pg_temp.take('on');
 select is((select (public.archive_set(false, null)).enabled), false, 'archive_set(false) switches archiving off (the cutoff is kept)');
 select is((select cutoff::text from public.archive_settings where id = 1), '2026-11-17', 'the cutoff is kept when archive_set is given none');
 select pg_temp.take('off');
-select ok((select count(*) from snap where step = 'on') = 10 and (select count(*) from snap where step = 'off') = 10, 'snapshots: ten number sources, on and off');
+select ok((select count(*) from snap where step = 'on') = 9 and (select count(*) from snap where step = 'off') = 9, 'snapshots: nine number sources, on and off');
 select is((select coalesce(array_agg(a.k order by a.k), '{}') from snap a join snap b on b.k = a.k and b.step = 'off'
            where a.step = 'on' and a.j is distinct from b.j),
-  '{}'::text[], 'numbers: v_order_money, v_payment_net, v_month_pnl, v_gst_register, v_cash_month, v_order_state, v_jobs, receivables_summary, order_receivables and supplier_item_memory are identical with archiving on and off');
+  '{}'::text[], 'numbers: v_order_money, v_payment_net, v_month_pnl, v_gst_register, v_cash_month, v_order_state, v_jobs, order_receivables and supplier_item_memory are identical with archiving on and off');
 select ok((select jsonb_array_length(j) > 0 from snap where k = 'v_order_money' and step = 'on'), 'numbers: v_order_money has rows (the comparison is not empty)');
 select ok((select jsonb_array_length(j) > 0 from snap where k = 'v_month_pnl' and step = 'on'), 'numbers: v_month_pnl has rows');
 select ok((select jsonb_array_length(j) > 0 from snap where k = 'v_gst_register' and step = 'on'), 'numbers: v_gst_register has rows');
-select ok((select jsonb_array_length(j) > 0 from snap where k = 'receivables_summary' and step = 'on'), 'numbers: receivables_summary has a row');
 select is((select count(*)::int from fx where pg_temp.row_archived(entity, id) is distinct from false), 0, 'off again: nothing is hidden');
 
 -- ------------------------------------------------------------------ (f) archive_preview: works with archiving on or off

@@ -13,7 +13,8 @@ import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
- * Archive on receivables: the To collect LIST drops archived orders while every figure keeps counting them; the pickers (Which order?,
+ * Archive on receivables: the To collect LIST and the To collect figures drop archived orders (owner decision 18 Nov 2026: the server's
+ * receivables_summary leaves them out, and the page's own Not invoiced / Imported tiles count the live rows only); the pickers (Which order?,
  * Apply credit, the refund order) keep every order and tag the archived ones "In Archive". Archived ids come from v_order_state only.
  */
 const ROWS = [
@@ -82,14 +83,55 @@ function at(path: string) {
 }
 
 describe('To collect page', () => {
-  it('lists only the live order, keeps the headline on every order, and shows no footer total', async () => {
+  it('lists only the live order, counts only the live order in the headline, and shows no footer total', async () => {
     at('/money/receivables')
     const table = await screen.findByRole('table', { name: 'To collect' })
     expect(await within(table).findByRole('link', { name: 'Open ORD-0001' })).toBeInTheDocument()
     expect(within(table).queryByRole('link', { name: 'Open ORD-0002' })).toBeNull()
     expect(table.querySelector('tfoot')).toBeNull()
-    // the figures count both orders (6,000), not just the one listed
-    expect((await screen.findByTestId('owed-line')).textContent).toContain('6,000')
+    // the figures count the live order only (1,000), not the archived one (5,000)
+    const owed = (await screen.findByTestId('owed-line')).textContent
+    expect(owed).toContain('1,000')
+    expect(owed).not.toContain('6,000')
+  })
+
+  it('the Imported and Not invoiced tiles leave out an archived imported order that has not been invoiced', async () => {
+    const calls: FakeCall[] = []
+    const withImported = [
+      ...ROWS,
+      { order_id: 'o3', order_number: 3, company_id: 'c1', gross_target: 800, settled: 0, balance: 800, overpaid_by: 0, due_on: null, is_overdue: false, payment_state: 'unpaid', reminder_count: 0, last_reminded_on: null },
+    ]
+    const state = [...STATE, { order_id: 'o3', archived: true }]
+    const summary = { open_count: 1, outstanding: 1000, overdue_count: 1, overdue: 1000, reminder_due_count: 1, not_yet_due_count: 0, not_yet_due: 0, not_invoiced_count: 0, not_invoiced: 0, gross: 1000, settled: 0, settled_count: 0 }
+    installFakeDb((c: FakeCall): FakeResult => {
+      calls.push(c)
+      if (c.target === 'rpc:receivables_list') return receivablesListResult(c, withImported, { companyName: () => 'Ravi Agro' })
+      if (c.target === 'rpc:receivables_summary') return { data: [summary] }
+      if (c.target === 'v_order_state') return { data: filterRows(state, c) }
+      if (c.target === 'orders' && c.ops.some(([n]) => n === 'not')) return { data: [{ id: 'o3' }] }
+      return { data: [] }
+    })
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Someone', role: 'admin' } }}>
+          <MemoryRouter initialEntries={['/money/receivables']}>
+            <ToastProvider>
+              <Suspense fallback={null}>
+                <Routes>
+                  <Route path="/money/*" element={<MoneyScreen />} />
+                </Routes>
+              </Suspense>
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    await screen.findByRole('table', { name: 'To collect' })
+    expect(await screen.findByText('0 orders, from the old CRM')).toBeInTheDocument()
+    // the live order o1 has no invoice number here, so it is the one Not invoiced order; the archived o3 is in neither tile
+    expect(screen.getByText('1 order, balance from items')).toBeInTheDocument()
+    expect(screen.queryByText('1 order, from the old CRM')).toBeNull()
+    expect(calls.some(c => c.target === 'rpc:receivables_summary')).toBe(true)
   })
 })
 

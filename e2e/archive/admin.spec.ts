@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
-import { openAs } from '../support/stack'
+import { must, openAs, rest } from '../support/stack'
 import { archiveOff, archiveOn, CUTOFF, jobRowName, NEW_DAY, OLD_DAY, seedArchive, ADMIN_ID } from '../support/archive'
 import { homeBadge, monthOf, openJobsFor, settledText, todayRowsFor } from './shared'
 
 /*
  * Archive old data (0141), as the admin. The setting ships OFF; when ON, records dated before the cutoff (and imported ones) leave the lists,
- * Today, the top-bar number and search, for every role, while totals and the tax register still count them. Admin has Settings > Archive:
+ * Today, the top-bar number and search, for every role, while totals and the tax register still count them (the one exception, 0144: To collect leaves archived orders out). Admin has Settings > Archive:
  * the switch, the preview, the browse list and Unarchive. Synthetic data; every test switches archiving back off.
  */
 test.describe.configure({ mode: 'serial' })
@@ -86,18 +86,47 @@ test('payments: an old payment leaves the Payments list and a new one stays, whi
   await expect(page.getByText(f.oldOrder.invoiceNumber)).toBeVisible()
 })
 
-test('the To collect figures are the same with archiving on and off', async ({ page }) => {
+test('To collect leaves out archived orders: its figures drop with archiving on and come back with it off; the new order stays listed', async ({ page }) => {
+  test.setTimeout(120_000)
   const f = await seedArchive()
+  type Summary = { open_count: number; outstanding: number | string }
+  type ListRow = { order_id: string; balance: number | string }
+  const summary = async (): Promise<{ open: number; outstanding: number }> => {
+    const [r] = await must(rest<Summary[]>('admin', 'rpc/receivables_summary', { method: 'POST', body: {} }))
+    return { open: Number(r.open_count), outstanding: Number(r.outstanding) }
+  }
+  // receivables_list is NOT filtered (every other receivables read still counts archived orders): the old order's open balance comes from it
+  const oldBalance = async (): Promise<number> => {
+    const rows = await must(rest<ListRow[]>('admin', 'rpc/receivables_list', { method: 'POST', body: { p_with_value: true } }))
+    const row = rows.find(r => r.order_id === f.oldOrder.id)
+    expect(row, 'the old order is still in receivables_list').toBeTruthy()
+    return Number(row?.balance)
+  }
+  const listedOldBalance = await oldBalance()
+  expect(listedOldBalance).toBeGreaterThan(0)
+  const offFigures = await summary()
+
   await openAs(page, 'admin', '/money/receivables')
   const tile = page.getByLabel('Balance by status, includes GST').first()
-  await expect(page.getByRole('row').filter({ hasText: f.company.name }).first()).toBeVisible()
-  const off = await settledText(async () => (await tile.textContent()) ?? '')
+  await expect(page.getByRole('row').filter({ hasText: f.newOrder.invoiceNumber })).not.toHaveCount(0)
+  const offTiles = await settledText(async () => (await tile.textContent()) ?? '')
+
   await archiveOn()
+  const onFigures = await summary()
+  expect(offFigures.outstanding - onFigures.outstanding).toBeGreaterThanOrEqual(listedOldBalance)
+  expect(onFigures.open).toBeLessThan(offFigures.open)
+  expect(await oldBalance()).toBe(listedOldBalance) // receivables_list is unchanged by archiving
   await page.goto('/money/receivables')
   await expect(page.getByRole('row').filter({ hasText: f.newOrder.invoiceNumber })).not.toHaveCount(0)
-  // the old job's row is hidden from the list, yet the figures above did not move
   await expect(page.getByRole('row').filter({ hasText: f.oldOrder.invoiceNumber })).toHaveCount(0)
-  await expect(tile).toHaveText(off)
+  await expect(async () => expect((await tile.textContent()) ?? '').not.toBe(offTiles)).toPass({ timeout: 20_000 })
+
+  // off again: the figures are the whole book again
+  await archiveOff()
+  expect(await summary()).toEqual(offFigures)
+  await page.goto('/money/receivables')
+  await expect(page.getByRole('row').filter({ hasText: f.oldOrder.invoiceNumber })).not.toHaveCount(0)
+  await expect(async () => expect((await tile.textContent()) ?? '').toBe(offTiles)).toPass({ timeout: 20_000 })
 })
 
 test('Settings > Archive: the switch, the preview and the browse list; Unarchive brings the job back to the Jobs list', async ({ page }) => {

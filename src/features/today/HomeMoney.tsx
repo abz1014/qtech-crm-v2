@@ -16,7 +16,8 @@ import { useReceivablesSummary } from '@/features/money/payments/hooks'
  * The money pulse on Home (Forest 10-home.html, F-614): admin and sales only. Never drawn for an engineer: the screen renders it
  * behind seesPrices(), so an engineer makes no request either. Every figure is read from where the Money pages read it, so
  * the numbers agree with them:
- *   To collect            receivables_summary (the same Outstanding as Money home and To collect), the late part in red words
+ *   To collect            receivables_summary (the same Outstanding as Money home and To collect), the late part in red words.
+ *                         Archived orders are left out of it by the server (0144, owner decision 18 Nov 2026).
  *   Received this month   the In vs out month row (admin only, as on Money home)
  * Each card is a link-out to its page; nothing is worked out here.
  */
