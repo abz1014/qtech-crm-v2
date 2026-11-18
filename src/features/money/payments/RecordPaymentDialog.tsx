@@ -16,6 +16,7 @@ import { DateInput } from '@/ui/form/DateInput'
 import { Form, FormField } from '@/ui/form/Form'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
+import { withArchiveTag } from '@/features/money/lib/archiveLabel'
 import { TextField } from '@/ui/form/TextField'
 import { useSubmitForm } from '@/ui/form/useSubmitForm'
 import { PAID_VIA_LABEL, type PaidVia } from '@/features/money/expenses/model'
@@ -219,7 +220,7 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
         ) : null}
         {showTie ? (
           <FormField<Values, 'invoiceId'> name="invoiceId" label="This payment is for" help="Leave it on the oldest unpaid invoice unless the customer named one.">
-            {f => <Select {...f} placeholder="The oldest unpaid invoice" options={invoices.map(i => ({ value: i.id, label: `${i.number ?? 'Invoice'} · ${pkr(i.gross)}` }))} />}
+            {f => <Select {...f} placeholder="The oldest unpaid invoice" options={invoices.map(i => ({ value: i.id, label: withArchiveTag(`${i.number ?? 'Invoice'} · ${pkr(i.gross)}`, i.archived) }))} />}
           </FormField>
         ) : null}
         <p className="text-link-rows flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">

@@ -30,6 +30,7 @@ const screens: Record<NavKey, ComponentType> = {
 /** The weekly owner review (redesign phase 3): /todo/review, admin only. */
 const ReviewPage = lazy(() => import('@/features/today/ReviewPage'))
 const BackupsPage = lazy(() => import('@/features/settings/BackupsPage').then(m => ({ default: m.BackupsPage })))
+const ArchivePage = lazy(() => import('@/features/settings/archive/ArchivePage').then(m => ({ default: m.ArchivePage })))
 const ExportPage = lazy(() => import('@/features/settings/ExportPage').then(m => ({ default: m.ExportPage })))
 const TeamPage = lazy(() => import('@/features/settings/TeamPage').then(m => ({ default: m.TeamPage })))
 const TaxDeadlinesPage = lazy(() => import('@/features/settings/TaxDeadlinesPage').then(m => ({ default: m.TaxDeadlinesPage })))
@@ -183,6 +184,16 @@ function AppRouteTable() {
                 <AdminOnly area="Backups and usage">
                   <Suspense fallback={<PageLoading />}>
                     <BackupsPage />
+                  </Suspense>
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="archive"
+              element={
+                <AdminOnly area="Archive">
+                  <Suspense fallback={<PageLoading />}>
+                    <ArchivePage />
                   </Suspense>
                 </AdminOnly>
               }

@@ -179,6 +179,7 @@ insert into public.expense_groups (id, name, kind) values (pg_temp.f('d0'), 'M G
 insert into public.expense_claims (id, created_by, amount_pkr) values (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5);   -- 0087
 insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);   -- 0087
 insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);   -- 0087
+insert into public.archive_unhidden (entity, row_id) values ('rfq', pg_temp.f('15'));   -- 0141: one override, so the table has a row to read
 insert into public.checked_findings (finding_key, message_hash) values ('probe-key', 'probe-hash');   -- 0102
 insert into public.gst_deadline_overrides (month, pay_by) values ('2019-01-01', '2019-02-20');   -- 0110
 insert into public.orders (id, company_id, owner_id, legacy_source) values   -- 0096: an imported order, an unlinked imported invoice and a linked one
@@ -277,7 +278,9 @@ insert into spec values
   ('purchase_orders', '', 'id = @3b', 'pdf_path', $q$insert into public.purchase_orders (id, supplier_order_id, number, revision, currency, total, lines) values (@b5, @24, 7102, 0, 'USD', 0, '[{"qty":1,"unit_price":1}]')$q$),
   ('gst_deadline_settings', '', 'id = 1', 'pay_day', $q$insert into public.gst_deadline_settings (id) values (2)$q$),   -- 0110
   ('gst_deadline_overrides', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.gst_deadline_overrides (month, pay_by) values ('2019-02-01', '2019-03-20')$q$),   -- 0110
-  ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$);
+  ('company_profile', '', 'id = 1', 'phone', $q$insert into public.company_profile (id) values (2)$q$),
+  ('archive_settings', '', 'id = 1', 'updated_by', $q$insert into public.archive_settings (id) values (2)$q$),   -- 0141: a singleton written only by archive_set
+  ('archive_unhidden', '', $q$entity = 'rfq' and row_id = @15$q$, 'unhidden_at', $q$insert into public.archive_unhidden (entity, row_id) values ('rfq', @16)$q$);   -- 0141: written only by archive_unhide / archive_rehide
 
 
 insert into probes
@@ -427,7 +430,15 @@ insert into probes values
   ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$),
   ('job_stage', '', 'X', $q$select 1 from public.job_stage(@15, null)$q$),   -- 0099
   ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'fixture.txt') is not null$q$),   -- 0100
-  ('month_closed', '', 'X', $q$select 1 where public.month_closed(date '2019-01-01') is not null$q$);   -- 0107
+  ('month_closed', '', 'X', $q$select 1 where public.month_closed(date '2019-01-01') is not null$q$),   -- 0107
+  ('archive_hides', '', 'X', $q$select 1 where public.archive_hides(date '2020-01-01', false) is not null$q$),   -- 0141: NULL when the caller cannot read the setting
+  ('is_archived', '', 'X', $q$select 1 where public.is_archived('rfq', @15) is not null$q$),   -- 0141: NULL when the caller cannot see the row
+  ('archived', '', 'X', $q$select 1 from public.rfqs r where r.id = @15 and public.archived(r) is not null$q$),   -- 0141
+  ('archive_set', '', 'X', $q$select 1 from public.archive_set(false, null)$q$),   -- 0141: admin only; rolled back
+  ('archive_unhide', '', 'X', $q$select public.archive_unhide('rfq', @16)$q$),   -- 0141: admin only; rolled back
+  ('archive_rehide', '', 'X', $q$select public.archive_rehide('rfq', @15)$q$),   -- 0141: admin only; rolled back
+  ('archive_preview', '', 'X', $q$select 1 from public.archive_preview(null) limit 1$q$),   -- 0141: admin only
+  ('archive_list', '', 'X', $q$select 1 from public.archive_list('order', null, null, 5, 0) limit 1$q$);   -- 0141: admin only; the imported order @e7 is on it
 
 
 -- ------------------------------------------------------------------ 0901: extra probes (privilege escalation through users)
@@ -579,9 +590,9 @@ from (values ('anon'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is((select array_agg(p.proname::text order by p.proname::text) from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')),
-          array['admin_health', 'apply_credit', 'attachment_is_priced', 'book_recurring_month', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
+          array['admin_health', 'apply_credit', 'archive_list', 'archive_preview', 'archive_rehide', 'archive_set', 'archive_unhide', 'attachment_is_priced', 'book_recurring_month', 'close_month', 'close_months_through', 'confirm_backup_decrypt_test', 'current_user_role', 'job_stage', 'month_closed', 'my_target_progress',
                 'order_receivables', 'receipt_locked', 'record_history_rows', 'record_refund', 'reopen_month', 'supplier_category_price_wins'],   -- 0093: role check inside, NULL counts for all but admin and sales
-  'the client-callable SECURITY DEFINER functions are exactly the reviewed seventeen (0138: book_recurring_month, admin only inside, and pg_cron runs it; 0127: record_refund and apply_credit, admin only; 0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
+  'the client-callable SECURITY DEFINER functions are exactly the reviewed twenty-two (0141: archive_set, archive_unhide, archive_rehide, archive_preview and archive_list, admin only inside; 0138: book_recurring_month, admin only inside, and pg_cron runs it; 0127: record_refund and apply_credit, admin only; 0120: admin_health and confirm_backup_decrypt_test, admin only inside; 0090: record_history_rows, refused unless record_history marked the transaction; 0093: supplier_category_price_wins; 0099: job_stage, words and a date only; 0100: attachment_is_priced, a yes/no for the storage policy; 0107: month_closed, a yes/no for the Invoice screen)');
 select is((select coalesce(array_agg(p.proname::text order by p.proname::text), '{}') from pg_proc p
            where p.pronamespace = 'public'::regnamespace and p.prosecdef and p.prorettype <> 'trigger'::regtype
              and has_function_privilege('authenticated', p.oid, 'execute')
@@ -621,6 +632,11 @@ select is(pg_temp.probe($q$select public.reopen_month(date '2019-01-01')$q$, p.p
 from (values ('sales'), ('engineer'), ('deactivated'), ('norole'), ('ghost')) p (persona);
 select is(pg_temp.probe('select * from public.order_receivables()', 'engineer'), 'N',
   'order_receivables refuses an engineer (balances are money)');
+
+-- 0141: the five archive RPCs refuse everyone but an admin, inside the function.
+select is(pg_temp.actual(f, '', p.persona), '', format('%s is refused %s', p.persona, f))
+from unnest(array['archive_set', 'archive_unhide', 'archive_rehide', 'archive_preview', 'archive_list']) f
+cross join (values ('sales'), ('engineer'), ('deactivated')) p (persona);
 
 select * from finish();
 rollback;

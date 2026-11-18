@@ -1,4 +1,4 @@
-import { Boxes, Building2, CalendarClock, DatabaseBackup, Download, KeyRound, Receipt, RefreshCw, Target, User, Users, type LucideIcon } from 'lucide-react'
+import { Archive, Boxes, Building2, CalendarClock, DatabaseBackup, Download, KeyRound, Receipt, RefreshCw, Target, User, Users, type LucideIcon } from 'lucide-react'
 import { seesPrices } from '@/app/session'
 
 /*
@@ -32,6 +32,7 @@ export const SETTINGS_GROUPS: readonly { title: string; links: readonly Settings
       { to: '/settings/exchange-rates', label: 'Exchange rates', icon: RefreshCw, pricesOnly: true },
       { to: '/settings/backups', label: 'Backups and usage', icon: DatabaseBackup, adminOnly: true },
       { to: '/settings/export', label: 'Export data', icon: Download, adminOnly: true },
+      { to: '/settings/archive', label: 'Archive', icon: Archive, adminOnly: true },
     ],
   },
   {

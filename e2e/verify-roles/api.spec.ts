@@ -86,7 +86,9 @@ test('no-access personas call no function with a result, and write nothing', asy
     const got: string[] = []
     for (const f of schema.functions) {
       const r = await api(p, `/rest/v1/rpc/${f.name}`, { method: 'POST', body: argsFor(f.name, f.args) })
-      if (r.status >= 400) continue
+      // 300 is PostgREST's PGRST203 "could not choose between overloads": archived() is one computed field per table or view (0141), so a call by name alone
+      // cannot be routed to any of them and nothing runs. That is no result. Each overload is proved on its own (pgTAP 0141: NULL without a role).
+      if (r.status >= 400 || r.status === 300) continue
       if (empty(r.body)) continue
       if (PURE.has(f.name) && p !== 'anon') continue
       got.push(`${f.name}: ${r.status} ${r.text.slice(0, 120)}`)

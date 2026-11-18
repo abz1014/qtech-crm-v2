@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { installFakeDb, opArgs } from '@/test/fakeSupabase'
-import { findJobs, listCustomerPos, getJobFactsFromOld, jobKeyOf, quotationNumberOf } from '@/features/jobs/api'
+import { findJobs, getJob, listJobs, listCustomerPos, getJobFactsFromOld, jobKeyOf, quotationNumberOf } from '@/features/jobs/api'
 
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
@@ -109,6 +109,32 @@ describe('facts from an old address (one round)', () => {
     expect(db.calls.map(c => c.target).sort()).toEqual(['orders', 'rfqs', 'v_jobs'])
     installFakeDb(c => (c.target === 'v_jobs' ? { data: row('O-45', { kind: 'direct', rfq_id: null, order_id: 'o2' }) } : { data: { rfq: null } }))
     expect(await getJobFactsFromOld('order', 'o2')).toBeNull()
+  })
+})
+
+describe('archive: list reads hide archived jobs, number and detail reads do not', () => {
+  const hides = (c: { ops: [string, unknown[]][] }) => c.ops.some(([n, a]) => n === 'eq' && a[0] === 'archived' && a[1] === false)
+  const respond = (c: { target: string }) => (c.target === 'v_jobs' ? { data: [row('139')] } : { data: [] })
+
+  it('listJobs filters v_jobs on archived = false', async () => {
+    const { calls } = installFakeDb(respond)
+    await listJobs()
+    expect(hides(calls.find(c => c.target === 'v_jobs')!)).toBe(true)
+  })
+  it('findJobs filters v_jobs on archived = false', async () => {
+    const { calls } = installFakeDb(respond)
+    await findJobs('Job 139')
+    expect(hides(calls.find(c => c.target === 'v_jobs')!)).toBe(true)
+  })
+  it('getJob (one job by its key) is NOT filtered: an archived job still opens', async () => {
+    const { calls } = installFakeDb(respond)
+    await getJob('139')
+    expect(hides(calls.find(c => c.target === 'v_jobs')!)).toBe(false)
+  })
+  it('listCustomerPos (a number read on orders) is NOT filtered', async () => {
+    const { calls } = installFakeDb(() => ({ data: [] }))
+    await listCustomerPos()
+    expect(hides(calls.find(c => c.target === 'orders')!)).toBe(false)
   })
 })
 

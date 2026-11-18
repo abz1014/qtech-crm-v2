@@ -35,6 +35,7 @@ import { LazyHistoryPanel } from '@/features/history/LazyHistoryPanel'
 import { useClosedMonths, useMonthClosed } from '@/features/money/monthEnd/hooks'
 import { CLOSED_MONTH_LINE } from '@/features/money/expenses/deleteFlow'
 import { pkr } from '@/features/money/expenses/model'
+import { ArchiveBanner } from '@/features/archive/ArchiveBanner'
 
 /*
  * One invoice's steps (M01): the dates the register's tracks are built from, the TCS consignment number, the PSID, the receipt
@@ -108,9 +109,10 @@ export function InvoiceDetailDialog({ invoiceId, onClose }: { invoiceId: string;
 }
 
 /** The invoice dialog's frame (54-invoice-dialogs #detail): the file tile, "Dated ... · customer" under the title, the footer band. */
-function Frame({ title, context, footer, children }: { title: string; context?: ReactNode; footer: ReactNode; children: ReactNode }) {
+function Frame({ title, context, footer, children, archiveId }: { title: string; context?: ReactNode; footer: ReactNode; children: ReactNode; archiveId?: string }) {
   return (
     <DialogContent title={title} icon={FileText} context={context} size="lg" footer={footer}>
+      {archiveId ? <ArchiveBanner entity="invoice" id={archiveId} /> : null}
       {children}
     </DialogContent>
   )
@@ -349,6 +351,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
   if (voided) {
     return (
       <Frame
+        archiveId={invoice.id}
         title={frameTitle}
         context={frameContext}
         footer={
@@ -451,6 +454,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
     const gross = net + gst
     return (
       <Frame
+        archiveId={invoice.id}
         title={frameTitle}
         context={frameContext}
         footer={
@@ -487,6 +491,7 @@ function DetailForm({ invoice, onBusy, onClose }: { invoice: InvoiceRow; onBusy:
 
   return (
     <Frame
+      archiveId={invoice.id}
       title={frameTitle}
       context={frameContext}
       footer={

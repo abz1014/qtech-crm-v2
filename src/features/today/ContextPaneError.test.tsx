@@ -21,6 +21,7 @@ describe('Today pane, the message could not be loaded', () => {
     const row = { order_id: 'o1', order_number: 31, company_id: 'c1', owner_id: 'me', balance: 1000, settled: 0, due_on: addDays(businessToday(), -12), is_overdue: true, last_reminded_on: null, reminder_count: 0, company_name: 'Karachi Glassworks', invoice_numbers: [] }
     installFakeDb((c: FakeCall) => {
       if (c.target === 'rpc:receivables_list') return { data: [row] }
+      if (c.target === 'v_order_state') return { data: [{ order_id: 'o1' }] }
       if (c.target === 'invoices' && c.ops.some(o => o[0] === 'eq' && o[1][0] === 'order_id')) return fail ? { data: null, error: { message: 'boom' } } : { data: [] }
       return { data: [] }
     })

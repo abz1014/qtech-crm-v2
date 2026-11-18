@@ -1,4 +1,6 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { PlainError } from '@/lib/errors/plainError'
+import { constraintOf } from '@/lib/pgErrors'
 import type { ViewRow } from '@/features/dbTypes'
 import type { FloatItemPayload } from '@/features/rfqs/lib/intakeModel'
 import type { EvidenceFeedRow } from '@/features/rfqs/lib/ranking/reasons'
@@ -193,11 +195,38 @@ export async function floatRfq(input: FloatInput): Promise<SavedRfq> {
     p_mark_sent: input.markSent,
     p_is_priority: input.isPriority,
   })
-  if (error) throw error
+  if (error) throw await explainDuplicateRef(error, input.companyId, input.customerRef)
   const created = (data as { created?: boolean } | null)?.created !== false
   const row = unwrap(await db.from('rfqs').select('id, number').eq('id', input.id).single()) as { id: string; number: number } | null
   if (!row) throw new Error('The RFQ was saved but could not be read back.')
   return { id: row.id, number: row.number, created }
+}
+
+/** A customer ref that clashes with an RFQ sitting in the Archive: the plain message, and the RFQ so the screen can offer "Open it". */
+export class ArchivedDuplicateRef extends PlainError {
+  readonly existing: SavedRfq
+  constructor(ref: string, existing: SavedRfq) {
+    super(`Ref ${ref} already exists on RFQ-${existing.number} (in Archive). Unarchive it or use another ref.`, '23505')
+    this.name = 'ArchivedDuplicateRef'
+    this.existing = existing
+  }
+}
+
+/**
+ * The unique key rfqs_company_customer_ref_key (0007) also counts RFQs the lists hide. When it fires, look the clash up WITHOUT the archive
+ * filter; when that RFQ is archived, say so. Anything else (a visible clash, another error) comes back unchanged.
+ */
+async function explainDuplicateRef(err: unknown, companyId: string, customerRef: string | null | undefined): Promise<unknown> {
+  const e = err as { code?: string; message?: string }
+  const ref = customerRef?.trim()
+  if (e?.code !== '23505' || !ref || !/customer_ref/.test(constraintOf(e) ?? e.message ?? '')) return err
+  try {
+    const rows = unwrap(await requireSupabase().from('rfqs').select('id, number, archived').eq('company_id', companyId).eq('customer_ref', ref).limit(1))
+    const hit = rows[0]
+    return hit?.archived ? new ArchivedDuplicateRef(ref, { id: hit.id, number: hit.number }) : err
+  } catch {
+    return err
+  }
 }
 
 /** The RFQ saved under this id, when there is one: a New RFQ draft whose RFQ was already saved is offered "Open it" instead. */
@@ -905,7 +934,7 @@ export async function updateRfqHeader(rfqId: string, p: RfqHeaderPatch): Promise
     .update({ company_id: p.companyId, site_id: p.siteId, contact_id: p.contactId, customer_ref: p.customerRef?.trim() || null, received_on: p.receivedOn })
     .eq('id', rfqId)
     .select('id')
-  if (error) throw error
+  if (error) throw await explainDuplicateRef(error, p.companyId, p.customerRef)
   if (!data || data.length === 0) throw { code: '42501', message: 'Only the person who entered this, or an admin, can change it.', hint: 'not_yours' }
 }
 

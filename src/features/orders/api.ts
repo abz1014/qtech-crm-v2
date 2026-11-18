@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { poRef } from '@/lib/refs'
 import { PlainError } from '@/lib/errors/plainError'
+import { hideArchived } from '@/lib/archive'
 import type { TableRow, TableUpdate, ViewRow } from '@/features/dbTypes'
 import type { ConvertPayloadLine } from '@/features/orders/lib/convert'
 import { medianDeliveryDays } from '@/features/orders/lib/leadTime'
@@ -365,7 +366,7 @@ export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
     // 0077 (BUG-CONC-1): someone else already won this RFQ. Their order is the answer, so it is returned instead of an error.
     const existing = existingOrderOf(error)
     if (existing) return existing
-    throw error
+    throw await friendlyDuplicatePo(error)
   }
   return (data as string | null) ?? input.orderId
 }
@@ -374,6 +375,32 @@ export async function convertRfqToOrder(input: ConvertInput): Promise<string> {
 export function existingOrderOf(err: { hint?: string | null } | null | undefined): string | null {
   const m = /^rfq_has_order:([0-9a-f-]{36})$/i.exec(err?.hint ?? '')
   return m ? m[1] : null
+}
+
+/**
+ * A customer PO that is already on an order is refused with 23505 (trigger orders_check_po_free, backed by the unique index
+ * orders_company_po_key on company_id + customer_po_number, which skips po_shared and cancelled orders). The order that holds it may be
+ * archived, so the person cannot see it in any list. The clashing order is looked up WITHOUT the archive filter (an archived order
+ * must still be found); only when it is archived does the sentence say so and name the way out. Any other error, and a clash with a
+ * visible order, is returned unchanged for the usual message (rpcMessages: "PO X is already on order ORD-N. Open that order...").
+ */
+export async function friendlyDuplicatePo(err: unknown): Promise<unknown> {
+  const e = err as { code?: string; message?: string; hint?: string | null } | null
+  if (!e || e.code !== '23505') return err
+  const text = typeof e.message === 'string' ? e.message : ''
+  const m = /^PO (.+) is already on order ORD-0*(\d+)\./.exec(text)
+  if (!m) return err
+  const id = /^po_has_order:([0-9a-f-]{36})$/i.exec(e.hint ?? '')?.[1]
+  try {
+    const q = requireSupabase().from('orders').select('number, archived')
+    const rows = unwrap(await (id ? q.eq('id', id) : q.eq('number', Number(m[2]))).limit(1)) as unknown as Array<{ number: number; archived: boolean | null }>
+    const hit = rows[0]
+    if (!hit || hit.archived !== true) return err
+    const ref = `ORD-${String(hit.number).padStart(4, '0')}`
+    return new PlainError(`PO ${m[1]} already exists on ${ref} (in Archive). Unarchive it or use another PO number.`, '23505')
+  } catch {
+    return err
+  }
 }
 
 /** What an edit says when the order changed under it (the conditional write below matched no row). */
@@ -388,11 +415,11 @@ export async function updateOrder(id: string, patch: TableUpdate<'orders'>, expe
   const q = requireSupabase().from('orders').update(patch).eq('id', id)
   if (!expectedUpdatedAt) {
     const { error } = await q
-    if (error) throw error
+    if (error) throw await friendlyDuplicatePo(error)
     return
   }
   const { data, error } = await q.eq('updated_at', expectedUpdatedAt).select('id')
-  if (error) throw error
+  if (error) throw await friendlyDuplicatePo(error)
   if (!data || data.length === 0) throw new PlainError(ORDER_CHANGED, 'order_changed')
 }
 
@@ -562,17 +589,25 @@ export async function searchOrders(text: string, signal?: AbortSignal, limit = 6
   if (includePo) filters.push(`customer_po_number.ilike.%${escapeLike(q).replace(/[,()]/g, ' ')}%`)
   if (digits) filters.push(`number.eq.${Number(digits[2])}`)
   if (filters.length === 0) return []
-  let req = db
+  const found = db
     .from('orders')
     .select(includePo ? 'id, number, customer_po_number, companies(name)' : 'id, number, companies(name)')
     .or(filters.join(','))
-    .order('number', { ascending: false })
-    .limit(limit)
+  // Archived orders drop out of the search list. Admin and sales filter on the table; an engineer (includePo false) may not read
+  // `archived` on orders (42501), so theirs is told apart through v_order_state below.
+  let req = (includePo ? hideArchived(found) : found).order('number', { ascending: false }).limit(limit)
   if (signal) req = req.abortSignal(signal)
   const { data, error } = await req
   if (error) throw new Error(error.message)
   type Row = { id: string; number: number; customer_po_number?: string | null; companies: { name: string } | { name: string }[] | null }
-  return ((data ?? []) as unknown as Row[]).map(r => {
+  let rows = (data ?? []) as unknown as Row[]
+  if (!includePo && rows.length > 0) {
+    const live = await db.from('v_order_state').select('order_id').in('order_id', rows.map(r => r.id)).eq('archived', false)
+    if (live.error) throw new Error(live.error.message)
+    const keep = new Set((live.data ?? []).map(r => r.order_id))
+    rows = rows.filter(r => keep.has(r.id))
+  }
+  return rows.map(r => {
     const c = Array.isArray(r.companies) ? r.companies[0] : r.companies
     return { id: r.id, number: r.number, customerPo: includePo ? (r.customer_po_number ?? null) : null, companyName: c?.name ?? 'Unknown company' }
   })
@@ -828,28 +863,31 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
   const db = requireSupabase()
   const money = role !== 'engineer'
   const stateCols = money ? 'order_id, lifecycle, goods_state, commissioning_state, data_trust, invoicing_state, gross' : 'order_id, lifecycle, goods_state, commissioning_state, data_trust'
+  // Archived orders are left out. v_order_state carries `archived` for every role; the orders table does too, but an engineer may not
+  // read it there (42501), so for an engineer the orders read is unfiltered and cut below to the orders the state view still lists.
+  const hideForRole = money ? hideArchived : <Q,>(q: Q): Q => q
   const [orders, states, users, assigned, pay, pos, importedRows] = await Promise.all([
     fetchAll(
       (from, to) =>
-        db
-          .from('orders')
-          // every line (description, quantity, its supplier order; never a price) and the supplier orders with their dates and supplier
-          .select(
-            // the customer PO number only for admin and sales: an engineer's role may not read the column (0133)
-            `id, number, ${money ? 'customer_po_number, ' : ''}ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position, supplier_order_id, is_service), supplier_orders(id, placed_on, expected_on, delivered_on, companies(name))`,
-          )
-          // Only the supplier orders a Next step can name: not yet delivered, or never marked placed. One that is placed and
-          // delivered never changes the step (orderSteps reads open = placed and not delivered, and to-place = not placed), so it
-          // is left on the server; that is every finished supplier order in history.
-          .or(LIST_LEG_FILTER, { referencedTable: 'supplier_orders' })
+        hideForRole(
+          db
+            .from('orders')
+            // every line (description, quantity, its supplier order; never a price) and the supplier orders with their dates and supplier
+            .select(
+              // the customer PO number only for admin and sales: an engineer's role may not read the column (0133)
+              `id, number, ${money ? 'customer_po_number, ' : ''}ordered_on, owner_id, company_id, commissioning_planned_on, companies(name), company_sites(name), order_items(description, qty, position, supplier_order_id, is_service), supplier_orders(id, placed_on, expected_on, delivered_on, companies(name))`,
+            )
+            // Only the supplier orders a Next step can name: not yet delivered, or never marked placed. One that is placed and
+            // delivered never changes the step (orderSteps reads open = placed and not delivered, and to-place = not placed), so it
+            // is left on the server; that is every finished supplier order in history.
+            .or(LIST_LEG_FILTER, { referencedTable: 'supplier_orders' }),
+        )
           .order('number', { ascending: false })
           .range(from, to) as unknown as PromiseLike<{ data: OrdersJoin[] | null; error: { code?: string; message: string } | null }>,
     ),
     fetchAll(
       (from, to) =>
-        db
-          .from('v_order_state')
-          .select(stateCols)
+        hideArchived(db.from('v_order_state').select(stateCols))
           .range(from, to) as unknown as PromiseLike<{ data: Array<Record<string, unknown>> | null; error: { code?: string; message: string } | null }>,
     ),
     db.from('users').select('id, name'),
@@ -889,7 +927,7 @@ export async function listOrders(role: 'admin' | 'sales' | 'engineer'): Promise<
   const engBy = new Map<string, string[]>()
   for (const a of assigned) engBy.set(a.order_id, [...(engBy.get(a.order_id) ?? []), a.user_id])
   const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? (v[0] ?? null) : v)
-  return orders.map(o => {
+  return orders.filter(o => money || stateBy.has(o.id)).map(o => {
     const s = stateBy.get(o.id)
     const p = payBy.get(o.id)
     return {
@@ -999,7 +1037,8 @@ export async function searchPastOrders(text: string, signal?: AbortSignal, limit
   const q = text.trim()
   const orderCols = 'id, number, company_id, site_id, ordered_on, customer_po_number, companies(name), company_sites(name)'
   const base = () => {
-    const req = db.from('orders').select(orderCols).is('cancelled_on', null).order('ordered_on', { ascending: false, nullsFirst: false }).order('number', { ascending: false }).limit(limit)
+    // admin and sales only (a repeat order copies prices), so the archived column on orders is readable
+    const req = hideArchived(db.from('orders').select(orderCols).is('cancelled_on', null)).order('ordered_on', { ascending: false, nullsFirst: false }).order('number', { ascending: false }).limit(limit)
     return signal ? req.abortSignal(signal) : req
   }
   let rows: OrdersJoin[]
@@ -1083,6 +1122,6 @@ export async function createRepeatOrder(input: RepeatInput): Promise<string> {
     ...(input.customerPo ? { p_customer_po_number: input.customerPo } : {}),
     ...(input.orderedOn ? { p_ordered_on: input.orderedOn } : {}),
   })
-  if (error) throw error
+  if (error) throw await friendlyDuplicatePo(error)
   return (data as string | null) ?? input.orderId
 }
