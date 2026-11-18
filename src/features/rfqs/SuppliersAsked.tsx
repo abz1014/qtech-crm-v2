@@ -25,7 +25,7 @@ import { useChannelPreference } from '@/lib/useChannelPreference'
 import { awaitingReply, canChaseInquiry, jumpToReplyRow, outstandingItems, replyItems } from '@/features/rfqs/replyFocus'
 import { ReplyChip, SupplierReplyDialog } from '@/features/rfqs/SupplierReplies'
 import { useReplyDialog } from '@/features/rfqs/useReplyDialog'
-import { QuietChip, SECTION_BOX } from '@/features/rfqs/supplierLook'
+import { SECTION_BOX } from '@/features/rfqs/supplierLook'
 import { SentConfirm } from '@/features/rfqs/SentConfirm'
 import {
   daysSince,
@@ -95,8 +95,8 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
   const chaseable = chase === 'none' ? [] : inquiries.filter(i => canChaseInquiry(i, items))
   const [picked, setPicked] = useState<string | null>(null)
   const [channel, setChannel] = useChannelPreference()
-  // Waiting for prices: the first supplier to chase shows its card. Once prices are in, a card opens only on "Show message".
-  const open = chaseable.find(i => i.id === picked) ?? (chase === 'card' ? chaseable[0] : undefined)
+  // The follow-up message opens only on "Show message" (owner, 18 Nov 2026: open by itself it filled half the step). "Follow up" stays 1 tap.
+  const open = chaseable.find(i => i.id === picked)
   const today = businessToday()
   const reply = useReplyDialog()
   // A reply is prices: an engineer has no Enter or Edit reply and the dialog never opens (owner decision 2026-10-22).
@@ -128,21 +128,9 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
     jumpToReplyRow(firstAwaiting)
   }, [phone, jump, firstAwaiting, rfq.id])
 
-  // The header's count and how many of those asked have answered (a price, or "cannot quote"), as drawn (proposal 23).
-  const askedN = inquiries.filter(i => i.sentOn || i.noOfferOn).length
-  const answeredN = inquiries.filter(i => (i.sentOn || i.noOfferOn) && (i.lines.length > 0 || Boolean(i.noOfferOn))).length
+  // No count here: the Quotation step's header already says "1 of 2 answered" (owner, 18 Nov 2026: it was said three times).
   return (
-    <DetailPanel
-      title="Suppliers asked"
-      dataSlot="suppliers-asked"
-      tip={
-        <QuietChip className="num ml-2 shrink-0 px-2">
-          {inquiries.length}
-          <span className="sr-only">{inquiries.length === 1 ? ' supplier' : ' suppliers'}</span>
-        </QuietChip>
-      }
-      meta={askedN > 0 ? <span className="num text-sm" data-answered>{`${answeredN} of ${askedN} answered`}</span> : undefined}
-    >
+    <DetailPanel title="Suppliers asked" dataSlot="suppliers-asked">
       <ul>
         {inquiries.map(i => {
           const awaiting = Boolean(i.sentOn) && !i.noOfferOn && i.lines.length === 0
@@ -199,10 +187,15 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                       )}
                       {awaiting && !i.sentConfirmedAt ? <SentConfirm rfqId={rfq.id} inquiry={i} variant="later" /> : null}
                       {can && open?.id !== i.id ? <ChaseNow rfq={rfq} items={items} inquiry={i} variant={channel} /> : null}
-                      {/* While a card shows, its "Message for" picker reaches the others; with no card (prices in), each row offers it. */}
+                      {/* While a card shows, its "Message for" picker reaches the others; with no card, each row offers it. */}
                       {can && !open ? (
                         <Button size="sm" variant="quiet" onClick={() => setPicked(i.id)} aria-label={`Show message, ${i.supplierName}`}>
                           Show message
+                        </Button>
+                      ) : null}
+                      {open?.id === i.id ? (
+                        <Button size="sm" variant="quiet" onClick={() => setPicked(null)} aria-label={`Hide message, ${i.supplierName}`}>
+                          Hide message
                         </Button>
                       ) : null}
                     </div>
@@ -229,10 +222,16 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
         <Button icon={Plus} onClick={onFloat}>
           Ask more suppliers
         </Button>
+        {/* A reply from someone not asked from here (a call, the owner's WhatsApp): rare, so a small link, not a second button. */}
         {onReplyFrom ? (
-          <Button variant="quiet" icon={MessageSquareReply} className="h-auto min-h-control whitespace-normal py-2 leading-snug text-left" onClick={onReplyFrom}>
+          <button
+            type="button"
+            onClick={onReplyFrom}
+            className="inline-flex min-h-touch items-center gap-2 rounded-control text-left text-sm font-medium text-fg-muted underline underline-offset-4 hover:text-fg"
+          >
+            <Icon icon={MessageSquareReply} />
             Enter reply from another supplier
-          </Button>
+          </button>
         ) : null}
       </div>
       {replying ? (

@@ -96,6 +96,7 @@ function renderWith(items: RfqItemRow[], inq: InquiryRow = inquiry, onCall: (cal
 describe('SuppliersAsked escalation', () => {
   it('never offers the customer the RFQ is for as the next supplier in line', async () => {
     renderWith([{ id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: 'b-hach', brandName: 'Hach', familyId: null, qty: 1, unit: 'pcs' }])
+    await userEvent.click(screen.getByRole('button', { name: 'Show message, Silent Traders' }))
     const next = await screen.findByRole('list', { name: 'Next in line' })
     expect(within(next).getByText(/Orient Analytical/)).toBeInTheDocument()
     expect(within(next).queryByText(/Acme Plastics/)).toBeNull()
@@ -103,6 +104,7 @@ describe('SuppliersAsked escalation', () => {
 
   it('finds the suppliers on the family shortlist for an item known only by its family', async () => {
     renderWith([{ id: 'it-1', number: 1, description: 'Portable pH meter', brandId: null, brandName: null, familyId: 'f-meters', familyName: 'Meters', qty: 1, unit: 'pcs' }])
+    await userEvent.click(screen.getByRole('button', { name: 'Show message, Silent Traders' }))
     const next = await screen.findByRole('list', { name: 'Next in line' })
     expect(within(next).getByText(/Meter House/)).toBeInTheDocument()
   })
@@ -142,9 +144,9 @@ describe('SuppliersAsked chase', () => {
         if (call.target === 'rpc:stamp_supplier_chase') stamps.push(call)
       },
     )
-    // The supplier to chase shows the preview and one "Copy and mark chased" (no second Chase button beside it).
-    expect(screen.queryByRole('button', { name: 'Follow up with Silent Traders' })).toBeNull()
-    const chase = screen.getByRole('button', { name: 'Copy and record follow-up' })
+    // The message waits behind Show message (owner, 18 Nov 2026): the row's 1-tap Follow up copies and records it.
+    expect(screen.queryByRole('group', { name: 'Follow up with Silent Traders' })).toBeNull()
+    const chase = screen.getByRole('button', { name: 'Follow up with Silent Traders' })
     await user.dblClick(chase)
     release()
     await waitFor(() => expect(screen.getAllByText('Follow-up text copied').length).toBeGreaterThan(0))
@@ -155,6 +157,7 @@ describe('SuppliersAsked chase', () => {
     const user = userEvent.setup()
     localStorage.removeItem('qtech.channel.u1')
     renderWith([{ id: 'it-1', number: 1, description: 'Hach HQ1110 meter', brandId: 'b-hach', brandName: 'Hach', familyId: null, qty: 1, unit: 'pcs' }], { ...inquiry, chaseCount: 0, lastChasedOn: null })
+    await user.click(screen.getByRole('button', { name: 'Show message, Silent Traders' }))
     const card = screen.getByRole('group', { name: 'Follow up with Silent Traders' })
     expect(within(card).getByTestId('chase-text')).toHaveClass('line-clamp-3')
     expect(within(card).queryByRole('group', { name: 'Items still without a price from this supplier' })).toBeNull()
@@ -243,11 +246,13 @@ describe('SuppliersAsked: each supplier once, with its reply (grade-B R2, R3, R4
     lines: [{ id: 'l-1', inquiryId: 'i-3', itemId: 'it-1', unitPrice: 100, currency: 'PKR', leadTime: null, inStock: null, fxRatePkr: null, fxRateOn: null }],
   }
 
-  it('waiting for prices: the others get Enter reply and Chase only; the card picker "Message for" switches it (grade-A 9)', async () => {
+  it('waiting for prices: no message is open to start; once one is, the card picker "Message for" switches it (grade-A 9)', async () => {
     const user = userEvent.setup()
     renderMode('card', [{ ...inquiry, chaseCount: 0, lastChasedOn: null }, second])
-    expect(screen.queryByRole('button', { name: /^Show message/ })).toBeNull()
+    expect(screen.queryByRole('group', { name: /^Follow up with/ })).toBeNull()
     expect(screen.getByRole('button', { name: 'Follow up with Second Source' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Show message, Silent Traders' }))
+    expect(screen.queryByRole('button', { name: /^Show message/ })).toBeNull()
     // The other channel waits with the whole message.
     expect(screen.queryByRole('button', { name: 'Email instead' })).toBeNull()
     await user.selectOptions(screen.getByRole('combobox', { name: /^Message for/ }), 'i-2')
@@ -298,6 +303,7 @@ describe('SuppliersAsked: a supplier asked about some items (supplier flow D, 01
     const user = userEvent.setup()
     renderWith(three, { ...inquiry, chaseCount: 0, lastChasedOn: null, askedItemIds: ['it-1', 'it-2'] })
     expect(screen.getByText('Asked about items 1 and 2 only')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Show message, Silent Traders' }))
     const card = screen.getByRole('group', { name: 'Follow up with Silent Traders' })
     await user.click(within(card).getByRole('button', { name: 'Show the whole message' }))
     const text = within(card).getByTestId('chase-text')

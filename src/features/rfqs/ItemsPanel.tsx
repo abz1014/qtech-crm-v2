@@ -78,6 +78,9 @@ function useShowPkr(): [boolean, (on: boolean) => void] {
   return [on, set]
 }
 
+/** From this many items, a list that is only waiting starts folded. */
+const FOLD_FROM = 5
+
 const daysBetween = (from: string, to: string) => Math.round((Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10)) - Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10))) / 86_400_000)
 
 // Every row is its own grid, so the tracks are fixed to line up; sized for 16px text ("≈ PKR 1,234,567", "Not in stock").
@@ -371,6 +374,12 @@ export function ItemsPanel({
   // Desktop: the column names show once, over the first item that has prices (they were repeated over every item).
   const headItemId = items.find(it => inquiries.some(i => i.lines.some(l => l.itemId === it.id)))?.id
   const shownItem = openItem === undefined ? items.find(it => hasBody(it.id))?.id : openItem
+  // Asked, but nothing back on any item yet: every item would say the same "Waiting for prices" (owner, 18 Nov 2026: 31 items said
+  // it 62 times). The panel says it once; a long list starts folded behind "Show items", and the items carry no chip of their own.
+  const waitedOn = (itemId: string) => inquiries.some(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[itemId] && askedAbout(i, itemId))
+  const allWaiting = !nobodyAsked && items.length > 0 && items.every(it => !hasBody(it.id) && waitedOn(it.id))
+  const [showItems, setShowItems] = useState(false)
+  const listFolded = allWaiting && items.length > FOLD_FROM && !showItems
   return (
     <DetailPanel
       title={prices ? 'Items and supplier prices' : 'Items and supplier replies'}
@@ -413,9 +422,22 @@ export function ItemsPanel({
           <b className="font-semibold text-fg">Ask a supplier first.</b> Replies are entered under Suppliers asked.
         </p>
       ) : null}
+      {allWaiting ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-deep px-4 py-3 text-fg-2" data-all-waiting>
+          <Icon icon={Clock} className="shrink-0 text-fg-muted" />
+          <span className="min-w-0 flex-1">
+            <b className="font-semibold text-fg">No prices yet.</b> {items.length === 1 ? 'The item is' : `All ${items.length} items are`} waiting on the suppliers asked.
+          </span>
+          {items.length > FOLD_FROM ? (
+            <Button size="sm" variant="quiet" icon={ChevronDown} className={cn('[&_svg]:transition-transform', showItems && '[&_svg]:rotate-180')} aria-expanded={showItems} onClick={() => setShowItems(v => !v)}>
+              {showItems ? 'Hide items' : 'Show items'}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
       {items.length === 0 ? (
         <p className="mt-4 rounded-control border border-dashed px-4 py-6 text-fg-muted">This RFQ has no items yet. Add the first one to start asking for prices.</p>
-      ) : (
+      ) : listFolded ? null : (
         <div className="divide-y">
           {items.map(item => {
             const entries: Entry[] = []
@@ -451,9 +473,9 @@ export function ItemsPanel({
                 {/* A grid, so the number stays beside the title and the fold chevron and menu stay at the right of the first row at any
                     width; below lg the chip drops under the title, from lg it sits before the chevron. */}
                 <header className={cn('relative grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 px-0 pt-4 lg:grid-cols-[auto_minmax(0,1fr)_auto_auto] lg:pt-3', folded && 'pb-4', phone && !foldable && !nobodyAsked && 'pb-4')}>
-                  <span className="num col-start-1 row-start-1 mt-px grid size-6 place-items-center rounded-round border border-line-strong text-sm font-medium">{item.number}</span>
+                  <span className="num col-start-1 row-start-1 mt-px grid h-6 min-w-6 place-items-center rounded-round border border-line-strong px-1 text-sm font-medium">{item.number}</span>
                   <div className="col-start-2 row-start-1 min-w-0">
-                    <h3 className="type-row text-pretty [overflow-wrap:anywhere]">
+                    <h3 className="text-pretty text-base font-medium [overflow-wrap:anywhere]">
                       {foldable ? (
                         // The whole header is the tap target (the button's box stretches over it); the name is its label.
                         <button
@@ -482,7 +504,7 @@ export function ItemsPanel({
                   </p>
                   {/* "Priced" is said once, on each supplier's row (Suppliers asked): an item with prices shows its price rows, not a second chip. */}
                   {/* An item others were asked about but nobody about this one says so folded too: Needs suppliers. */}
-                  {unasked || (cov.value && cov.value !== 'priced') ? (
+                  {unasked || (cov.value && cov.value !== 'priced' && !allWaiting) ? (
                     <span className="col-start-2 row-start-3 justify-self-start lg:col-start-3 lg:row-start-1">
                       <StatusBadge dimension="item-price" value={unasked ? 'unasked' : (cov.value as string)} detail={cov.detail} />
                     </span>
@@ -525,7 +547,7 @@ export function ItemsPanel({
                       </div>
                     ) : null}
 
-                    {nobodyAsked ? null : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
+                    {nobodyAsked || allWaiting ? null : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
                       <div className="mt-3 lg:mt-1">
                         {entries.length > 0 && prices ? (
                           item.id !== headItemId ? null : <div className={HEAD} aria-hidden="true">
@@ -629,7 +651,8 @@ export function ItemsPanel({
                               </span>
                             </li>
                           ))}
-                          {/* Phone: the chip says it is waiting and Suppliers asked says on whom; the line stays on desktop. */}
+                          {/* Phone: the chip says it is waiting and Suppliers asked says on whom; the line stays on desktop. Nothing back on any
+                              item: the panel says it once, so no item repeats it. */}
                           {waiting.length > 0 && !(phone && entries.length === 0 && declined.length === 0) ? <WaitingLine waiting={waiting} /> : null}
                         </ul>
                       </div>

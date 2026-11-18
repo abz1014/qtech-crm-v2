@@ -45,11 +45,12 @@ const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog
 
 /**
  * A compact section (F-161, 23-job-suppliers .qb-fold--compact): a card row (the title, how many, a chevron) that opens its panel, open
- * from the start only when there is something in it. The same compact fold card as Commissioning and Challans on the Delivery stop.
+ * closed to start. The same compact fold card as Commissioning and Challans on the Delivery stop.
  */
 function Fold({ title, count, noun, icon, children }: { title: string; count: number; noun: [string, string]; icon: LucideIcon; children: ReactNode }) {
+  // Starts closed: the count on the row says what is inside (owner, 18 Nov 2026: open, they pushed the work down).
   const [chosen, setChosen] = useState<boolean | null>(null)
-  const open = chosen ?? count > 0
+  const open = chosen ?? false
   const id = useId()
   return (
     <div data-fold={title}>
@@ -201,13 +202,6 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
 
   return (
     <div className="grid gap-4" data-enquiry-work data-chaseable={chaseable}>
-      {isAdmin && !hasOrder ? (
-        <div className="flex justify-end" data-slot="enquiry-cost">
-          <Button size="sm" variant="quiet" icon={Plus} onClick={() => setCosting(true)}>
-            Add cost
-          </Button>
-        </div>
-      ) : null}
       {lastAsk ? <SendToEachCard ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
       <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
         {nobodyAsked ? (
@@ -242,6 +236,14 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
       </Suspense>
       <EnquiryExtras rfq={rfq} inquiries={inquiryList} />
+      {/* A cost against the enquiry is rare work: it waits at the foot of the step, not over the suppliers. */}
+      {isAdmin && !hasOrder ? (
+        <div className="flex justify-end" data-slot="enquiry-cost">
+          <Button size="sm" variant="quiet" icon={Plus} onClick={() => setCosting(true)}>
+            Add cost
+          </Button>
+        </div>
+      ) : null}
       {isAdmin ? <AddExpenseDialog open={costing} onOpenChange={setCosting} context={{ rfqId: rfq.id, rfqLabel: rfqRef(rfq.number) }} /> : null}
       {adding ? (
         <Suspense fallback={null}>
