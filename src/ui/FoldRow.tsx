@@ -72,9 +72,11 @@ export interface FoldRowProps {
    * ("Delivery, Now, Waiting, 2 of 3 delivered").
    */
   chip?: FoldRowChip
+  /** The row is its own card from this width up (job stages): the hover shade then fills the card's header edge to edge, not a tile inside it. */
+  cardFrom?: 'md'
 }
 
-export function FoldRow({ state, title, summary, open, onToggle, controlsId, children, className, id, dataStage, bodyLabel, tone, muted = false, disabled = false, figure = false, chip }: FoldRowProps) {
+export function FoldRow({ state, title, summary, open, onToggle, controlsId, children, className, id, dataStage, bodyLabel, tone, muted = false, disabled = false, figure = false, chip, cardFrom }: FoldRowProps) {
   const summaryTone = tone ? TONE[tone] : 'text-fg-2'
   const words = chip ? (
     // Two lines: the title over the summary, the chip to the right (DOM order keeps the name "Title State Chip Summary").
@@ -128,7 +130,7 @@ export function FoldRow({ state, title, summary, open, onToggle, controlsId, chi
           aria-expanded={open}
           aria-controls={controlsId}
           onClick={onToggle}
-          className={cn('type-row min-h-touch w-full text-left transition-colors duration-fast hover:bg-sunken', line, chip && '-mx-2 w-[calc(100%+var(--sp-4))] rounded-row px-2')}
+          className={cn('type-row min-h-touch w-full text-left transition-colors duration-fast hover:bg-sunken', line, chip && '-mx-2 w-[calc(100%+var(--sp-4))] rounded-row px-2', cardFrom === 'md' && cn('md:-mx-[var(--card-pad)] md:w-[calc(100%+2*var(--card-pad))] md:px-[var(--card-pad)]', open ? 'md:rounded-b-none md:rounded-t-[calc(var(--radius-card)-1px)]' : 'md:rounded-[calc(var(--radius-card)-1px)]'))}
         >
           {words}
           <Icon icon={ChevronRight} className={cn('text-fg-muted transition-transform duration-fast motion-reduce:transition-none', chevron, open && 'rotate-90')} />

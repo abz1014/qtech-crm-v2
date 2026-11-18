@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { ChevronDown, Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, RefreshCw, Split, Trash2, TriangleAlert, Truck } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
-import { convertToPaisa, formatAmount, formatPaisa } from '@/lib/money'
+import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef, poRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
@@ -13,7 +13,6 @@ import { MenuItem, Popover, PopoverContent, PopoverTrigger } from '@/ui/Popover'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { Tag } from '@/ui/Tag'
 import { useFxLatest } from '@/features/rfqs/hooks'
-import { toRateTable } from '@/features/rfqs/lib/comparePrices'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useHistoryPanel } from '@/features/history/useHistoryPanel'
 import { DeletePoRevisionConfirm } from '@/features/purchaseOrders/DeleteRevision'
@@ -83,7 +82,6 @@ export function LegsPanel({
   part?: LegsPart
 }) {
   const fx = useFxLatest()
-  const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   // Admin only (the Margin panel reads the same query, so this is no extra request): what is still owed on each supplier order, the
   // amount Pay supplier starts at (entry-burden J14).
   const costs = useOrderCosts(order.id, isAdmin)
@@ -157,7 +155,6 @@ export function LegsPanel({
               money={money}
               isAdmin={isAdmin}
               canEdit={canEdit}
-              rates={rates}
               owed={owedByLeg.get(leg.id)}
               today={today}
               collapsible={legs.length > 1}
@@ -188,7 +185,6 @@ function Leg({
   money,
   isAdmin,
   canEdit,
-  rates,
   owed,
   today,
   onChase,
@@ -210,7 +206,6 @@ function Leg({
   money: boolean
   isAdmin: boolean
   canEdit: boolean
-  rates: ReturnType<typeof toRateTable>
   /** Admin: what is still owed to this supplier, Pay supplier's starting amount. */
   owed?: { amount: number; note: string }
   today: string
@@ -246,8 +241,6 @@ function Leg({
   const suggestion = defaultExpected(leg.placedOn ?? today, leg.leadTimes, actions.medianDays)
   const total = legSupplierTotal(items.map(it => ({ qty: it.qty, supplierUnitPrice: it.supplierUnitPrice, isService: it.isService })))
   const ccy = leg.currency
-  const rate = ccy && ccy !== 'PKR' ? rates[ccy] : undefined
-  const pkr = rate && rate.staleness !== 'unusable' && total.priced > 0 ? convertToPaisa(total.total, rate.rate) : null
   const name = leg.supplierName
   const [deletingPo, setDeletingPo] = useState(false)
   const poHistory = useHistoryPanel({ table: 'purchase_orders', id: po?.id ?? '', context: po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision} · ${name}` : name })
@@ -401,7 +394,6 @@ function Leg({
               {total.priced > 0 ? formatAmount(total.total) : 'Not set'}
             </span>
             {total.of > 0 && total.priced < total.of ? <span className="text-xs text-fg-muted">{`${total.priced} of ${total.of} lines priced`}</span> : null}
-            {pkr !== null ? <span className="num text-xs text-fg-muted">≈ PKR {formatPaisa(pkr, 'auto')} today</span> : null}
           </div>
         ) : null}
         {canEdit ? (

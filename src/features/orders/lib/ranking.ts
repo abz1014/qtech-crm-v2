@@ -43,10 +43,6 @@ export const forItem = (all: readonly RankedQuote[], itemId: string): RankedQuot
   all.filter(q => q.itemId === itemId).sort((a, b) => a.supplierName.localeCompare(b.supplierName, 'en', { sensitivity: 'base' }) || a.price - b.price)
 
 /** "USD 412.00" and, under it, "≈ PKR 114,701" or "no conversion". */
-export function priceTexts(q: RankedQuote): { price: string; pkr: string } {
-  const pkrUnit = q.row.pkr_unit_price
-  return {
-    price: `${q.currency} ${formatAmount(q.price, 'always')}`,
-    pkr: q.currency === 'PKR' ? 'no conversion' : pkrUnit !== null ? `≈ PKR ${formatAmount(Math.round(pkrUnit))}` : 'no rate',
-  }
+export function priceTexts(q: RankedQuote): { price: string } {
+  return { price: `${q.currency} ${formatAmount(q.price, 'always')}` }
 }
