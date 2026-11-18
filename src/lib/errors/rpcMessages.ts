@@ -261,6 +261,10 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This would leave more refunded or applied credit than / },
   { match: /^Only an admin can clear a PSID or a tax deposit date once it is recorded\.$/, message: () => ADMIN_ONLY },
   { match: /^012[678]: /, internal: true },
+  // 0141 (the archive): admin-only RPCs; a missing on/off value is a programmer error; a vanished record means reload.
+  { match: /^Only an admin can (change the archive setting|bring an archived row back|put an archived row away again|preview the archive|browse the archive)\.$/, message: () => ADMIN_ONLY },
+  { match: /^Say whether archiving is on or off\.$/, internal: true },
+  { match: /^That record could not be found\.$/, message: () => RELOAD },
   // 0096 (money truth): linking imported invoices to their orders, and the owner's review of imported records. Already plain.
   { match: /^Only an admin can link or review imported records\.$/, message: () => ADMIN_ONLY },
   { match: /^Imported record not found$/, message: () => RELOAD },

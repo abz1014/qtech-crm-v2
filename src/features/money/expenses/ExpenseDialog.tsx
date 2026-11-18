@@ -7,6 +7,7 @@ import { amountSchema, businessDateRange, inDateRange, MAX_AMOUNT, pkr } from '@
 import { intakeFiles, type AddedFile } from '@/lib/fileIntake'
 import { Button } from '@/ui/Button'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { ArchiveBanner } from '@/features/archive/ArchiveBanner'
 import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -117,6 +118,7 @@ export function AddExpenseDialog({ open, onOpenChange, context, expense, onSaved
   return (
     <Dialog open={open} onOpenChange={onOpenChange} busy={busy}>
       <DialogContent icon={ReceiptText} title={expense ? 'Edit expense' : 'Add expense'} context={expense ? undefined : sub} size="md" className={expense ? 'md:w-[36rem]' : 'md:w-[32.5rem]'}>
+        {open && expense ? <ArchiveBanner entity="expense" id={expense.id} /> : null}
         {open ? (
           <ExpenseForm
             context={context}

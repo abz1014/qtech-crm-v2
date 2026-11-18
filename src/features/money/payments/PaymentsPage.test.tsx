@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { SessionProvider } from '@/app/SessionProvider'
 import MoneyScreen from '@/features/money/MoneyScreen'
 import { businessToday } from '@/lib/dates'
-import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
+import { filterRows, installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 
@@ -27,7 +27,7 @@ const NAMES: Record<string, string> = { c3: 'Ravi Agro', c4: 'Kestrel Power' }
 
 function respond(rows: unknown[]) {
   return (c: FakeCall): FakeResult => {
-    if (c.target === 'payments_in') return { data: rows }
+    if (c.target === 'payments_in') return { data: filterRows(rows as Record<string, unknown>[], c) }
     if (c.target === 'rpc:lookup_labels') return { data: LABELS }
     if (c.target === 'v_month_pnl') return { data: [{ month: `${MONTH}-01`, net_in: 640000, gst_in: 115200 }] }
     if (c.target === 'rpc:receivables_list') return receivablesListResult(c, OPEN, { companyName: id => NAMES[id], invoiceNumbers: id => (id === 'o3' ? ['INV-2284'] : []) })
@@ -84,6 +84,21 @@ describe('Money > Payments', () => {
     expect(screen.getByTestId('payments-count')).toHaveTextContent('2 payments in')
     expect(screen.getByTestId('payments-count')).toHaveTextContent('PKR 762,201 with GST. Voided payments are not listed.')
     expect(screen.getByRole('link', { name: 'Payments' })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('hides archived payments from the list while the month total and count still include them', async () => {
+    const calls = at('/money/payments', 'admin', [...PAYMENTS, { id: 'p3', received_on: `${MONTH}-03`, amount: 1000, paid_via: 'bank', reference: 'OLD-1', order_id: 'o1', archived: true }])
+    const table = await screen.findByRole('table', { name: /Payments received in/ })
+    expect(await within(table).findByText('TT-88')).toBeInTheDocument()
+    expect(within(table).queryByText('OLD-1')).not.toBeInTheDocument()
+    // the table has no footer total of its own: the SumBar and the status line carry the true month total, so the two never disagree
+    expect(table.querySelector('tfoot')).toBeNull()
+    const archivedArg = (c: FakeCall) => c.ops.some(([op, a]) => op === 'eq' && a[0] === 'archived')
+    expect(calls.some(c => c.target === 'payments_in' && archivedArg(c))).toBe(true)
+    await waitFor(() => expect(screen.getByTestId('payments-count')).toHaveTextContent('3 payments in'))
+    expect(screen.getByTestId('payments-count')).toHaveTextContent('PKR 763,201 with GST')
+    // the total read carries no archived filter
+    expect(calls.some(c => c.target === 'payments_in' && !archivedArg(c))).toBe(true)
   })
 
   it('an empty month says so and offers Record a payment', async () => {

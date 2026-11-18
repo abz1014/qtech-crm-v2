@@ -47,6 +47,8 @@ jobs: # weight=60
   - 'e2e/jobs/**'
 capture: # weight=155
   - 'e2e/capture/**'
+archive: # weight=60 (Archive old data, one spec file per role; the setting is global, so the files run in order)
+  - 'e2e/archive/**'
 expenses: # weight=76
   - 'e2e/expenses/**'
 reports: # weight=42

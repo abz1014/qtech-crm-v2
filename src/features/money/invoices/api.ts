@@ -176,6 +176,8 @@ export interface InvoiceableOrder {
   id: string
   ref: string
   company: string
+  /** Old or imported: still offered (it still counts), but marked "In Archive". Absent when not archived. */
+  archived?: boolean
 }
 
 /** Orders a new invoice can go on: not cancelled and not fully invoiced yet (v_order_state, so an engineer-proof derived value). */
@@ -186,7 +188,7 @@ export async function listInvoiceableOrders(): Promise<InvoiceableOrder[]> {
   const orders = await fetchAll((from, to) =>
     db
       .from('v_order_state')
-      .select('order_id, number, company_id')
+      .select('order_id, number, company_id, archived')
       .neq('lifecycle', 'cancelled')
       .or(INVOICEABLE_FILTER)
       .order('number', { ascending: false })
@@ -194,7 +196,7 @@ export async function listInvoiceableOrders(): Promise<InvoiceableOrder[]> {
   )
   if (orders.length === 0) return []
   const { companies } = await lookupLabels({ companies: orders.map(o => o.company_id).filter((x): x is string => !!x) })
-  return orders.filter(o => o.order_id).map(o => ({ id: o.order_id as string, ref: orderRef(Number(o.number)), company: (o.company_id && companies[o.company_id]) || '' }))
+  return orders.filter(o => o.order_id).map(o => ({ id: o.order_id as string, ref: orderRef(Number(o.number)), company: (o.company_id && companies[o.company_id]) || '', ...(o.archived === true ? { archived: true } : {}) }))
 }
 
 /** v_order_state rows a new invoice can go on: not fully invoiced (PostgREST `or`; `neq` alone would drop a null state). */

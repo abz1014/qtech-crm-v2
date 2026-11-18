@@ -340,6 +340,16 @@ insert into matrix (kind, obj, variant, admin_ops, sales_ops, engineer_ops) valu
   ('function', 'delete_company',        '',    'X',    '',     ''),     -- 0092: admin only
   ('function', 'admin_health',          '',    'X',    '',     ''),     -- 0120: admin only (42501 for everyone else)
   ('function', 'confirm_backup_decrypt_test', '', 'X', '',     ''),     -- 0120: admin only
+  ('table', 'archive_settings',    '',           'S',    'S',    'S'),    -- 0141: singleton; everyone with a role reads it, nobody writes it directly (archive_set does)
+  ('table', 'archive_unhidden',    '',           'S',    'S',    'S'),    -- 0141: the rows an admin brought back; everyone with a role reads it, nobody writes it directly
+  ('function', 'archive_hides',     '',          'X',    'X',    'X'),    -- 0141: the rule (date, imported?) -> hidden?; reads the setting; NULL for someone with no role
+  ('function', 'is_archived',       '',          'X',    'X',    'X'),    -- 0141: the rule for one row by name; invoker, reads the row's own columns; NULL when the caller cannot see the row
+  ('function', 'archived',          '',          'X',    'X',    'X'),    -- 0141: computed fields archived(<row>) for 13 tables and 5 list views; no money column is read
+  ('function', 'archive_set',       '',          'X',    '',     ''),     -- 0141: admin only (42501 for everyone else)
+  ('function', 'archive_unhide',    '',          'X',    '',     ''),     -- 0141: admin only
+  ('function', 'archive_rehide',    '',          'X',    '',     ''),     -- 0141: admin only
+  ('function', 'archive_preview',   '',          'X',    '',     ''),     -- 0141: admin only (counts, and the money still open on archived rows)
+  ('function', 'archive_list',      '',          'X',    '',     ''),     -- 0141: admin only (the browse screen, with amounts)
   ('bucket', 'claim-receipts',   'own',   'SID',  '',     'SID'),         -- 0087: receipt photos under <claim id>/: the admin, and the engineer on their own pending claim
   ('bucket', 'claim-receipts',   'other', 'SID',  '',     '');            -- 0087: another person's claim photos are closed to an engineer
 
@@ -432,6 +442,7 @@ insert into public.expense_claims (id, created_by, amount_pkr, note) values
   (pg_temp.f('e0'), 'a0000000-0000-4000-8000-000000000003', 5, 'engineer claim'),
   (pg_temp.f('e1'), 'a0000000-0000-4000-8000-000000000001', 5, 'other claim');
 insert into public.cash_topups (id, amount_pkr) values (pg_temp.f('e2'), 5);
+insert into public.archive_unhidden (entity, row_id) values ('rfq', pg_temp.f('15'));   -- 0141: one override, so the table has a row to read
 insert into public.cash_counts (id, counted_pkr, is_opening) values (pg_temp.f('e3'), 10, true);
 insert into public.checked_findings (finding_key, message_hash) values ('probe-key', 'probe-hash');   -- 0102
 insert into public.gst_deadline_overrides (month, pay_by) values ('2019-01-01', '2019-02-20');   -- 0110
@@ -532,6 +543,8 @@ insert into spec values
   ('expense_claims', 'other', 'id = @e1', 'note', null),   -- 0087: a claim is always the caller's own, so "someone else's" cannot be inserted
   ('cash_topups', '', 'id = @e2', 'note', $q$insert into public.cash_topups (id, amount_pkr) values (@e5, 5)$q$),   -- 0087
   ('cash_counts', '', 'id = @e3', 'note', $q$insert into public.cash_counts (id, counted_pkr) values (@e6, 7)$q$),   -- 0087
+  ('archive_settings', '', 'id = 1', 'updated_by', $q$insert into public.archive_settings (id) values (2)$q$),   -- 0141: a singleton written only by archive_set
+  ('archive_unhidden', '', $q$entity = 'rfq' and row_id = @15$q$, 'unhidden_at', $q$insert into public.archive_unhidden (entity, row_id) values ('rfq', @16)$q$),   -- 0141: written only by archive_unhide / archive_rehide
   ('checked_findings', '', $q$finding_key = 'probe-key'$q$, 'message_hash', $q$insert into public.checked_findings (finding_key, message_hash) values ('probe-2', 'probe-hash')$q$),   -- 0102
   ('gst_deadline_settings', '', 'id = 1', 'pay_day', $q$insert into public.gst_deadline_settings (id) values (2)$q$),   -- 0110: a singleton, no insert and no delete
   ('gst_deadline_overrides', '', $q$month = '2019-01-01'$q$, 'note', $q$insert into public.gst_deadline_overrides (month, pay_by) values ('2019-02-01', '2019-03-20')$q$);   -- 0110
@@ -745,13 +758,21 @@ insert into probes values
   ('rfqs', 'owner_id', 'U', $q$update public.rfqs set owner_id = 'a0000000-0000-4000-8000-000000000003' where id = @16$q$),
   ('receipt_locked', '', 'X', $q$select 1 where public.receipt_locked('gst-receipts', 'fixture.txt') is not null$q$),
   ('job_stage', '', 'X', $q$select 1 from public.job_stage(@15, null)$q$),   -- 0099: a row for staff, none for a deactivated user
-  ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'm/1.pdf') is not null$q$);   -- 0100: NULL for anyone without a role
+  ('attachment_is_priced', '', 'X', $q$select 1 where public.attachment_is_priced('rfq-files', 'm/1.pdf') is not null$q$),   -- 0100: NULL for anyone without a role
+  ('archive_hides', '', 'X', $q$select 1 where public.archive_hides(date '2020-01-01', false) is not null$q$),   -- 0141: NULL when the caller cannot read the setting
+  ('is_archived', '', 'X', $q$select 1 where public.is_archived('rfq', @15) is not null$q$),   -- 0141: NULL when the caller cannot see the row
+  ('archived', '', 'X', $q$select 1 from public.rfqs r where r.id = @15 and public.archived(r) is not null$q$),   -- 0141
+  ('archive_set', '', 'X', $q$select 1 from public.archive_set(false, null)$q$),   -- 0141: admin only; rolled back
+  ('archive_unhide', '', 'X', $q$select public.archive_unhide('rfq', @16)$q$),   -- 0141: admin only; rolled back
+  ('archive_rehide', '', 'X', $q$select public.archive_rehide('rfq', @15)$q$),   -- 0141: admin only; rolled back
+  ('archive_preview', '', 'X', $q$select 1 from public.archive_preview(null) limit 1$q$),   -- 0141: admin only
+  ('archive_list', '', 'X', $q$select 1 from public.archive_list('order', null, null, 5, 0) limit 1$q$);   -- 0141: admin only; the imported order @e7 is on it (rows the rule matches, archiving on or off)
 
 -- ------------------------------------------------------------------ coverage: the matrix names every object that exists
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
   'coverage: the matrix lists every table in schema public (39)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 47, 'coverage: 47 tables');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 49, 'coverage: 49 tables (0141: archive_settings, archive_unhidden)');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

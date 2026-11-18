@@ -123,7 +123,9 @@ export function ReceivablesPage() {
   const local = useMemo(() => receivableTotals(rows, today), [rows, today])
   // Not invoiced and Imported come from the rows (all of them are loaded): the server's summary counts an imported order as not invoiced.
   const totals = { ...(summary.data ?? local), notInvoicedCount: local.notInvoicedCount, notInvoiced: local.notInvoiced, importedCount: local.importedCount, imported: local.imported }
-  const byState = useMemo(() => filterReceivables(rows, filter), [rows, filter])
+  // The LIST drops archived orders (archive feature); the figures above and the pickers keep every row.
+  const listed = useMemo(() => rows.filter(r => !r.archived), [rows])
+  const byState = useMemo(() => filterReceivables(listed, filter), [listed, filter])
   const shown = useMemo(() => sortReceivables(byState.filter(r => matchesAllWords(receivableSearchText(r), search))), [byState, search])
   // The panel follows the picked row; before a pick (or when it leaves the list) it follows the most overdue row (E-MN-03), else the first.
   const mostOverdue = shown.find(r => r.state === 'overdue') ?? shown[0] ?? null
@@ -175,7 +177,6 @@ export function ReceivablesPage() {
         kind: 'money',
         hideClass: GROSS_SETTLED,
         value: r => String(r.gross),
-        total: true,
         cell: r => (
           <span className="grid justify-items-end gap-px">
             <Money value={r.gross} prefix={false} />
@@ -183,8 +184,8 @@ export function ReceivablesPage() {
           </span>
         ),
       },
-      { id: 'settled', header: 'Settled', kind: 'money', hideClass: GROSS_SETTLED, value: r => String(r.settled), total: true },
-      { id: 'balance', header: 'Balance', kind: 'money', value: r => String(r.balance), total: true, cell: r => <Money value={r.balance} prefix={false} strong /> },
+      { id: 'settled', header: 'Settled', kind: 'money', hideClass: GROSS_SETTLED, value: r => String(r.settled) },
+      { id: 'balance', header: 'Balance', kind: 'money', value: r => String(r.balance), cell: r => <Money value={r.balance} prefix={false} strong /> },
       {
         id: 'due',
         header: 'Due',
@@ -272,7 +273,6 @@ export function ReceivablesPage() {
             twoLine
             onRowOpen={pick}
             activeRowId={selected?.orderId ?? null}
-            footerLabel={`${shown.length} ${filter === 'settled' ? 'paid' : filter === 'overdue' ? 'overdue' : 'open'} ${shown.length === 1 ? 'order' : 'orders'}`}
             loading={q.isPending}
             error={q.isError ? { title: 'The balances did not load', message: 'Invoices and payments are safe. Try again, and if it keeps failing, tell the admin.', onRetry: () => void q.refetch() } : null}
             toolbar={

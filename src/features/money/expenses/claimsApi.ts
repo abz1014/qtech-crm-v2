@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { hideArchived } from '@/lib/archive'
 import { orderRef, rfqRef } from '@/lib/refs'
 import { lookupLabels } from '@/features/money/lookupLabels'
 import { uploadReceipt } from '@/features/money/expenses/api'
@@ -102,17 +103,17 @@ async function toClaims(rows: readonly ClaimRow[]): Promise<Claim[]> {
   }))
 }
 
-/** The admin's "To approve" list: every pending claim, oldest first. */
+/** The admin's "To approve" list: every pending claim, oldest first. A LIST: claims dated before the archive cutoff drop out (the owner accepted that old pending claims are reached through the admin Archive). */
 export async function listPendingClaims(): Promise<Claim[]> {
   const db = requireSupabase()
-  const rows = await fetchAll<ClaimRow>((from, to) => db.from('expense_claims').select(COLS).eq('status', 'pending').order('created_at').range(from, to))
+  const rows = await fetchAll<ClaimRow>((from, to) => hideArchived(db.from('expense_claims').select(COLS)).eq('status', 'pending').order('created_at').range(from, to))
   return toClaims(rows)
 }
 
-/** An engineer's own claims (row security returns nothing else), newest first; the last 60. */
+/** An engineer's own claims (row security returns nothing else), newest first; the last 60. A LIST: archived claims drop out (safe for an engineer: expense_claims grants the column). */
 export async function listMyClaims(): Promise<Claim[]> {
   const db = requireSupabase()
-  const rows = unwrap(await db.from('expense_claims').select(COLS).order('created_at', { ascending: false }).limit(60)) ?? []
+  const rows = unwrap(await hideArchived(db.from('expense_claims').select(COLS)).order('created_at', { ascending: false }).limit(60)) ?? []
   return toClaims(rows)
 }
 

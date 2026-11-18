@@ -2,9 +2,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ExpensesTab } from '@/features/money/expenses/ExpensesTab'
-import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
+import { filterRows, installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
 /*
@@ -21,14 +21,15 @@ const CATEGORIES = [cat('c-water', 'Water', OFFICE, 'overhead'), cat('c-sup', 'S
 const exp = (id: string, paid_on: string, amount_pkr: number, category_id: string, description: string | null) => ({
   id, paid_on, amount_pkr, category_id, description, input_tax_pkr: 0, paid_via: 'cash', order_id: null, supplier_order_id: null, payee_id: null, recurring_id: null, bank_month: null,
 })
-const ROWS = [exp('e1', '2026-09-03', 500, 'c-water', 'Office water'), exp('e2', '2026-09-11', 380000, 'c-sup', null), { ...exp('e3', '2026-09-17', 1150, 'c-water', 'Office water'), auto_booked: true }]
+let ROWS: Record<string, unknown>[] = []
+const BASE_ROWS = [exp('e1', '2026-09-03', 500, 'c-water', 'Office water'), exp('e2', '2026-09-11', 380000, 'c-sup', null), { ...exp('e3', '2026-09-17', 1150, 'c-water', 'Office water'), auto_booked: true }]
 
 function setup(closed: string[] = [], onDelete: () => { data?: unknown; error?: unknown } = () => ({ data: [{ id: 'x' }] })) {
   const db = installFakeDb((c: FakeCall) => {
     if (c.target === 'expense_categories') return { data: CATEGORIES }
     if (c.target === 'expense_groups') return { data: GROUPS }
     if (c.target === 'expenses' && c.verb === 'delete') return onDelete() as never
-    if (c.target === 'expenses' && c.verb === 'select') return { data: ROWS }
+    if (c.target === 'expenses' && c.verb === 'select') return { data: filterRows(ROWS, c) }
     if (c.target === 'closed_months') return { data: closed.map(m => ({ month: `${m}-01`, closed_at: '2026-10-03T10:00:00Z', closed_by: 'u1', note: null })) }
     if (c.target === 'users') return { data: [{ id: 'u1', name: 'Wasif' }] }
     if (c.target === 'rpc:lookup_labels') return { data: { companies: {}, orders: {}, legs: {} } }
@@ -47,6 +48,9 @@ function setup(closed: string[] = [], onDelete: () => { data?: unknown; error?: 
   return db
 }
 
+beforeEach(() => {
+  ROWS = BASE_ROWS
+})
 afterEach(() => installFakeDb(() => ({})).uninstall())
 
 describe('Expenses list (0086)', () => {
@@ -126,5 +130,18 @@ describe('Expenses list (0086)', () => {
     await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:record_history')).toBe(true))
     const call = db.calls.find(c => c.target === 'rpc:record_history') as FakeCall
     expect(opArgs(call, 'args')?.[0]).toMatchObject({ p_table: 'expenses' })
+  })
+})
+
+describe('Expenses list: archive', () => {
+  it('hides archived expenses from the list but the month total and the footer still count them', async () => {
+    ROWS = [...BASE_ROWS, { ...exp('e4', '2026-09-05', 1000, 'c-water', 'Old bill'), archived: true }]
+    setup()
+    expect(await screen.findByTestId('expenses-month-total')).toHaveTextContent('PKR 382,650 · 4 expenses')
+    expect(screen.getByTestId('expenses-archived-note')).toHaveTextContent('1 in the Archive, not listed')
+    const table = screen.getByRole('table', { name: 'Expenses' })
+    expect(within(table).queryByText('Old bill')).not.toBeInTheDocument()
+    // the footer reads the same as the headline
+    expect(within(table).getAllByText('382,650').length).toBeGreaterThan(0)
   })
 })

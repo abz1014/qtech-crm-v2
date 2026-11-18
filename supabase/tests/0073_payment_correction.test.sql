@@ -51,7 +51,8 @@ select ok(has_function_privilege('authenticated', 'public.void_payment(uuid, tex
 -- Every reader of payments_in leaves voided rows out. A view or function in public whose text names payments_in must also
 -- name voided_at, apart from these four (see the 0073 header): close_month and close_months_through only find the earliest
 -- month with a money row (a voided row still dates its month), enforce_month_lock locks voided rows like any other, and
--- take_month_snapshot reads payments through v_payment_net (it joins payments_in only for the reference).
+-- take_month_snapshot reads payments through v_payment_net (it joins payments_in only for the reference). archive_unhide and is_archived:
+-- archive date/existence check only; no money summed.
 select is((select coalesce(array_agg(x.name order by x.name), '{}') from (
              select p.proname::text as name from pg_proc p
              where p.pronamespace = 'public'::regnamespace
@@ -61,7 +62,7 @@ select is((select coalesce(array_agg(x.name order by x.name), '{}') from (
              where v.schemaname = 'public'
                and v.definition ~ '\mpayments_in\M' and v.definition !~ '\mvoided_at\M'
            ) x),
-  array['close_month', 'close_months_through', 'enforce_month_lock', 'record_history', 'take_month_snapshot'],   -- (0123: payments_in_invoice_guard copies a correction's tie and names voided_at, so it is not listed)
+  array['archive_unhide', 'close_month', 'close_months_through', 'enforce_month_lock', 'is_archived', 'record_history', 'take_month_snapshot'],   -- (0123: payments_in_invoice_guard copies a correction's tie and names voided_at, so it is not listed)
   'every other view and function that reads payments_in leaves voided payments out');
 
 -- ================================================================== fixtures (table owner, admin claims)

@@ -28,6 +28,11 @@ export interface ReceivableRow {
   reminderCount: number
   /** Imported from the old CRM (orders.legacy_source): its invoices are not linked to the order yet (owner decision 1b). */
   imported: boolean
+  /**
+   * The order is in the Archive (v_order_state.archived; migration 0141). The To collect LIST drops it; every total keeps counting it,
+   * and a payment picker keeps offering it with the "In Archive" label. Absent = not archived.
+   */
+  archived?: boolean
 }
 
 export const isInvoiced = (r: ReceivableRow): boolean => r.invoiceNumbers.length > 0

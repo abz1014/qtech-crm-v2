@@ -232,7 +232,7 @@ describe('Today screen', () => {
 
   it('an admin payment row shows one visible button; Record payment sits first in the More actions menu and goes where it always did', async () => {
     const row = { order_id: 'o1', order_number: 31, company_id: 'c1', owner_id: 'me', balance: 1000, settled: 0, due_on: addDays(businessToday(), -12), is_overdue: true, last_reminded_on: null, reminder_count: 0, company_name: 'Karachi Glassworks', invoice_numbers: [] }
-    fake = installFakeDb((c: FakeCall): FakeResult => (c.target === 'rpc:receivables_list' ? { data: [row] } : { data: [] }))
+    fake = installFakeDb((c: FakeCall): FakeResult => (c.target === 'rpc:receivables_list' ? { data: [row] } : c.target === 'v_order_state' ? { data: [{ order_id: 'o1' }] } : { data: [] }))
     const Probe = () => <p data-testid="loc">{useLocation().pathname + useLocation().search}</p>
     const session: SessionState = { status: 'signed-in', user: { id: 'me', name: 'Ayesha Rana', role: 'admin' } }
     render(

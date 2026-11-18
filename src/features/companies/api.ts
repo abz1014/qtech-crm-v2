@@ -1,4 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
+import { hideArchived } from '@/lib/archive'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { toBusinessDate } from '@/lib/dates'
 import { PlainError } from '@/lib/errors/plainError'
@@ -368,7 +369,7 @@ export interface SupplierEnquiry {
 /** The supplier's sent enquiries of the last 24 months (v_supplier_activity), newest first, with the RFQ number. */
 export async function getSupplierActivity(companyId: string): Promise<SupplierEnquiry[]> {
   const db = requireSupabase()
-  const rows = unwrap(
+  let rows = unwrap(
     await db
       .from('v_supplier_activity')
       .select('inquiry_id, rfq_id, sent_on, replied, quoted, no_offer, reply_days, is_legacy')
@@ -376,6 +377,13 @@ export async function getSupplierActivity(companyId: string): Promise<SupplierEn
       .order('sent_on', { ascending: false })
       .limit(50),
   )
+  // Archive: only enquiries the archive leaves visible (v_inquiry_state, readable by every role).
+  const liveRows = rows.length
+    ? new Set(
+        unwrap(await hideArchived(db.from('v_inquiry_state').select('inquiry_id').in('inquiry_id', rows.map(r => r.inquiry_id).filter((x): x is string => !!x)))).map(r => r.inquiry_id),
+      )
+    : new Set<string | null>()
+  rows = rows.filter(r => liveRows.has(r.inquiry_id))
   const rfqIds = [...new Set(rows.map(r => r.rfq_id).filter((x): x is string => !!x))]
   const numbers = rfqIds.length ? unwrap(await db.from('rfqs').select('id, number').in('id', rfqIds)) : []
   const numberBy = new Map(numbers.map(n => [n.id, n.number]))
@@ -473,6 +481,13 @@ export async function getSupplierRecord(companyId: string, prices = true): Promi
   }
   const legRows = unwrap(legRes) as unknown as LegRow[]
   const rfqIds = [...new Set(inquiries.map(i => i.rfqId))]
+  // Archive: which of these fetched enquiries and legs the lists may show. The raw rows stay complete for the counts and the span.
+  const [liveInqRows, liveLegRows] = await Promise.all([
+    inquiries.length ? hideArchived(db.from('supplier_inquiries').select('id').eq('supplier_id', companyId).in('id', inquiries.map(i => i.id))) : { data: [], error: null },
+    legRows.length ? hideArchived(db.from('supplier_orders').select('id').eq('supplier_id', companyId).in('id', legRows.map(l => l.id))) : { data: [], error: null },
+  ])
+  const liveInquiryIds = (unwrap(liveInqRows as never) as { id: string }[]).map(r => r.id)
+  const liveLegIds = (unwrap(liveLegRows as never) as { id: string }[]).map(r => r.id)
 
   const [lineRows, itemRows, rfqRows, poRows] = await Promise.all([
     inBatches(
@@ -568,7 +583,7 @@ export async function getSupplierRecord(companyId: string, prices = true): Promi
       po: latestPo.get(l.id) ?? null,
     }
   })
-  return { supplierId: companyId, inquiries, lines, items, rfqs, orderItems, legs }
+  return { supplierId: companyId, inquiries, lines, items, rfqs, orderItems, legs, liveInquiryIds, liveLegIds }
 }
 
 export interface HistoryRfq {
@@ -602,6 +617,8 @@ export interface HistoryOrder {
 export interface CompanyHistory {
   rfqs: HistoryRfq[]
   orders: HistoryOrder[]
+  /** How many more RFQs and orders sit in the Archive (older or imported, hidden from the two lists). 0 while archiving is off. */
+  archived: { rfqs: number; orders: number }
 }
 
 /**
@@ -611,25 +628,30 @@ export interface CompanyHistory {
  */
 export async function getCompanyHistory(companyId: string, withPayment = false): Promise<CompanyHistory> {
   const db = requireSupabase()
-  const [rfqs, rfqState, orders, orderState] = await Promise.all([
-    db
-      .from('rfqs')
-      .select('id, number, site_id, received_on, due_on, customer_ref, close_reason')
-      .eq('company_id', companyId)
-      .order('received_on', { ascending: false }),
+  // The two lists drop archived rows (migration 0141). The company itself is never hidden, and its stats stay unfiltered.
+  // An engineer may not read `archived` on the orders table (42501), so the orders are told apart through v_order_state (all roles);
+  // the RFQs table has no such limit. The archived counts come from the same sources, head-only.
+  const [rfqs, rfqState, orders, orderState, archivedRfqs, archivedOrders] = await Promise.all([
+    hideArchived(db.from('rfqs').select('id, number, site_id, received_on, due_on, customer_ref, close_reason').eq('company_id', companyId)).order('received_on', {
+      ascending: false,
+    }),
     db.from('v_rfq_state').select('rfq_id, outcome').eq('company_id', companyId),
     db
       .from('orders')
       .select('id, number, site_id, ordered_on, rfq_id')
       .eq('company_id', companyId)
       .order('ordered_on', { ascending: false, nullsFirst: false }),
-    db.from('v_order_state').select('order_id, lifecycle, goods_state, invoicing_state').eq('company_id', companyId),
+    hideArchived(db.from('v_order_state').select('order_id, lifecycle, goods_state, invoicing_state').eq('company_id', companyId)),
+    db.from('rfqs').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('archived', true),
+    db.from('v_order_state').select('order_id', { count: 'exact', head: true }).eq('company_id', companyId).eq('archived', true),
   ])
   const outcomeBy = new Map(unwrap(rfqState).map(s => [s.rfq_id, s.outcome]))
   const stateBy = new Map(unwrap(orderState).map(s => [s.order_id, s]))
-  const orderRows = unwrap(orders)
+  const allOrderRows = unwrap(orders)
+  // an RFQ keeps the number of the order it became, archived or not
+  const orderNumberByRfq = new Map(allOrderRows.filter(o => o.rfq_id).map(o => [o.rfq_id as string, o.number]))
+  const orderRows = allOrderRows.filter(o => stateBy.has(o.id))
   const rfqRows = unwrap(rfqs)
-  const orderNumberByRfq = new Map(orderRows.filter(o => o.rfq_id).map(o => [o.rfq_id as string, o.number]))
 
   // "What": the first item of each RFQ and of each order (by position), with how many more there are.
   const [rfqItems, orderItems, receivables] = await Promise.all([
@@ -667,6 +689,7 @@ export async function getCompanyHistory(companyId: string, withPayment = false):
     for (const r of receivables.data ?? []) if (r.is_overdue && r.order_id) overdue.add(r.order_id)
   }
   return {
+    archived: { rfqs: archivedRfqs.count ?? 0, orders: archivedOrders.count ?? 0 },
     rfqs: rfqRows.map(r => ({
       id: r.id,
       number: r.number,

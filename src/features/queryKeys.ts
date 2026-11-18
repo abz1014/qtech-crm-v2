@@ -178,6 +178,11 @@ function settings() {
     activeCategories: () => [...all, 'categories', 'active'] as const,
     /** C4: the product categories (families) with their curated flag and tagged suppliers. */
     productCategories: () => [...all, 'product-categories'] as const,
+    /** 0141: the archive setting, the preview for one cutoff and one page of the browse list. */
+    archiveSetting: () => [...all, 'archive', 'setting'] as const,
+    archivePreview: (cutoff: string) => [...all, 'archive', 'preview', cutoff] as const,
+    archiveList: (entity: string, companyId: string, search: string, limit: number, offset: number) =>
+      [...all, 'archive', 'list', entity, companyId, search, limit, offset] as const,
   }
 }
 
@@ -329,6 +334,12 @@ function history() {
   return { all, record: (table: string, id: string) => [...all, table, id] as const }
 }
 
+/** Whether one record is in the Archive (the detail-page banner). */
+function archive() {
+  const all = root('archive')
+  return { all, state: (entity: string, id: string) => [...all, 'state', entity, id] as const }
+}
+
 /** Jobs (redesign phase 5): the read-only view v_jobs and what one job page reads. Any write in the app makes these stale (invalidateAfter). */
 function jobs() {
   const all = root('jobs')
@@ -368,6 +379,7 @@ export const qk = {
   reports: reports(),
   onboarding: onboarding(),
   history: history(),
+  archive: archive(),
 }
 
 export type QueryKeyRoot = keyof typeof qk

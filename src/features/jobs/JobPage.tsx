@@ -30,6 +30,7 @@ import { JobKeyFacts } from '@/features/jobs/JobKeyFacts'
 import { jobKeyFacts } from '@/features/jobs/lib/keyFacts'
 import { businessToday } from '@/lib/dates'
 import { WonDialogHost } from '@/features/jobs/WonDialogHost'
+import { ArchiveBanner } from '@/features/archive/ArchiveBanner'
 
 /*
  * The Job page (redesign phase 5, P5-C; clarity redesign L1): /jobs/:key, one page for a customer request from enquiry to payment.
@@ -235,6 +236,12 @@ function JobView({ facts }: { facts: JobFacts }) {
   return (
     <Shell bar>
       {role === 'engineer' || !button ? <NoPrimary /> : null}
+      {/* a job is archived when its RFQ and its live order both are (the v_jobs rule); only 'rfq' and 'order' are asked, safe for an engineer */}
+      {job.rfqId ? (
+        <ArchiveBanner entity="rfq" id={job.rfqId} also={job.orderId ? { entity: 'order', id: job.orderId } : null} />
+      ) : (
+        <ArchiveBanner entity="order" id={job.orderId} />
+      )}
       <DetailHeader
         name={job.companyName}
         nameHref={`/companies/${job.companyId}`}

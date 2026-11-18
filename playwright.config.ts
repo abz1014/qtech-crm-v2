@@ -291,6 +291,14 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
     },
     {
+      // Archive old data (0141): the switch is ONE global setting, so the specs run in order and each switches it off again.
+      name: 'archive',
+      testMatch: /archive\/.*\.spec\.ts/,
+      fullyParallel: false,
+      retries: process.env.CI ? 1 : 0,
+      use: { ...devices['Desktop Chrome'], baseURL: `http://127.0.0.1:${AUTH_PORT}`, viewport: { width: 1440, height: 900 }, screenshot: 'only-on-failure' },
+    },
+    {
       name: 'expenses',
       testMatch: /expenses\/.*\.spec\.ts/,
       fullyParallel: false,

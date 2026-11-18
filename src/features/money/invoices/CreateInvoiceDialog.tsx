@@ -17,6 +17,7 @@ import { SegmentedControl } from '@/ui/SegmentedControl'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { Combobox } from '@/ui/form/Combobox'
+import { withArchiveTag } from '@/features/money/lib/archiveLabel'
 import { DateInput } from '@/ui/form/DateInput'
 import { Form, FormField } from '@/ui/form/Form'
 import { NumberInput } from '@/ui/form/NumberInput'
@@ -89,7 +90,7 @@ function OrderPicker({ onPick, onCancel }: { onPick: (id: string) => void; onCan
         <Combobox
           id={orderField}
           data-autofocus
-          options={(orders.data ?? []).map(o => ({ value: o.id, label: o.ref, meta: o.company }))}
+          options={(orders.data ?? []).map(o => ({ value: o.id, label: o.ref, meta: withArchiveTag(o.company, o.archived) }))}
           value={null}
           loading={orders.isPending}
           placeholder="ORD-0038"
