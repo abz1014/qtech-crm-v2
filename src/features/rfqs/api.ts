@@ -118,21 +118,47 @@ export async function getSupplierMemory(
   const distinct = new Map<string, MemoryQuery>()
   for (const it of items) if (!distinct.has(sig(it))) distinct.set(sig(it), it)
   const bySig = new Map<string, SupplierItemMemoryRow[]>()
-  await Promise.all(
-    [...distinct.entries()].map(async ([key, it]) => {
-      // The generated argument types do not admit NULL for the optional ids; the function does.
-      const args = {
-        p_supplier_ids: [...supplierIds],
-        p_brand_id: it.brandId,
-        p_family_id: it.familyId,
-        p_description: it.description,
-        p_exclude_rfq_id: excludeRfqId ?? null,
-      } as unknown as { p_supplier_ids: string[]; p_brand_id: string; p_family_id: string; p_description: string }
-      const rows = unwrap(await db.rpc('supplier_item_memory', args)) ?? []
-      bySig.set(key, rows as unknown as SupplierItemMemoryRow[])
-    }),
-  )
+  await Promise.all([...distinct.entries()].map(async ([key, it]) => bySig.set(key, await getItemSupplierMemory(it, supplierIds, excludeRfqId, db))))
   return Object.fromEntries(items.map(it => [it.key, bySig.get(sig(it)) ?? []]))
+}
+
+/**
+ * At most this many supplier_item_memory() reads in flight from this tab. Each is a heavy read; 31 at once on a big RFQ held
+ * the item saves behind them for 30 to 60 seconds (owner, 19 Nov 2026). The rest wait their turn here.
+ */
+export const MEMORY_IN_FLIGHT = 4
+let memoryRunning = 0
+const memoryWaiting: (() => void)[] = []
+
+async function inMemorySlot<T>(run: () => Promise<T>): Promise<T> {
+  if (memoryRunning >= MEMORY_IN_FLIGHT) await new Promise<void>(resolve => memoryWaiting.push(resolve))
+  memoryRunning++
+  try {
+    return await run()
+  } finally {
+    memoryRunning--
+    memoryWaiting.shift()?.()
+  }
+}
+
+/** supplier_item_memory() for one item against the supplier list: the per-item read behind the RFQ page's memory, so an edit re-reads one item. */
+export async function getItemSupplierMemory(
+  it: Omit<MemoryQuery, 'key'>,
+  supplierIds: readonly string[],
+  excludeRfqId?: string,
+  db = requireSupabase(),
+): Promise<SupplierItemMemoryRow[]> {
+  if (supplierIds.length === 0) return []
+  // The generated argument types do not admit NULL for the optional ids; the function does.
+  const args = {
+    p_supplier_ids: [...supplierIds],
+    p_brand_id: it.brandId,
+    p_family_id: it.familyId,
+    p_description: it.description,
+    p_exclude_rfq_id: excludeRfqId ?? null,
+  } as unknown as { p_supplier_ids: string[]; p_brand_id: string; p_family_id: string; p_description: string }
+  const rows = await inMemorySlot(async () => unwrap(await db.rpc('supplier_item_memory', args)) ?? [])
+  return rows as unknown as SupplierItemMemoryRow[]
 }
 
 /**
