@@ -49,6 +49,43 @@ describe('edit an item', () => {
   })
 })
 
+/** What a statement wrote: the argument of its insert or update. */
+const bodyOf = (calls: readonly FakeCall[], target: string, verb: 'insert' | 'update') =>
+  calls.find(c => c.target === target && c.verb === verb)?.ops.find(([op]) => op === verb)?.[1][0] as Record<string, unknown> | undefined
+
+describe('the brand of an item (owner, 19 Nov 2026)', () => {
+  const brandsTable = [{ id: 'b-abb', name: 'ABB', kind: 'brand' }, { id: 'f-plc', name: 'PLC', kind: 'family' }]
+
+  it('picks a brand on file and saves it with the item', async () => {
+    const fake = setup(close => <EditItemDialog rfq={rfq} item={item} onClose={close} />, 'admin', c => (c.target === 'brands' ? { data: brandsTable } : { data: [{ id: 'i-1' }] }))
+    const box = screen.getByRole('combobox', { name: /Brand/ })
+    await userEvent.type(box, 'AB')
+    await userEvent.click(await screen.findByRole('option', { name: /^ABB/ }))
+    expect(screen.queryByRole('option', { name: /PLC/ })).toBeNull() // a product family is not a brand
+    await userEvent.click(screen.getByRole('button', { name: 'Save item' }))
+    await waitFor(() => expect(bodyOf(fake.calls, 'rfq_items', 'update')).toMatchObject({ brand_id: 'b-abb' }))
+  })
+
+  it('a brand not on file is added on Save, then set on the item', async () => {
+    const fake = setup(close => <EditItemDialog rfq={rfq} item={item} onClose={close} />, 'admin', c =>
+      c.target === 'brands' ? (c.verb === 'insert' ? { data: { id: 'b-new', name: 'Weintek' } } : { data: brandsTable }) : { data: [{ id: 'i-1' }] },
+    )
+    await userEvent.type(screen.getByRole('combobox', { name: /Brand/ }), 'Weintek')
+    await userEvent.click(await screen.findByRole('option', { name: /Add “Weintek” as a new brand/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save item' }))
+    await waitFor(() => expect(bodyOf(fake.calls, 'rfq_items', 'update')).toMatchObject({ brand_id: 'b-new' }))
+    expect(bodyOf(fake.calls, 'brands', 'insert')).toMatchObject({ name: 'Weintek', kind: 'brand' })
+  })
+
+  it('a change to the text alone leaves the brand untouched', async () => {
+    const fake = setup(close => <EditItemDialog rfq={rfq} item={{ ...item, brandId: 'b-abb', brandName: 'ABB' }} onClose={close} />, 'admin', c => (c.target === 'brands' ? { data: brandsTable } : { data: [{ id: 'i-1' }] }))
+    await userEvent.type(screen.getByLabelText(/Description/), ' x')
+    await userEvent.click(screen.getByRole('button', { name: 'Save item' }))
+    await waitFor(() => expect(fake.calls.some(c => c.target === 'rfq_items' && c.verb === 'update')).toBe(true))
+    expect(bodyOf(fake.calls, 'rfq_items', 'update')).not.toHaveProperty('brand_id')
+  })
+})
+
 describe('remove an item', () => {
   it('shows the database sentence when an order line is based on the item, and keeps the item', async () => {
     setup(
