@@ -84,6 +84,31 @@ describe('the brand of an item (owner, 19 Nov 2026)', () => {
     await waitFor(() => expect(fake.calls.some(c => c.target === 'rfq_items' && c.verb === 'update')).toBe(true))
     expect(bodyOf(fake.calls, 'rfq_items', 'update')).not.toHaveProperty('brand_id')
   })
+  it('a retry after a failed save reuses the brand it added, never adding it twice', async () => {
+    let updates = 0
+    const fake = setup(close => <EditItemDialog rfq={rfq} item={item} onClose={close} />, 'admin', c => {
+      if (c.target === 'brands') return c.verb === 'insert' ? { data: { id: 'b-new', name: 'Weintek' } } : { data: brandsTable }
+      if (c.target === 'rfq_items' && c.verb === 'update' && ++updates === 1) return { error: { code: '57014', message: 'canceling statement due to statement timeout' } }
+      return { data: [{ id: 'i-1' }] }
+    })
+    await userEvent.type(screen.getByRole('combobox', { name: /Brand/ }), 'Weintek')
+    await userEvent.click(await screen.findByRole('option', { name: /Add “Weintek” as a new brand/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Save item' }))
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect((screen.getByRole('combobox', { name: /Brand/ }) as HTMLInputElement).value).toBe('Weintek')
+    await userEvent.click(screen.getByRole('button', { name: 'Save item' }))
+    await waitFor(() => expect(updates).toBe(2))
+    expect(fake.calls.filter(c => c.target === 'brands' && c.verb === 'insert')).toHaveLength(1)
+    const last = fake.calls.filter(c => c.target === 'rfq_items' && c.verb === 'update').at(-1)
+    expect(last?.ops.find(([op]) => op === 'update')?.[1][0]).toMatchObject({ brand_id: 'b-new' })
+  })
+
+  it("shows the item's brand by name when the brand list is older than the item", async () => {
+    const withBrand: RfqItemRow = { ...item, brandId: 'b-br', brandName: 'B&R' }
+    setup(close => <EditItemDialog rfq={rfq} item={withBrand} onClose={close} />, 'admin', c => (c.target === 'brands' ? { data: brandsTable } : { data: [{ id: 'i-1' }] }))
+    await waitFor(() => expect((screen.getByRole('combobox', { name: /Brand/ }) as HTMLInputElement).value).toBe('B&R'))
+    expect((screen.getByRole('button', { name: 'Save item' }) as HTMLButtonElement).disabled).toBe(true)
+  })
 })
 
 describe('remove an item', () => {

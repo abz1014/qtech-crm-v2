@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useRef } from 'react'
+import { useMutation, useQueries, useQuery, useQueryClient, type QueryClient, type UseQueryResult } from '@tanstack/react-query'
 import { qk } from '@/features/queryKeys'
 import { nullOnInvalidId } from '@/lib/uuid'
 import { invalidateAfter } from '@/features/invalidation'
@@ -6,6 +7,7 @@ import * as api from '@/features/rfqs/api'
 import { searchCompanies } from '@/features/companies/api'
 import { useSeesPrices, useSession } from '@/app/session'
 import { attachmentHasPrices } from '@/features/rfqs/lib/attachmentPrices'
+import type { SupplierItemMemoryRow } from '@/features/rfqs/lib/supplierSuggestion'
 
 /*
  * RFQ hooks for intake (R05). Same shape as companies (src/features/README.md): one hook per read, one per write,
@@ -64,19 +66,55 @@ export function useSupplierCategoryData(familyIds: readonly string[], supplierId
   })
 }
 
+export interface SupplierMemoryResult {
+  /** supplier_item_memory() rows by item key. A key is missing while that item's read is in flight; undefined until any read is in. */
+  data: Record<string, SupplierItemMemoryRow[]> | undefined
+  isLoading: boolean
+  isError: boolean
+  refetch: () => Promise<unknown>
+}
+
 /**
- * What each candidate remembers about each item. `signature` changes when an item's description, brand or family does.
+ * What each candidate remembers about each item: one read per distinct item (description, brand, family), each cached on its own,
+ * so editing one item re-reads that item only, not all 31 (owner, 19 Nov 2026: saves waited 30 to 60 seconds behind them).
  * `excludeRfqId` (the RFQ detail page) leaves the open RFQ out of its own memory.
  */
-export function useSupplierMemory(items: readonly api.MemoryQuery[], supplierIds: readonly string[], enabled: boolean, excludeRfqId?: string) {
+export function useSupplierMemory(items: readonly api.MemoryQuery[], supplierIds: readonly string[], enabled: boolean, excludeRfqId?: string): SupplierMemoryResult {
   // The memory carries the last quoted, PO and ordered prices: never asked for an engineer (owner decision 2026-10-22).
   const prices = useSeesPrices()
-  const signature = JSON.stringify([items.map(i => [i.key, i.description, i.brandId, i.familyId]), excludeRfqId ? supplierIds.join(',') : supplierIds.length, excludeRfqId ?? null])
-  return useQuery({
-    queryKey: excludeRfqId ? qk.memory.rfq(excludeRfqId, signature) : qk.intake.memory(signature),
-    queryFn: () => api.getSupplierMemory(items, supplierIds, excludeRfqId),
-    enabled: enabled && items.length > 0 && prices,
-    staleTime: 60_000,
+  const suppliers = excludeRfqId ? supplierIds.join(',') : supplierIds.length
+  const sig = (i: Omit<api.MemoryQuery, 'key'>) => JSON.stringify([i.description.trim(), i.brandId, i.familyId, suppliers, excludeRfqId ?? null])
+  const distinct = new Map<string, api.MemoryQuery>()
+  for (const it of items) if (!distinct.has(sig(it))) distinct.set(sig(it), it)
+  const on = enabled && items.length > 0 && prices
+  const sigs = [...distinct.keys()]
+  // The merged record keeps its identity until a read lands or the items change, so the screens' useMemo on it holds.
+  const merged = useRef<{ stamp: string; data: SupplierMemoryResult['data'] }>({ stamp: '', data: undefined })
+  const combine = (results: UseQueryResult<SupplierItemMemoryRow[]>[]): SupplierMemoryResult => {
+    const stamp = JSON.stringify([items.map(it => [it.key, sig(it)]), results.map(r => r.dataUpdatedAt)])
+    if (merged.current.stamp !== stamp) {
+      const bySig = new Map<string, SupplierItemMemoryRow[]>()
+      results.forEach((r, n) => {
+        if (r.data) bySig.set(sigs[n], r.data)
+      })
+      const loaded = items.filter(it => bySig.has(sig(it)))
+      merged.current = { stamp, data: bySig.size === 0 ? undefined : Object.fromEntries(loaded.map(it => [it.key, bySig.get(sig(it)) ?? []])) }
+    }
+    return {
+      data: merged.current.data,
+      isLoading: results.some(r => r.isLoading),
+      isError: results.some(r => r.isError),
+      refetch: () => Promise.all(results.map(r => r.refetch())),
+    }
+  }
+  return useQueries({
+    queries: [...distinct.entries()].map(([s, it]) => ({
+      queryKey: excludeRfqId ? qk.memory.rfq(excludeRfqId, s) : qk.intake.memory(s),
+      queryFn: () => api.getItemSupplierMemory(it, supplierIds, excludeRfqId),
+      enabled: on,
+      staleTime: 60_000,
+    })),
+    combine,
   })
 }
 

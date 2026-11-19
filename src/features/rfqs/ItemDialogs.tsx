@@ -37,15 +37,21 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
   // The brand (owner, 19 Nov 2026: it could only be picked when the RFQ was entered). A name typed that is not on file is added on Save.
   const [brandId, setBrandId] = useState<string | null>(item.brandId)
   const [newBrand, setNewBrand] = useState<string | null>(null)
+  // A brand this dialog already added: when Save fails after the brand was made, the next try reuses it instead of adding it twice.
+  const [made, setMade] = useState<{ id: string; name: string } | null>(null)
   const brands = useBrands()
   const client = useQueryClient()
-  const brandOptions = useMemo(
-    () => [
-      ...(brands.data ?? []).filter(b => b.kind !== 'family').map(b => ({ value: b.id, label: b.name })),
-      ...(newBrand ? [{ value: NEW_BRAND, label: newBrand, meta: 'new' }] : []),
-    ],
-    [brands.data, newBrand],
-  )
+  const brandOptions = useMemo(() => {
+    const onFile = (brands.data ?? []).filter(b => b.kind !== 'family').map(b => ({ value: b.id, label: b.name }))
+    // The brand list can be older than the item (a brand added since it was read): the item's own brand, and one added here,
+    // still show by name instead of an empty box.
+    const known = new Set(onFile.map(o => o.value))
+    const extra = [
+      ...(item.brandId && item.brandName && !known.has(item.brandId) ? [{ value: item.brandId, label: item.brandName }] : []),
+      ...(made && !known.has(made.id) && made.id !== item.brandId ? [{ value: made.id, label: made.name }] : []),
+    ]
+    return [...onFile, ...extra, ...(newBrand ? [{ value: NEW_BRAND, label: newBrand, meta: 'new' }] : [])]
+  }, [brands.data, newBrand, made, item.brandId, item.brandName])
   const [error, setError] = useState<string | null>(null)
   const locked = !access.can
   const brandChanged = newBrand !== null || brandId !== item.brandId
@@ -66,8 +72,12 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
     try {
       let brand: string | null | undefined = brandChanged ? brandId : undefined
       if (newBrand !== null) {
-        brand = (await createBrand({ id: crypto.randomUUID(), name: newBrand })).id
-        await invalidateAfter(client, 'brand.create', {})
+        const created = await createBrand({ id: crypto.randomUUID(), name: newBrand })
+        brand = created.id
+        setMade({ id: created.id, name: newBrand })
+        setBrandId(created.id)
+        setNewBrand(null)
+        void invalidateAfter(client, 'brand.create', {})
       }
       await save.mutateAsync({ id: item.id, patch: { description, qty, unit: unit || null, ...(brand !== undefined ? { brandId: brand } : {}) } })
       toast({ title: 'Item updated', body: `${rfqRef(rfq.number)} · item ${item.number}`, tone: 'success' })
@@ -145,7 +155,9 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
               }}
               onCreate={text => {
                 const name = text.trim()
-                const same = (brands.data ?? []).find(b => b.kind !== 'family' && b.name.trim().toLowerCase() === name.toLowerCase())
+                const same =
+                  (brands.data ?? []).find(b => b.kind !== 'family' && b.name.trim().toLowerCase() === name.toLowerCase()) ??
+                  (made && made.name.toLowerCase() === name.toLowerCase() ? made : undefined)
                 if (same) {
                   setNewBrand(null)
                   setBrandId(same.id)

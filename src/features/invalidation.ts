@@ -212,7 +212,9 @@ export const invalidates: { [N in WriteName]: (v: WriteVars[N]) => Keys } = {
   'fx.set': () => [qk.fx.all, qk.rfqs.all, qk.orders.rankedAll()],
   // A new item changes the page, the board's counts and the coverage.
   'item.add': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId)],
-  'item.edit': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId), qk.memory.all],
+  // Not qk.memory: the edited item's memory is read under a new key (its description, brand or family changed), and the other
+  // items' memory leaves this RFQ out, so it cannot change. Marking it all stale re-read every item on each save (19 Nov 2026).
+  'item.edit': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.orders.rankedFor(v.rfqId)],
   'item.remove': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.rfqs.statsAll(), qk.orders.rankedFor(v.rfqId), qk.memory.all],
   // A new customer, site or contact moves the RFQ between customers: the customer pages, Today and the orders that read the RFQ.
   'rfq.edit': v => [qk.rfqs.detail(v.rfqId), qk.rfqs.lists(), qk.rfqs.all, qk.companies.all, qk.today.all, qk.orders.all],
