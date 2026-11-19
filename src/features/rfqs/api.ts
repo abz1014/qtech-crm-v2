@@ -942,12 +942,14 @@ export interface RfqItemPatch {
   description: string
   qty: number
   unit: string | null
+  /** The item's brand (brands.id, kind brand); left out: unchanged, null: no brand. */
+  brandId?: string | null
 }
 
 export async function updateRfqItem(id: string, p: RfqItemPatch): Promise<void> {
   const { data, error } = await requireSupabase()
     .from('rfq_items')
-    .update({ description: p.description.trim(), qty: p.qty, unit: p.unit?.trim() || null })
+    .update({ description: p.description.trim(), qty: p.qty, unit: p.unit?.trim() || null, ...(p.brandId !== undefined ? { brand_id: p.brandId } : {}) })
     .eq('id', id)
     .select('id')
   if (error) throw error

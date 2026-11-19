@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Pencil } from 'lucide-react'
 import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
 import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { Dialog, DialogContent } from '@/ui/Dialog'
+import { Combobox } from '@/ui/form/Combobox'
 import { Field } from '@/ui/form/Field'
 import { NumberInput } from '@/ui/form/NumberInput'
 import { TextField } from '@/ui/form/TextField'
@@ -12,11 +13,18 @@ import { useToast } from '@/ui/useToast'
 import type { RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useRemoveRfqItem, useRestoreRfqItem, useRfqInquiries, useUpdateRfqItem } from '@/features/rfqs/hooks'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
+import { createBrand } from '@/features/companies/api'
+import { useBrands } from '@/features/companies/hooks'
+import { invalidateAfter } from '@/features/invalidation'
+import { useQueryClient } from '@tanstack/react-query'
 
 /* The edit and remove dialogs of an RFQ item (see ItemEdit.tsx for the rules): their own module, so the RFQ page does not carry them. */
 function useItemAccess(rfq: RfqHeader) {
   return useEntryAccess({ createdBy: rfq.createdBy ?? null, ownerId: rfq.owner?.id ?? null })
 }
+
+/** The combobox value of a brand typed in this dialog and not yet on file (created on Save). */
+const NEW_BRAND = '__new_brand__'
 
 export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: RfqItemRow; onClose: () => void }) {
   const { toast } = useToast()
@@ -26,9 +34,22 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
   const [description, setDescription] = useState(item.description)
   const [qty, setQty] = useState<number | null>(item.qty)
   const [unit, setUnit] = useState(item.unit ?? '')
+  // The brand (owner, 19 Nov 2026: it could only be picked when the RFQ was entered). A name typed that is not on file is added on Save.
+  const [brandId, setBrandId] = useState<string | null>(item.brandId)
+  const [newBrand, setNewBrand] = useState<string | null>(null)
+  const brands = useBrands()
+  const client = useQueryClient()
+  const brandOptions = useMemo(
+    () => [
+      ...(brands.data ?? []).filter(b => b.kind !== 'family').map(b => ({ value: b.id, label: b.name })),
+      ...(newBrand ? [{ value: NEW_BRAND, label: newBrand, meta: 'new' }] : []),
+    ],
+    [brands.data, newBrand],
+  )
   const [error, setError] = useState<string | null>(null)
   const locked = !access.can
-  const dirty = description.trim() !== item.description || qty !== item.qty || unit.trim() !== (item.unit ?? '')
+  const brandChanged = newBrand !== null || brandId !== item.brandId
+  const dirty = description.trim() !== item.description || qty !== item.qty || unit.trim() !== (item.unit ?? '') || brandChanged
 
   const submit = async () => {
     if (locked || sending.current) return
@@ -43,7 +64,12 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
     sending.current = true
     setError(null)
     try {
-      await save.mutateAsync({ id: item.id, patch: { description, qty, unit: unit || null } })
+      let brand: string | null | undefined = brandChanged ? brandId : undefined
+      if (newBrand !== null) {
+        brand = (await createBrand({ id: crypto.randomUUID(), name: newBrand })).id
+        await invalidateAfter(client, 'brand.create', {})
+      }
+      await save.mutateAsync({ id: item.id, patch: { description, qty, unit: unit || null, ...(brand !== undefined ? { brandId: brand } : {}) } })
       toast({ title: 'Item updated', body: `${rfqRef(rfq.number)} · item ${item.number}`, tone: 'success' })
       onClose()
     } catch (err) {
@@ -104,6 +130,32 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
               <TextField value={unit} disabled={locked} onChange={e => setUnit(e.target.value)} placeholder="pcs" autoComplete="off" />
             </Field>
           </div>
+          <Field label="Brand" requirement="optional">
+            <Combobox
+              options={brandOptions}
+              value={newBrand !== null ? NEW_BRAND : brandId}
+              loading={brands.isPending}
+              disabled={locked}
+              placeholder="Type a brand, for example Siemens"
+              autoComplete="off"
+              onChange={id => {
+                setNewBrand(null)
+                setBrandId(id === NEW_BRAND ? null : id)
+                setError(null)
+              }}
+              onCreate={text => {
+                const name = text.trim()
+                const same = (brands.data ?? []).find(b => b.kind !== 'family' && b.name.trim().toLowerCase() === name.toLowerCase())
+                if (same) {
+                  setNewBrand(null)
+                  setBrandId(same.id)
+                } else if (name) {
+                  setNewBrand(name)
+                }
+              }}
+              createLabel={t => `Add “${t}” as a new brand`}
+            />
+          </Field>
           {error ? (
             <p role="alert" className="text-base font-medium text-tone-danger-fg">
               {error}
