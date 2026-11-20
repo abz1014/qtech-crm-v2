@@ -776,7 +776,7 @@ insert into probes values
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'table'),
           (select array_agg(tablename::text order by tablename) from pg_tables where schemaname = 'public'),
   'coverage: the matrix lists every table in schema public (39)');
-select is((select count(distinct obj)::int from matrix where kind = 'table'), 49, 'coverage: 49 tables (0141: archive_settings, archive_unhidden)');
+select is((select count(distinct obj)::int from matrix where kind = 'table'), 50, 'coverage: 50 tables (0145: inquiry_item_waits, 0141: archive_settings, archive_unhidden)');
 select is((select array_agg(distinct obj order by obj) from matrix where kind = 'view'),
           (select array_agg(viewname::text order by viewname) from pg_views where schemaname = 'public'),
   'coverage: the matrix lists every view in schema public');

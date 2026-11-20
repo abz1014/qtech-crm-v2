@@ -55,7 +55,7 @@ begin
 end;
 $$;
 
-revoke all on function public.end_item_wait() from public, anon;
+revoke all on function public.end_item_wait() from public, anon, authenticated;
 
 create trigger supplier_quote_lines_end_wait after insert or update of unit_price on public.supplier_quote_lines
   for each row execute function public.end_item_wait();
