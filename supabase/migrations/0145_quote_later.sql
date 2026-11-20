@@ -27,17 +27,22 @@ create index inquiry_item_waits_item_idx on public.inquiry_item_waits (rfq_item_
 alter table public.inquiry_item_waits enable row level security;
 
 revoke all on table public.inquiry_item_waits from public, anon, authenticated;
-grant select, insert, update, delete on table public.inquiry_item_waits to authenticated;
+-- qtech_engineer too (0081): an engineer's request runs as that role, and engineers log replies like everyone else.
+grant select, insert, update, delete on table public.inquiry_item_waits to authenticated, qtech_engineer;
 
 -- The role check in the wrapped form (0074): run once per statement.
-create policy inquiry_item_waits_select_staff on public.inquiry_item_waits for select to authenticated
+create policy inquiry_item_waits_select_staff on public.inquiry_item_waits for select to authenticated, qtech_engineer
   using ((select public.current_user_role()) is not null);
-create policy inquiry_item_waits_insert_staff on public.inquiry_item_waits for insert to authenticated
+create policy inquiry_item_waits_insert_staff on public.inquiry_item_waits for insert to authenticated, qtech_engineer
   with check ((select public.current_user_role()) is not null);
-create policy inquiry_item_waits_update_staff on public.inquiry_item_waits for update to authenticated
+create policy inquiry_item_waits_update_staff on public.inquiry_item_waits for update to authenticated, qtech_engineer
   using ((select public.current_user_role()) is not null) with check ((select public.current_user_role()) is not null);
-create policy inquiry_item_waits_delete_staff on public.inquiry_item_waits for delete to authenticated
+create policy inquiry_item_waits_delete_staff on public.inquiry_item_waits for delete to authenticated, qtech_engineer
   using ((select public.current_user_role()) is not null);
+
+-- created_by is always the caller, whatever an insert names (L-1, 0065).
+create trigger inquiry_item_waits_force_created_by before insert or update on public.inquiry_item_waits
+  for each row execute function public.force_created_by();
 
 -- The table has no id column: the audit trigger is keyed on the composite primary key (see 0013 and 0032).
 create trigger inquiry_item_waits_audit after insert or update or delete on public.inquiry_item_waits

@@ -219,12 +219,12 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
   })
 })
 
-test.describe('reply form: lead time and weight on every priced item (16 Nov 2026)', () => {
+test.describe('reply form: a lead time on every priced item (16 Nov 2026), the weight optional (20 Nov 2026)', () => {
   for (const [w, h] of [
     [1440, 900],
     [375, 812],
   ] as const) {
-    test(`each item shows its lead time, weight and origin; a missing one is named under its box (${w})`, async ({ page }) => {
+    test(`each item shows its lead time, weight and origin; a missing lead time is named under its box (${w})`, async ({ page }) => {
       await page.setViewportSize({ width: w, height: h })
       const s = await seed()
       await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
@@ -242,32 +242,24 @@ test.describe('reply form: lead time and weight on every priced item (16 Nov 202
       await expect(r.getByText(/≈ PKR|Reads as/)).toHaveCount(0)
       if (w === 1440) await review(page, 'quoted-currency-reply-desktop')
       await r.getByRole('button', { name: 'Save reply' }).click()
-      // Item 1 lacks its weight, item 2 both; the cursor goes to the first missing box (item 1's weight).
-      await expect(r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true })).toBeFocused()
+      // Item 2 lacks its lead time; the weight is optional (owner, 20 Nov 2026). The cursor goes to item 2's lead time.
+      await expect(r.getByLabel(`Lead time, item 2 from ${s.germany.name}`, { exact: true })).toBeFocused()
       await expect(r.getByLabel(`Lead time, item 2 from ${s.germany.name}`, { exact: true })).toHaveAttribute('aria-invalid', 'true')
       await expect(r.getByLabel(`Lead time, item 1 from ${s.germany.name}`, { exact: true })).not.toHaveAttribute('aria-invalid', 'true')
+      await expect(r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true })).not.toHaveAttribute('aria-invalid', 'true')
       expect(await linesOf(s.germany.inquiryId)).toHaveLength(0)
       // "Same for all items" copies the first item's lead time to the rest.
       await r.getByRole('button', { name: 'Same for all items' }).click()
       await expect(r.getByLabel(`Lead time, item 2 from ${s.germany.name}`, { exact: true })).toHaveValue('6 weeks')
-      const w1 = r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true })
-      await w1.fill('3.4')
-      await r.getByLabel(`Lead time, item 1 from ${s.germany.name}`, { exact: true }).focus()
-      // The filled weight is no longer marked invalid. The box fades from the danger colours over --dur-fast (120 ms): the
-      // first review shot was taken inside that fade and looked pink. Wait for the colour transitions to end before the shot,
-      // then check the box is drawn exactly like a valid one (item 1's country box).
-      await expect(w1).not.toHaveAttribute('aria-invalid', 'true')
-      await page.evaluate(() => Promise.all(document.getAnimations().filter(a => a instanceof CSSTransition).map(a => a.finished.catch(() => undefined))))
-      const paint = (el: Element) => [getComputedStyle(el).backgroundColor, getComputedStyle(el).borderTopColor].join(' ')
-      expect(await w1.evaluate(paint)).toBe(await r.getByLabel(`Country of origin, item 1 from ${s.germany.name}`, { exact: true }).evaluate(paint))
-      expect(await w1.evaluate(paint)).not.toBe(await r.getByLabel(`Weight of one unit, item 2 from ${s.germany.name}`, { exact: true }).evaluate(paint))
+      await r.getByLabel(`Weight of one unit, item 1 from ${s.germany.name}`, { exact: true }).fill('3.4')
       await review(page, `reply-details-${w === 375 ? 'phone' : 'desktop'}-${w}`)
       // No horizontal scroll inside the form at this width.
       expect(await r.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
-      await fillReplyDetails(r, s.germany.name, [2], { leadTime: '6 weeks', weight: '0.9' })
       await r.getByRole('button', { name: 'Save reply' }).click()
       await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
-      expect((await linesOf(s.germany.inquiryId)).map(l => l.lead_time)).toEqual(['6 weeks', '6 weeks'])
+      const lines = await linesOf(s.germany.inquiryId)
+      expect(lines.map(l => l.lead_time)).toEqual(['6 weeks', '6 weeks'])
+      expect(lines.map(l => (l.weight === null ? null : Number(l.weight))).sort()).toEqual([3.4, null])
     })
   }
 })
@@ -299,26 +291,19 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
     expect(Number(lines[0].fx_rate_pkr)).toBe(280)
   })
 
-  test('a pasted reply that does not state the weight: Accept fills what was read and asks for the rest before saving', async ({ page }) => {
+  test('a pasted reply that does not state the weight: Accept saves the prices and lead times read (weight optional, 20 Nov 2026)', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.usd.name)
-    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 2 weeks`, 'Regards'].join('\n'))
+    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 2 weeks`, 'Regards'].join('
+'))
     await r.getByRole('button', { name: 'Paste reply' }).click()
     await r.getByRole('button', { name: 'Accept 2 prices' }).click()
-    // Nothing saved: the prices and lead times read are in the form, and the cursor is in the first weight box.
-    await expect(r.getByLabel(`Lead time, item 1 from ${s.usd.name}`, { exact: true })).toHaveValue('3 weeks')
-    await expect(r.getByLabel(`Lead time, item 2 from ${s.usd.name}`, { exact: true })).toHaveValue('2 weeks')
-    await expect(r.getByLabel(`Weight of one unit, item 1 from ${s.usd.name}`, { exact: true })).toBeFocused()
-    await expect(r.getByText('2 priced items still need a lead time or a weight. Add them, then save the reply.')).toBeVisible()
-    expect(await linesOf(s.usd.inquiryId)).toHaveLength(0)
-    await r.getByLabel(`Weight of one unit, item 1 from ${s.usd.name}`, { exact: true }).fill('2.5')
-    await r.getByLabel(`Weight of one unit, item 2 from ${s.usd.name}`, { exact: true }).fill('1.2')
-    await r.getByRole('button', { name: 'Save reply' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
+    await expect.poll(async () => (await linesOf(s.usd.inquiryId)).length).toBe(2)
     const lines = await linesOf(s.usd.inquiryId)
-    expect(lines.map(l => Number(l.weight)).sort()).toEqual([1.2, 2.5])
-    expect(lines.every(l => l.lead_time)).toBe(true)
+    expect(lines.map(l => l.lead_time).sort()).toEqual(['2 weeks', '3 weeks'])
+    expect(lines.every(l => l.weight === null)).toBe(true)
   })
 
   test('a figure that could be read two ways is highlighted for checking, and Cancel saves nothing', async ({ page }) => {
@@ -683,15 +668,13 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await page.getByRole('menuitem', { name: 'Edit reply' }).click()
     // The supplier's reply dialog opens with the cursor in that item's price box.
     await expect(page.getByRole('dialog', { name: s.usd.name, exact: true }).getByLabel(`Price for item 1 from ${s.usd.name}`)).toBeFocused()
-    // An older line saved without a weight: the lead time it has is shown on the item, and saving asks for the weight.
+    // An older line saved without a weight: the lead time it has is shown on the item, and it saves as it is (weight optional).
     const edit = page.getByRole('dialog', { name: s.usd.name, exact: true })
     await expect(edit.getByLabel(`Lead time, item 1 from ${s.usd.name}`, { exact: true })).toHaveValue('3 weeks')
     await edit.getByLabel(`Price for item 1 from ${s.usd.name}`).fill('110')
     await edit.getByRole('button', { name: 'Save reply' }).click()
-    await expect(edit.getByLabel(`Weight of one unit, item 1 from ${s.usd.name}`, { exact: true })).toBeFocused()
-    expect((await linesOf(s.usd.inquiryId)).map(l => Number(l.unit_price))).toEqual([100])
-    await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: 'Discard' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
+    await expect.poll(async () => (await linesOf(s.usd.inquiryId)).map(l => Number(l.unit_price))).toEqual([110])
 
     await menu()
     await page.getByRole('menuitem', { name: 'Remove reply' }).click()
