@@ -686,7 +686,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await page.getByRole('button', { name: 'Undo' }).click()
     await expect.poll(async () => (await linesOf(s.usd.inquiryId)).length).toBe(1)
     const [back] = await linesOf(s.usd.inquiryId)
-    expect(back).toMatchObject({ currency: 'USD', unit_price: 100, lead_time: '3 weeks' })
+    expect(back).toMatchObject({ currency: 'USD', unit_price: 110, lead_time: '3 weeks' }) // the price saved above (110) comes back
     expect(Number(back.fx_rate_pkr)).toBe(280) // the rate it was entered at comes back with it
   })
 
