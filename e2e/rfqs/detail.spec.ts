@@ -137,7 +137,7 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     for (const [i, it] of s.items.entries()) {
       await cn.getByLabel(`Price for item ${i + 1} from ${s.china.name}`).fill(String(1000 + i * 500))
       typedPrices++
-      // Every priced item needs its lead time and the weight of one unit (16 Nov 2026).
+      // Every priced item needs its lead time (16 Nov 2026); a weight given is saved with it.
       await fillReplyDetails(cn, s.china.name, [i + 1], { leadTime: `${3 + i} weeks`, weight: String(2 + i) })
       void it
     }
@@ -182,13 +182,13 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
     await r.getByLabel(`Price for item 1 from ${s.usd.name}`).fill('100')
     // No PKR preview: the typed price stays in USD (owner, 16 Nov 2026).
     await expect(r.getByText(/≈ PKR|Reads as|28,000/)).toHaveCount(0)
-    // Save is refused until the priced item has its lead time and weight: the first missing box gets the cursor.
+    // Save is refused until the priced item has its lead time (the weight is optional, 20 Nov 2026): the box gets the cursor.
     await r.getByRole('button', { name: 'Save reply' }).click()
     const lead = r.getByLabel(`Lead time, item 1 from ${s.usd.name}`, { exact: true })
     await expect(lead).toBeFocused()
     await expect(lead).toHaveAttribute('aria-invalid', 'true')
     await expect(r.getByText('Add the lead time, for example 2 weeks or ex-stock.')).toBeVisible()
-    await expect(r.getByText('Add the weight of one unit, above zero.')).toBeVisible()
+    await expect(r.getByText('Add the weight of one unit, above zero.')).toHaveCount(0)
     expect(await linesOf(s.usd.inquiryId)).toHaveLength(0)
     await review(page, 'rfq-detail-02-reply-details-missing-1440')
     await fillReplyDetails(r, s.usd.name, [1], { leadTime: '3 weeks', weight: '750', unit: 'g' })

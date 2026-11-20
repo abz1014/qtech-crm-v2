@@ -459,7 +459,7 @@ export default defineConfig({
     {
       // Review screenshots (e2e/review): supplier flow D and the engineer search, at 1440, 375 and 320. Not a gate: no assertions.
       name: 'review-items23',
-      testMatch: /review\/(items-2-3|quotation-declutter)-shots\.spec\.ts/,
+      testMatch: /review\/(items-2-3|quotation-declutter|quote-later)-shots\.spec\.ts/,
       fullyParallel: false,
       retries: 0,
       timeout: 600_000,

@@ -1271,6 +1271,50 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"inquiry_item_waits": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"inquiry_id": string,"note": string | null,"rfq_item_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"inquiry_id": string,"note"?: string | null,"rfq_item_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"inquiry_id"?: string,"note"?: string | null,"rfq_item_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "inquiry_item_waits_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "users"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "inquiry_item_waits_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "supplier_inquiries"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "inquiry_item_waits_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_inquiry_state"
+      referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "inquiry_item_waits_inquiry_id_fkey"
+      columns: ["inquiry_id"]
+isOneToOne: false
+      referencedRelation: "v_supplier_activity"
+      referencedColumns: ["inquiry_id"]
+    },{
+      foreignKeyName: "inquiry_item_waits_rfq_item_id_fkey"
+      columns: ["rfq_item_id"]
+isOneToOne: false
+      referencedRelation: "rfq_items"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"invoices": {
                   Row: {
                     "client_received_on": string | null,"company_id": string | null,"copy_received_on": string | null,"created_at": string,"created_by": string | null,"gst_amount": number,"id": string,"invoice_date": string | null,"last_reminded_on": string | null,"legacy_flags": (string)[],"legacy_review": string | null,"legacy_source": Json | null,"net_amount": number,"notes": string | null,"number": string | null,"order_id": string | null,"psid": string | null,"reminder_count": number,"settled_before_cutover": boolean,"tax_bank_month": string | null,"tax_deposit_amount": number | null,"tax_deposited_on": string | null,"tcs_number": string | null,"tcs_sent_on": string | null,"updated_at": string,"void_reason": string | null,"voided_at": string | null,"voided_by": string | null,"voided_gst": number | null,"voided_net": number | null,"wasif_receipt_on": string | null,"archived": boolean | null

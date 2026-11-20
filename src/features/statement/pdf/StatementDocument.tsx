@@ -1,5 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
+import type { InquiryRow, RfqItemRow } from '@/features/rfqs/api'
 import { longDay, splitDescription, type QuotedRow, type Statement } from '@/features/statement/model'
 
 /*
@@ -30,6 +31,17 @@ export interface StatementPdfData {
   preparedBy: string
   /** The "did not reply" lines are on the sheet (the person ticked the toggle). */
   showNoReply: boolean
+  /** The raw RFQ for the Excel file's "Side by side" sheet (items as rows, one column pair per supplier). The PDF does not read it. */
+  grid?: StatementGrid
+}
+
+export interface StatementGrid {
+  items: RfqItemRow[]
+  inquiries: InquiryRow[]
+  /** The customer's contact person on the RFQ, or null. */
+  contact: string | null
+  /** The customer's own reference for the RFQ, or null. */
+  customerRef: string | null
 }
 
 const C = {

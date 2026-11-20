@@ -72,20 +72,19 @@ export function itemLeadTime(draft: ReplyDraft, itemId: string): string {
 /** What is still needed for one priced item before the reply can be saved. */
 export interface MissingDetails {
   leadTime: boolean
-  weight: boolean
 }
 
 /**
- * The priced items that still lack a lead time or a weight of one unit above zero, by item id (owner, 16 Nov 2026: both are
- * required for every item that gets a price). An item with no price, or one the supplier cannot offer, needs neither.
+ * The priced items that still lack a lead time, by item id. An item with no price, or one the supplier cannot offer, needs none.
+ * The weight of one unit is optional here (owner, 20 Nov 2026: suppliers almost never send it, and asking for it on every line of
+ * every reply was the slowest part of logging; the Issue quotation dialog says which items still have no weight). It was required
+ * from 16 Nov 2026.
  */
 export function missingQuoteDetails(draft: ReplyDraft): Record<string, MissingDetails> {
   const out: Record<string, MissingDetails> = {}
   for (const [itemId, price] of Object.entries(draft.prices)) {
     if (!valid(price)) continue
-    const leadTime = itemLeadTime(draft, itemId) === ''
-    const weight = validWeight(draft.extras?.[itemId]?.weight) === null
-    if (leadTime || weight) out[itemId] = { leadTime, weight }
+    if (itemLeadTime(draft, itemId) === '') out[itemId] = { leadTime: true }
   }
   return out
 }
