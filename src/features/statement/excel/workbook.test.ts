@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { formatPaisa, productPaisa } from '@/lib/money'
 import type { InquiryRow } from '@/features/rfqs/api'
 import { buildStatement } from '@/features/statement/model'
-import { buildStatementWorkbook, COLUMNS, SHEET_NAME, SIDE_NOTE, SIDE_SHEET_NAME, sideBySideSheet, statementSheet } from '@/features/statement/excel/workbook'
+import { buildStatementWorkbook, COLUMNS, partModel, SHEET_NAME, SIDE_NOTE, SIDE_SHEET_NAME, sideBySideSheet, statementSheet } from '@/features/statement/excel/workbook'
 import { PROFILE, sampleData } from '@/features/statement/testFixture'
 
 /*
@@ -246,5 +246,17 @@ describe('comparative statement, side by side sheet', () => {
     delete data.grid
     const wb = read(buildStatementWorkbook(data, PROFILE), { type: 'array' })
     expect(wb.SheetNames).toEqual([SHEET_NAME])
+  })
+})
+
+describe('partModel: the part as the description writes it (owner, 20 Nov 2026)', () => {
+  const it0 = (description: string, brandName: string | null = null) => ({ id: 'x', number: 1, description, brandId: null, brandName, familyId: null, qty: 1, unit: null })
+  it('keeps dashes and the case of the original', () => {
+    expect(partModel(it0('HMI Touch Panel Siemens 6AV2124-0QC02-0AX0 SIMATIC HMI TP1500', 'Siemens'))).toBe('6AV2124-0QC02-0AX0')
+    expect(partModel(it0('HMI Touch Panel Weintek MT8102iE 10.1" TFT', 'Weintek'))).toBe('MT8102iE')
+    expect(partModel(it0('Phase Monitoring Relay ABB CM-PVS.41S 3-phase', 'ABB'))).toBe('CM-PVS.41S')
+  })
+  it('is empty when the description names no model', () => {
+    expect(partModel(it0('Inverter power card for a 37kW drive'))).toBe('')
   })
 })

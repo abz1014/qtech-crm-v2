@@ -205,7 +205,13 @@ export function noPriceText(inq: InquiryRow, item: RfqItemRow): string {
 
 /** The first model-shaped word of the description, the item's own brand left out ("" when there is none). */
 export function partModel(item: RfqItemRow): string {
-  return modelTokens(item.description, item.brandName ? [item.brandName] : [])[0] ?? ''
+  const token = modelTokens(item.description, item.brandName ? [item.brandName] : [])[0]
+  if (!token) return ''
+  // modelTokens compares in a folded form (no dashes, dots or spaces, upper case). The sheet shows the part as the description writes
+  // it ("6AV2124-0QC02-0AX0", "MT8102iE"), so the folded token is found back in the description.
+  const chars = [...token].map(c => (/[A-Za-z0-9]/.test(c) ? c : `\\${c}`))
+  const found = new RegExp(chars.join('[-./ ]?'), 'i').exec(item.description)
+  return found ? found[0] : token
 }
 
 /** The side-by-side sheet as rows (pure: the unit test reads it, and the workbook is made from it). */
