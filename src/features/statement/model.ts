@@ -130,7 +130,7 @@ function rowOf(item: RfqItemRow, inquiry: InquiryRow, l: QuoteLineRow): QuotedRo
   }
 }
 
-const byName = (a: { supplierName: string }, b: { supplierName: string }) => a.supplierName.localeCompare(b.supplierName, 'en', { sensitivity: 'base' })
+export const byName = (a: { supplierName: string }, b: { supplierName: string }) => a.supplierName.localeCompare(b.supplierName, 'en', { sensitivity: 'base' })
 
 /** null sorts last whichever way the column is sorted: a blank is not the smallest or the largest value. */
 function compareNullable(a: number | string | null, b: number | string | null, dir: SortDir): number {
@@ -181,7 +181,7 @@ export interface BuildOptions {
 }
 
 /** A supplier "asked": the enquiry went to it, or it answered. A supplier only on the shortlist is not asked yet. */
-const wasAsked = (i: InquiryRow) => Boolean(i.sentOn || i.noOfferOn || i.lines.length > 0)
+export const wasAsked = (i: InquiryRow) => Boolean(i.sentOn || i.noOfferOn || i.lines.length > 0)
 
 export function buildStatement(items: readonly RfqItemRow[], inquiries: readonly InquiryRow[], opts: BuildOptions = {}): Statement {
   const asked = inquiries.filter(wasAsked)

@@ -226,6 +226,10 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
 
   const list = items.data ?? []
   const isIn = (id: string) => included[id] === true
+  // The weight of one unit is optional when a reply is logged (owner, 20 Nov 2026). It is wanted for the freight, so the items being
+  // quoted that no supplier gave a weight for are named here, before the price is set. A note, not a block.
+  const hasWeight = (itemId: string) => inquiries.some(i => i.lines.some(l => l.itemId === itemId && typeof l.weight === 'number' && l.weight > 0))
+  const noWeight = list.map((it, idx) => ({ it, n: idx + 1 })).filter(({ it }) => isIn(it.id) && hasSupplierPrice(it.id) && !hasWeight(it.id)).map(({ n }) => n)
   const totals = computeTotals(list.map(i => ({ qty: i.qty, unitPrice: isIn(i.id) ? (prices[i.id] ?? null) : null, gstRate: rateOf[i.id] ?? '18' })))
   const chosen = list.filter(i => isIn(i.id))
   const missing = chosen.filter(i => prices[i.id] === null || prices[i.id] === undefined)
@@ -549,6 +553,14 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
 
             {inquiries.some(i => i.lines.length > 0) ? <StatementDownloads jobKey={String(rfq.number)} rfqId={rfq.id} look="inline" /> : null}
 
+            {noWeight.length > 0 ? (
+              <p className="text-sm text-fg-muted" data-testid="no-weight-note">
+                {noWeight.length === 1
+                  ? `No supplier gave a weight for item ${noWeight[0]}. Ask for it if the freight depends on it.`
+                  : `No supplier gave a weight for ${noWeight.length} items (${weightList(noWeight)}). Ask for them if the freight depends on it.`}
+              </p>
+            ) : null}
+
             {/* No overflow-hidden here: in the phone sheet's scrolling grid body a clipping box collapsed to no height (Chromium), so the
                 tinted pieces round their own corners instead. */}
             <div className="w-full min-w-0 rounded-control border">
@@ -743,4 +755,12 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
       </DialogContent>
     </Dialog>
   )
+}
+
+/** "1, 4 and 9"; past eight numbers, the first eight and "and 3 more". */
+function weightList(ns: readonly number[]): string {
+  const shown = ns.length > 8 ? ns.slice(0, 8) : ns
+  const rest = ns.length - shown.length
+  if (rest > 0) return `${shown.join(', ')} and ${rest} more`
+  return shown.length === 1 ? String(shown[0]) : `${shown.slice(0, -1).join(', ')} and ${shown[shown.length - 1]}`
 }

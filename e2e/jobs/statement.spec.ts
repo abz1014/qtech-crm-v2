@@ -56,7 +56,11 @@ async function seed(): Promise<Seed> {
   return { rfq, customer, items, names: { zeta: zeta.name, alpha: alpha.name, mid: mid.name, silent: silent.name }, inquiries }
 }
 
-/** Downloads the statement as Excel from the job page and reads its one sheet back as rows (header: 1, blanks as null). */
+/**
+ * Downloads the statement as Excel from the job page and reads its "Details" sheet back as rows (header: 1, blanks as null). The
+ * first sheet, "Side by side" (owner, 20 Nov 2026), has one row per item and a column pair per supplier: its supplier headings are
+ * checked here to be in name order.
+ */
 async function downloadExcel(page: Page, jobNumber: number): Promise<unknown[][]> {
   const box = page.getByTestId('statement-downloads')
   await expect(box.getByRole('button', { name: 'Download Excel' })).toBeEnabled()
@@ -65,8 +69,13 @@ async function downloadExcel(page: Page, jobNumber: number): Promise<unknown[][]
   const bytes = readFileSync(await download.path())
   expect(bytes.subarray(0, 2).toString()).toBe('PK') // a real .xlsx (a zip), not a CSV
   const wb = read(bytes, { type: 'buffer' })
-  expect(wb.SheetNames).toEqual(['Comparative statement'])
-  return utils.sheet_to_json<unknown[]>(wb.Sheets['Comparative statement'], { header: 1, blankrows: true, defval: null })
+  expect(wb.SheetNames).toEqual(['Side by side', 'Details'])
+  const side = utils.sheet_to_json<unknown[]>(wb.Sheets['Side by side'], { header: 1, blankrows: true, defval: null })
+  const head = side.find(r => r[0] === 'No.') ?? []
+  expect(head.slice(0, 6)).toEqual(['No.', 'Item', 'Brand', 'Part / model', 'Qty', 'Unit'])
+  const suppliers = head.slice(6).filter((x): x is string => typeof x === 'string')
+  expect(suppliers).toEqual([...suppliers].sort((x, y) => x.localeCompare(y, 'en', { sensitivity: 'base' })))
+  return utils.sheet_to_json<unknown[]>(wb.Sheets['Details'], { header: 1, blankrows: true, defval: null })
 }
 
 // The grid's columns in the Excel file (src/features/statement/excel/workbook.ts COLUMNS).

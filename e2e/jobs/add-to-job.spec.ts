@@ -49,11 +49,8 @@ test('a pasted WhatsApp price is read, matched to the supplier, and Accept saves
   await expect(page.getByTestId('guess-line')).toHaveText(`Supplier price from ${s.rhein.name}`)
   const accept = page.getByRole('button', { name: /^Accept \d+ prices?$/ })
   await expect(accept).toHaveText('Accept 2 prices')
-  // The lead time the message stated is filled in; the weight of one unit it did not state is asked for before saving.
+  // The lead time the message stated is filled in; the weight it did not state is optional (20 Nov 2026), and one typed is saved.
   await expect(page.getByLabel(`Lead time, item 1 from ${s.rhein.name}`, { exact: true })).toHaveValue('8 weeks')
-  await accept.click()
-  await expect(page.getByLabel(`Weight of one unit, item 1 from ${s.rhein.name}`, { exact: true })).toBeFocused()
-  expect(await must(rest<unknown[]>('admin', `supplier_quote_lines?inquiry_id=eq.${s.rheinInquiry.id}&select=id`))).toEqual([])
   await page.getByLabel(`Weight of one unit, item 1 from ${s.rhein.name}`, { exact: true }).fill('4.2')
   await page.getByLabel(`Weight of one unit, item 2 from ${s.rhein.name}`, { exact: true }).fill('0.9')
   await accept.click()

@@ -248,6 +248,15 @@ export function useSetItemDecline(rfqId: string) {
   })
 }
 
+/** 0145: a supplier will quote these items later, or no longer. Refreshes what a decline refreshes (the same reply facts). */
+export function useSetItemWaits(rfqId: string) {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: (v: { inquiryId: string; itemIds: readonly string[]; on: boolean }) => api.setItemWaits(v),
+    onSuccess: () => invalidateAfter(client, 'inquiry.cantQuote', { rfqId }),
+  })
+}
+
 export function useStampSupplierChase(rfqId: string) {
   const client = useQueryClient()
   return useMutation({

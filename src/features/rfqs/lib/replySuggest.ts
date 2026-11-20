@@ -61,6 +61,8 @@ export interface SuggestionSet {
   currency: string
   regret: RegretSuggestion | null
   declined: DeclinedSuggestion[]
+  /** 0145: items the reply prices later ("please wait"). Accepting records them as quoting later. */
+  waiting?: { itemId: string; itemNumber: number }[]
   /** The reply only asks something: nothing to accept. */
   question: string | null
   /** Nothing usable was found in the text. */
@@ -144,7 +146,8 @@ export function suggestFromReply(parsed: ParsedReply, items: readonly SuggestIte
     .filter(d => d.itemNumber > 0)
   const regret = parsed.regret && suggestions.every(s => !s.selectable) ? { reason: reasonForRegret(parsed.regretKind) } : null
   const question = parsed.question ? (parsed.questionSnippet ?? '') : null
-  return { suggestions, currency, regret, declined, question, nothingFound: suggestions.length === 0 && !regret && declined.length === 0 && question === null }
+  const waiting = (parsed.waiting ?? []).map(id => ({ itemId: id, itemNumber: numberOf.get(id) ?? 0 })).filter(w => w.itemNumber > 0)
+  return { suggestions, currency, regret, declined, waiting, question, nothingFound: suggestions.length === 0 && !regret && declined.length === 0 && waiting.length === 0 && question === null }
 }
 
 /**

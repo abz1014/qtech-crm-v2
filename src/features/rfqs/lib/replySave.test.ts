@@ -110,9 +110,9 @@ describe('lead time per item (16 Nov 2026)', () => {
   })
 })
 
-describe('missingQuoteDetails: lead time and weight are required for every priced item', () => {
+describe('missingQuoteDetails: a lead time is required for every priced item, the weight is optional (20 Nov 2026)', () => {
   const kg = (weight: number | null) => ({ weight, weightUnit: 'kg' as const, origin: '' })
-  it('names each priced item that lacks a lead time or a weight above zero', () => {
+  it('names each priced item that lacks a lead time, and none for a missing weight', () => {
     const m = missingQuoteDetails({
       currency: 'USD',
       prices: { a: 10, b: 20, c: 30, d: 40 },
@@ -121,17 +121,17 @@ describe('missingQuoteDetails: lead time and weight are required for every price
       inStock: null,
       extras: { a: kg(1.5), b: kg(2), c: kg(0), d: kg(null) },
     })
-    expect(m).toEqual({ b: { leadTime: true, weight: false }, c: { leadTime: false, weight: true }, d: { leadTime: false, weight: true } })
+    expect(m).toEqual({ b: { leadTime: true } })
   })
   it('asks nothing of an item with no price, a zero price or a cleared price', () => {
     expect(missingQuoteDetails({ currency: 'USD', prices: { a: null, b: 0, c: undefined }, leadTime: '', inStock: null })).toEqual({})
   })
-  it("takes the row's lead time for an item without its own, and asks for the weight when no extras are held", () => {
-    expect(missingQuoteDetails({ currency: 'USD', prices: { a: 10 }, leadTime: '3 weeks', inStock: null })).toEqual({ a: { leadTime: false, weight: true } })
+  it("takes the row's lead time for an item without its own, and asks for no weight when no extras are held", () => {
+    expect(missingQuoteDetails({ currency: 'USD', prices: { a: 10 }, leadTime: '3 weeks', inStock: null })).toEqual({})
   })
-  it('asks an old saved line without them for both when it is saved again', () => {
+  it('asks an old saved line without a lead time for it when it is saved again', () => {
     const d = draftFromLines([line('a', 10)], 'USD')
-    expect(missingQuoteDetails(d)).toEqual({ a: { leadTime: true, weight: true } })
+    expect(missingQuoteDetails(d)).toEqual({ a: { leadTime: true } })
   })
   it('is empty when every priced item has both', () => {
     expect(missingQuoteDetails({ currency: 'USD', prices: { a: 10 }, leadTime: '', leadTimes: { a: '4 weeks' }, inStock: null, extras: { a: kg(0.25) } })).toEqual({})
