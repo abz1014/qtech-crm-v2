@@ -295,8 +295,7 @@ test.describe('paste reply (FE-2: paste + accept is at most 2 actions)', () => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.usd.name)
-    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 2 weeks`, 'Regards'].join('
-'))
+    await copy(page, ['Dear Sir,', `FM${s.tag}1 DN50 - USD 100.00 each, 3 weeks`, `PT${s.tag}2 0-10 bar - USD 250.00 each, 2 weeks`, 'Regards'].join('\n'))
     await r.getByRole('button', { name: 'Paste reply' }).click()
     await r.getByRole('button', { name: 'Accept 2 prices' }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Reply saved' })).toBeVisible()
