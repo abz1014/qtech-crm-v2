@@ -9,6 +9,8 @@ import { mapPgError } from '@/lib/pgErrors'
 import { rfqRef } from '@/lib/refs'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
+import { SegmentedControl } from '@/ui/SegmentedControl'
+import { Tag } from '@/ui/Tag'
 import { Select } from '@/ui/form/Select'
 import { MessageActions } from '@/ui/MessageActions'
 import { useToast } from '@/ui/useToast'
@@ -18,6 +20,7 @@ import { ChannelLink } from '@/ui/ChannelLink'
 import { ChasedByNote, ChaseNote, FormattedMessage, MoreToggle, RecipientRow, ReplyByField, SubjectRow, TickList } from '@/features/rfqs/ChaseParts'
 import { useChooseSuppliers } from '@/features/rfqs/escalationLogic'
 import { askedAboutText } from '@/features/rfqs/lib/askedItems'
+import { askedReachText, isAsked, REACH_WORDS, sortSuppliers, supplierCounts, supplierCountsText, supplierReach, supplierStage, type Reach, type SupplierCounts } from '@/features/rfqs/lib/coverage'
 import { FloatElsewhere } from '@/features/rfqs/FloatElsewhere'
 import { useRestoreSupplierChase, useSetInquiryNoOffer, useStampSupplierChase } from '@/features/rfqs/hooks'
 import { useSignature } from '@/features/rfqs/useSignature'
@@ -121,6 +124,12 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
       return n
     })
   const firstAwaiting = inquiries.find(awaitingReply)?.supplierId
+  // Who has not answered first, then who is still quoting some items, then the complete ones (owner's lean board, 23 Nov 2026).
+  const sorted = sortSuppliers(inquiries, items)
+  const reaches = new Set(inquiries.map(i => supplierReach(i.supplierCountry)))
+  const bothReaches = reaches.has('local') && reaches.has('international')
+  const [reach, setReach] = useState<'all' | Reach>('all')
+  const listed = bothReaches && reach !== 'all' ? sorted.filter(i => supplierReach(i.supplierCountry) === reach) : sorted
   const jumped = useRef<string | null>(null)
   useEffect(() => {
     if (!phone || !jump || !firstAwaiting || jumped.current === rfq.id) return
@@ -130,9 +139,26 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
 
   // No count here: the Quotation step's header already says "1 of 2 answered" (owner, 18 Nov 2026: it was said three times).
   return (
-    <DetailPanel title="Suppliers asked" dataSlot="suppliers-asked">
+    <DetailPanel
+      title="Suppliers asked"
+      dataSlot="suppliers-asked"
+      actions={
+        bothReaches ? (
+          <SegmentedControl
+            aria-label="Which suppliers"
+            value={reach}
+            onValueChange={v => setReach(v as 'all' | Reach)}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'local', label: 'Local' },
+              { value: 'international', label: 'International' },
+            ]}
+          />
+        ) : null
+      }
+    >
       <ul>
-        {inquiries.map(i => {
+        {listed.map(i => {
           const awaiting = Boolean(i.sentOn) && !i.noOfferOn && i.lines.length === 0
           const mem = supplierMemoryLine(stats?.[i.supplierId], awaiting && i.sentOn ? daysSince(i.sentOn, today) : null)
           const can = chase !== 'none' && canChaseInquiry(i, items)
@@ -161,6 +187,7 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
                   {/* A long name keeps its width: the chip drops under it, the chevron stays at the right edge. */}
                   <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                     <b className="type-row min-w-0 flex-1 basis-[10rem] break-words">{i.supplierName}</b>
+                    <ReachTag country={i.supplierCountry} />
                     <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
                   </span>
                   <Icon icon={ChevronDown} className={cn('shrink-0 text-fg-muted transition-transform duration-base ease-out', !folded && 'rotate-180')} />
@@ -168,12 +195,14 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
               ) : (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                   <b className="type-row min-w-0 flex-1 basis-[10rem] break-words">{i.supplierName}</b>
+                  <ReachTag country={i.supplierCountry} />
                   <ReplyChip inquiry={i} itemCount={replyItems(i, items).length} />
                 </div>
               )}
               {folded ? null : (
                   <div id={detailId} className="contents">
                     <p className="text-sm text-fg-muted">{sentLine(i)}</p>
+                    {isAsked(i) ? <ReplyProgress inquiry={i} items={items} today={today} /> : null}
                     <AskedAboutLine inquiry={i} items={items} />
                     {mem ? <p className={mem.late ? 'text-sm text-tone-warning-fg' : 'text-sm text-fg-muted'}>{mem.text}</p> : null}
                     <ChasedByNote byId={i.lastChasedBy} at={i.lastChasedOn} />
@@ -219,6 +248,9 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
         })}
       </ul>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-0 pt-4">
+        <span className="text-sm text-fg-muted" data-asked-reach>
+          {askedReachText(inquiries)}
+        </span>
         <Button icon={Plus} onClick={onFloat}>
           Ask more suppliers
         </Button>
@@ -248,6 +280,42 @@ export function SuppliersAsked({ rfq, items, inquiries, stats, rates = {}, chase
         />
       ) : null}
     </DetailPanel>
+  )
+}
+
+/** Local or International, from the supplier's country. Nothing when the country is not on file. */
+function ReachTag({ country }: { country: string | null }) {
+  const r = supplierReach(country)
+  return r ? <Tag className="font-sans">{REACH_WORDS[r]}</Tag> : null
+}
+
+/** The order of the bar's parts, and their tones. */
+const BAR: { key: keyof Omit<SupplierCounts, 'asked' | 'total' | 'not-asked'>; tone: string }[] = [
+  { key: 'priced', tone: 'bg-tone-success-fg' },
+  { key: 'later', tone: 'bg-tone-warning-fg' },
+  { key: 'cannot', tone: 'bg-tone-danger-fg' },
+  { key: 'left-out', tone: 'bg-line-strong' },
+  { key: 'no-reply', tone: 'bg-selected' },
+]
+
+/**
+ * Where one supplier stands across the items it was asked about: a thin stacked bar (priced, later, cannot, left out, no reply)
+ * and the same in words, "Asked for 5 of 31 · 4 priced · 1 cannot". Nothing back yet: "No reply · 6 days since asked".
+ */
+function ReplyProgress({ inquiry, items, today }: { inquiry: InquiryRow; items: readonly RfqItemRow[]; today: string }) {
+  if (items.length === 0) return null
+  const c = supplierCounts(inquiry, items)
+  const silent = supplierStage(inquiry, items) === 'no-reply'
+  const days = inquiry.sentOn ? daysSince(inquiry.sentOn, today) : null
+  return (
+    <div className="mt-1 grid max-w-[32rem] gap-1" data-reply-progress={inquiry.supplierId}>
+      <span aria-hidden="true" className="flex h-[6px] overflow-hidden rounded-round bg-selected">
+        {c.asked > 0 ? BAR.map(b => (c[b.key] > 0 ? <i key={b.key} className={b.tone} style={{ width: `${(c[b.key] / c.asked) * 100}%` }} /> : null)) : null}
+      </span>
+      <span className="text-sm text-fg-2">
+        {silent ? `${c.asked === c.total ? `Asked for all ${c.total}` : `Asked for ${c.asked} of ${c.total}`} · No reply${days !== null ? ` · ${days} ${days === 1 ? 'day' : 'days'} since asked` : ''}` : supplierCountsText(c)}
+      </span>
+    </div>
   )
 }
 

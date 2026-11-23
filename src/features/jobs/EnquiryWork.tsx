@@ -16,6 +16,7 @@ import { ItemsPanel } from '@/features/rfqs/ItemsPanel'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
 import { useClarifications, useFxLatest, useRfqAttachments, useRfqHeader, useRfqInquiries, useRfqItems, useSupplierCandidates, useSupplierMemory, useSupplierStatsFor } from '@/features/rfqs/hooks'
 import { toRateTable } from '@/features/rfqs/lib/comparePrices'
+import { isAsked, showBoard, type BoardFilter } from '@/features/rfqs/lib/coverage'
 import { quotationSent } from '@/features/rfqs/lib/nextAction'
 import type { SuggestionItem } from '@/features/rfqs/lib/supplierSuggestion'
 import { useSuggestLib } from '@/features/rfqs/useSuggestLib'
@@ -41,6 +42,8 @@ const ReplyFromOther = lazyWithReload(() => import('@/features/rfqs/ReplyFromOth
 const ClarificationsPanel = lazyWithReload(() => import('@/features/rfqs/ClarificationsPanel').then(m => ({ default: m.ClarificationsPanel })))
 const AttachmentsPanel = lazyWithReload(() => import('@/features/rfqs/AttachmentsPanel').then(m => ({ default: m.AttachmentsPanel })))
 const AddExpenseDialog = lazyDialog(() => import('@/features/money/expenses/ExpenseDialog').then(m => m.AddExpenseDialog))
+const CoverageBoard = lazyWithReload(() => import('@/features/rfqs/CoverageBoard').then(m => ({ default: m.CoverageBoard })))
+const GapBar = lazyWithReload(() => import('@/features/rfqs/CoverageBoard').then(m => ({ default: m.GapBar })))
 const AddItemDialog = lazyWithReload(() => import('@/features/rfqs/AddItemDialog').then(m => ({ default: m.AddItemDialog })))
 
 /**
@@ -138,6 +141,9 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
   const rates = useMemo(() => toRateTable(fx.data ?? []), [fx.data])
   const [adding, setAdding] = useState(false)
   const [floating, setFloating] = useState(false)
+  // "Ask another supplier for these N" (the gap bar): the dialog opens with exactly those items ticked.
+  const [floatItems, setFloatItems] = useState<ReadonlySet<string> | null>(null)
+  const [boardFilter, setBoardFilter] = useState<BoardFilter>('all')
   const [costing, setCosting] = useState(false)
   const session = useSession()
   const isAdmin = session.status === 'signed-in' && session.user.role === 'admin'
@@ -199,10 +205,34 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
     setReplyFor(s.id)
   }
   const chaseable = inquiryList.filter(i => canChaseInquiry(i, itemList)).length
+  // The coverage board, from 5 items or 3 suppliers asked; below that the items list says it all.
+  const board = showBoard(itemList.length, inquiryList.filter(isAsked).length)
+  const showGap = () => {
+    if (board) {
+      setBoardFilter('no-price')
+      document.getElementById('coverage-board')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      return
+    }
+    const first = itemList.find(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id)))
+    if (first) document.querySelector(`[data-slot="items"] article[aria-label="Item ${first.number}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }
+  const askForGap = (ids: string[]) => {
+    setFloatItems(new Set(ids))
+    setFloating(true)
+  }
+  const closeFloat = () => {
+    setFloating(false)
+    setFloatItems(null)
+  }
 
   return (
     <div className="grid gap-4" data-enquiry-work data-chaseable={chaseable}>
       {lastAsk ? <SendToEachCard ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
+      {nobodyAsked ? null : (
+        <Suspense fallback={null}>
+          <GapBar items={itemList} inquiries={inquiryList} onShow={showGap} onAsk={askForGap} />
+        </Suspense>
+      )}
       <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>
         {nobodyAsked ? (
           <SuppliersToAskCard
@@ -221,6 +251,11 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
         )}
       </Suspense>
       {prices && jobKey && inquiryList.some(i => i.lines.length > 0) ? <StatementDownloads jobKey={jobKey} rfqId={rfq.id} /> : null}
+      {board ? (
+        <Suspense fallback={<Skeleton className="h-[12rem] w-full" />}>
+          <CoverageBoard items={itemList} inquiries={inquiryList} filter={boardFilter} onFilter={setBoardFilter} />
+        </Suspense>
+      ) : null}
       <ItemsPanel
         rfq={rfq}
         items={itemList}
@@ -231,6 +266,7 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
         suggestions={suggestions}
         onAddItem={() => setAdding(true)}
         onCopyEnquiry={(s, item) => void askFrom([s], [item])}
+        board={board}
       />
       <Suspense fallback={<Skeleton className="h-[8rem] w-full" />}>
         <QuotationsPanel rfq={rfq} inquiries={inquiryList} itemCount={itemList.length} />
@@ -267,12 +303,12 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
             suggestions={askList}
             coverage={coverage}
             excludeIds={askExclude}
-            onRecord={(ticked, list) => void recordFrom(ticked, list).then(r => r.ok && setFloating(false))}
+            onRecord={(ticked, list) => void recordFrom(ticked, list).then(r => r.ok && closeFloat())}
             items={itemList}
-            needing={new Set(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).map(it => it.id))}
+            needing={floatItems ?? new Set(itemList.filter(it => !inquiryList.some(i => i.lines.some(l => l.itemId === it.id))).map(it => it.id))}
             busy={asking}
-            onClose={() => setFloating(false)}
-            onAsk={(ticked, list) => void askFrom(ticked, list).then(r => r.ok && setFloating(false))}
+            onClose={closeFloat}
+            onAsk={(ticked, list) => void askFrom(ticked, list).then(r => r.ok && closeFloat())}
           />
         </Suspense>
       ) : null}
