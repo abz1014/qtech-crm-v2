@@ -135,7 +135,7 @@ export function CoverageBoard({
   const shown = useMemo(() => filterItems(items, asked, filter, search), [items, asked, filter, search])
   const groups = groupByBrand(shown)
   const grouped = groupByBrand(items).length > 1
-  const cols: CSSProperties = { gridTemplateColumns: `minmax(15rem, 1fr) repeat(${asked.length}, minmax(5.5rem, max-content)) minmax(10rem, max-content)` }
+  const cols: CSSProperties = { gridTemplateColumns: `minmax(14rem, 1fr) repeat(${asked.length}, minmax(4.5rem, 5rem)) minmax(9rem, max-content)` }
   const opened = open ? items.find(it => it.id === open) : undefined
   // Under 5 items and 3 suppliers asked the items list says it all (EnquiryWork asks the same before drawing this).
   if (!showBoard(items.length, asked.length)) return null
@@ -205,7 +205,7 @@ export function CoverageBoard({
                     aria-label={reach ? `${i.supplierName}, ${REACH_WORDS[reach]}` : i.supplierName}
                     className="sticky top-0 z-base grid content-end justify-items-center border-b bg-deep px-2 py-2 text-center"
                   >
-                    <span className="max-w-[7rem] truncate text-sm font-semibold text-fg">{short[n]}</span>
+                    <span className="max-w-full truncate text-sm font-semibold text-fg">{short[n]}</span>
                     {reach ? <span className="text-xs text-fg-muted">{reach === 'local' ? 'Local' : 'Intl'}</span> : null}
                   </span>
                 )
@@ -243,7 +243,7 @@ export function CoverageBoard({
                       <span role="rowheader" className="sticky left-0 z-base grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 border-b border-r bg-surface px-4 py-2">
                         <span className="num mt-px grid h-6 min-w-6 place-items-center rounded-round border border-line-strong px-1 text-sm font-medium">{it.number}</span>
                         <span className="min-w-0">
-                          <span className="block max-w-[22rem] text-base font-medium [overflow-wrap:anywhere]">{it.description}</span>
+                          <span className="block max-w-[16rem] text-base font-medium [overflow-wrap:anywhere]">{it.description}</span>
                           <span className="block text-sm text-fg-muted">{[it.brandName, q].filter(Boolean).join(' · ')}</span>
                         </span>
                       </span>
@@ -308,7 +308,7 @@ function ItemAnswers({ item, inquiries, onClose }: { item: RfqItemRow; inquiries
                   {reach ? <span className="text-sm text-fg-muted">{` · ${REACH_WORDS[reach]}`}</span> : null}
                   <span className="block text-sm text-fg-2">{detail.join(' · ')}</span>
                 </span>
-                {prices && line ? (
+                {prices && line && line.unitPrice != null ? (
                   <span className="num whitespace-nowrap text-base font-semibold" data-answer-price>
                     <span className="text-sm font-medium text-fg-muted">{line.currency}</span> {formatAmount(line.unitPrice, line.currency === 'PKR' ? 'auto' : 'always')}
                   </span>
