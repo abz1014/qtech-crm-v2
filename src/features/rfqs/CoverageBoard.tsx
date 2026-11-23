@@ -91,7 +91,7 @@ export function GapBar({ items, inquiries, onShow, onAsk }: { items: readonly Rf
   const t = gapText(gap)
   const n = gap.items.length
   return (
-    <div role="status" className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-control border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3" data-gap-bar={n}>
+    <div role="status" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-control border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3" data-gap-bar={n}>
       <p className="min-w-0 flex-1 basis-[16rem] text-fg-2">
         <b className="font-semibold text-tone-danger-fg">{t.lead}</b> {t.list}
         {t.open ? ` ${t.open}` : null}
@@ -100,8 +100,9 @@ export function GapBar({ items, inquiries, onShow, onAsk }: { items: readonly Rf
         <Button size="sm" onClick={onShow}>
           Show them
         </Button>
-        <Button size="sm" onClick={() => onAsk(gap.items.map(it => it.id))}>
-          {`Ask another supplier for ${n === 1 ? 'this one' : `these ${n}`}`}
+        {/* The short words fit a 320 px window. The name a screen reader hears keeps the count. */}
+        <Button size="sm" aria-label={`Ask another supplier for ${n === 1 ? 'this one' : `these ${n}`}`} onClick={() => onAsk(gap.items.map(it => it.id))}>
+          Ask another supplier
         </Button>
       </div>
     </div>
@@ -166,16 +167,18 @@ export function CoverageBoard({
     <div id={BOARD_ID} className="min-w-0 scroll-mt-[5rem]">
       <DetailPanel title="Items by supplier" dataSlot="coverage-board">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-3">
-          <SegmentedControl
-            aria-label="Show items"
-            value={filter}
-            onValueChange={v => onFilter(v as BoardFilter)}
-            options={[
-              { value: 'all', label: `All · ${counts.all}` },
-              { value: 'no-price', label: `No price · ${counts['no-price']}` },
-              { value: 'later', label: `Quoting later · ${counts.later}` },
-            ]}
-          />
+          <span className="max-w-full overflow-x-auto">
+            <SegmentedControl
+              aria-label="Show items"
+              value={filter}
+              onValueChange={v => onFilter(v as BoardFilter)}
+              options={[
+                { value: 'all', label: `All · ${counts.all}` },
+                { value: 'no-price', label: `No price · ${counts['no-price']}` },
+                { value: 'later', label: `Quoting later · ${counts.later}` },
+              ]}
+            />
+          </span>
           <span className="min-w-0 flex-1 basis-[12rem]">
             <TextField type="search" aria-label="Search item, brand, part" placeholder="Search item, brand, part" prefix={<Icon icon={Search} size="sm" />} value={search} onChange={e => setSearch(e.target.value)} />
           </span>
