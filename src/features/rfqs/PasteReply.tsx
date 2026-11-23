@@ -40,7 +40,8 @@ export function PasteReplyPanel({
   const [selected, setSelected] = useState<Set<string>>(() => new Set(set.suggestions.filter(s => s.selectable).map(s => s.key)))
   const itemName = (n: number | null) => items.find(i => i.number === n)?.description ?? null
   const count = selected.size
-  const declinedOnly = count === 0 && set.declined.length > 0
+  const waiting = set.waiting ?? []
+  const declinedOnly = count === 0 && (set.declined.length > 0 || waiting.length > 0)
   const toggle = (s: Suggestion, on: boolean) =>
     setSelected(prev => {
       const next = new Set(prev)
@@ -140,11 +141,17 @@ export function PasteReplyPanel({
         </p>
       ) : null}
 
+      {waiting.length > 0 ? (
+        <p className="text-sm text-fg-2" data-paste-waiting="">
+          {`They will price ${waiting.length === 1 ? `item ${waiting[0].itemNumber}` : `items ${waiting.map(w => w.itemNumber).join(', ')}`} later. Accepting records ${waiting.length === 1 ? 'it' : 'them'} as quoting later.`}
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button data-cancel onClick={onCancel} disabled={busy}>
           Cancel
         </Button>
-        {!set.nothingFound && set.question === null && !(set.regret && count === 0 && set.declined.length === 0) ? (
+        {!set.nothingFound && set.question === null && !(set.regret && count === 0 && set.declined.length === 0 && waiting.length === 0) ? (
           <Button
             variant="primary"
             icon={Check}
@@ -153,7 +160,7 @@ export function PasteReplyPanel({
             disabled={count === 0 && !declinedOnly}
             onClick={() => onAccept(selected)}
           >
-            {declinedOnly ? "Record cannot quote" : `Accept ${count} ${count === 1 ? 'price' : 'prices'}`}
+            {declinedOnly ? (set.declined.length > 0 ? 'Record cannot quote' : 'Record quoting later') : `Accept ${count} ${count === 1 ? 'price' : 'prices'}`}
           </Button>
         ) : null}
       </div>

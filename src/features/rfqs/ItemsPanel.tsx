@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react'
-import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, Table2, Trash2, TriangleAlert } from 'lucide-react'
+import { ChevronDown, Clock, Copy, Ellipsis, Pencil, Plus, Trash2, TriangleAlert } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useSeesPrices } from '@/app/session'
 import { cn } from '@/lib/utils'
@@ -275,14 +275,19 @@ function AskForItem({ suggestions, item, onCopyEnquiry }: { suggestions: readonl
  * "Waiting on 3 suppliers" with the names in the title. Who they are, the chase and "Cannot quote" live once per supplier in
  * Suppliers asked (SuppliersAsked.tsx), not on every item.
  */
-function WaitingLine({ waiting }: { waiting: readonly InquiryRow[] }) {
+function WaitingLine({ waiting, later = false }: { waiting: readonly InquiryRow[]; later?: boolean }) {
   const names = waiting.map(w => w.supplierName)
+  const who = waiting.length === 1 ? <b className="font-semibold text-fg">{names[0]}</b> : `${waiting.length} suppliers`
   return (
-    <li className="mt-2 flex items-center gap-2 rounded-control bg-deep px-3 py-2 text-fg-2" data-waiting={waiting.map(w => w.supplierId).join(' ')} title={names.join(', ')}>
+    <li
+      className="mt-2 flex items-center gap-2 rounded-control bg-deep px-3 py-2 text-fg-2"
+      data-waiting={later ? undefined : waiting.map(w => w.supplierId).join(' ')}
+      data-quoting-later={later ? waiting.map(w => w.supplierId).join(' ') : undefined}
+      title={names.join(', ')}
+    >
       <Icon icon={Clock} className="shrink-0 text-fg-muted" />
-      <span className="min-w-0 [overflow-wrap:anywhere]">
-        Waiting on {waiting.length === 1 ? <b className="font-semibold text-fg">{names[0]}</b> : `${waiting.length} suppliers`}
-      </span>
+      {/* 0145: a supplier that priced other items and said "please wait" for this one. */}
+      <span className="min-w-0 [overflow-wrap:anywhere]">{later ? <>Quoting later: {who}</> : <>Waiting on {who}</>}</span>
     </li>
   )
 }
@@ -332,7 +337,6 @@ export function ItemsPanel({
   suggestions,
   onAddItem,
   onCopyEnquiry,
-  statementTo,
 }: {
   rfq: RfqHeader
   items: RfqItemRow[]
@@ -345,8 +349,6 @@ export function ItemsPanel({
   suggestions?: readonly SupplierSuggestion[]
   onAddItem: () => void
   onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void
-  /** Where the Comparative statement is (admin and sales). Absent: no link. */
-  statementTo?: string
 }) {
   const today = businessToday()
   // Every price (supplier, selling, spread) is for admin and sales only (owner decision 2026-10-22); an engineer's lines carry none.
@@ -418,18 +420,6 @@ export function ItemsPanel({
       }
     >
       {!nobodyAsked && rateBar.length > 0 ? <RateBar entries={rateBar} /> : null}
-      {prices && statementTo && responders.length > 0 ? (
-        <p className="border-b px-0 py-2">
-          <Link
-            to={statementTo}
-            data-testid="open-statement"
-            className="inline-flex min-h-touch items-center gap-2 rounded-control text-base font-bold text-primary underline underline-offset-4 hover:text-primary-hover"
-          >
-            <Icon icon={Table2} />
-            Open the comparative statement
-          </Link>
-        </p>
-      ) : null}
       {nobodyAsked && items.length > 0 ? (
         <p className="mt-4 rounded-control border border-dashed px-4 py-3 text-fg-2">
           <b className="font-semibold text-fg">Ask a supplier first.</b> Replies are entered under Suppliers asked.
@@ -476,7 +466,8 @@ export function ItemsPanel({
               .filter(d => d.reason)
             // Still waiting: asked about this item (supplier flow D), nothing back from them at all, and not declined for this item. A
             // supplier who answered other items and left this one is not waiting on it (the chase card still asks for it).
-            const waiting = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[item.id] && askedAbout(i, item.id))
+            const waiting = inquiries.filter(i => i.sentOn && !i.noOfferOn && i.lines.length === 0 && !i.itemDeclines[item.id] && !i.itemWaits?.[item.id] && askedAbout(i, item.id))
+            const later = inquiries.filter(i => i.itemWaits?.[item.id] && !i.itemDeclines[item.id] && !i.lines.some(l => l.itemId === item.id))
             // Only the suppliers asked about this item count for it; one who priced it unasked counts too.
             const itemResponders = responders.filter(i => askedAbout(i, item.id) || i.lines.some(l => l.itemId === item.id))
             const askedForItem = inquiries.filter(i => (i.sentOn || i.noOfferOn) && askedAbout(i, item.id)).length
@@ -674,6 +665,7 @@ export function ItemsPanel({
                           ))}
                           {/* Phone: the chip says it is waiting and Suppliers asked says on whom; the line stays on desktop. Nothing back on any
                               item: the panel says it once, so no item repeats it. */}
+                          {later.length > 0 ? <WaitingLine waiting={later} later /> : null}
                           {waiting.length > 0 && !(phone && entries.length === 0 && declined.length === 0) ? <WaitingLine waiting={waiting} /> : null}
                         </ul>
                       </div>

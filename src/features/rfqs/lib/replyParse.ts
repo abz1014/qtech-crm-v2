@@ -115,6 +115,8 @@ export interface ParsedReply {
   regretSnippet: string | null
   /** Items the reply declines. A reply-level regret declines every item. */
   declined: DeclinedItem[]
+  /** 0145: items the reply will price later ("please wait", "advise for wait"), by RFQ item id. Never a decline. */
+  waiting: string[]
   /** The reply only asks something (which size? please confirm the quantity): no price, no regret. Nothing in it is an offer. */
   question: boolean
   /** The first question the reply asks, when `question` is set. */
@@ -348,8 +350,10 @@ const MOQ_RE = /\b(?:moq|min(?:imum)?\.?\s*(?:order\s*)?(?:qty|quantity|qnty|ord
 
 const COUNTRIES =
   'Germany|China|USA|U\\.S\\.A|United States|UK|United Kingdom|Italy|Japan|France|Switzerland|India|Korea|Taiwan|Turkey|Netherlands|Spain|Sweden|Denmark|Austria|UAE|Dubai|Malaysia|Singapore|Thailand|Czech|Poland|Finland|Belgium|Hungary|Brazil|Canada|Mexico|Pakistan|Vietnam|Indonesia|Hong Kong'
-const ORIGIN_LABEL_RE = /\b(?:country\s+of\s+origin|origin|made\s+in|manufactured\s+in|coo)\s*[:=-]?\s*([A-Za-z][A-Za-z ./&-]{1,30}?)(?=\s*(?:[,;|(]|\band\b|\.\s|\.$|$|\d|usd|eur|\$))/i
+// "origin" as a whole word only: "Original NEW ABB" is not "Origin: al NEW ABB" (owner, 20 Nov 2026).
+const ORIGIN_LABEL_RE = /\b(?:country\s+of\s+origin|origin(?![a-z])|made\s+in|manufactured\s+in|coo)\s*[:=-]?\s*([A-Za-z][A-Za-z ./&-]{1,30}?)(?=\s*(?:[,;|(]|\band\b|\.\s|\.$|$|\d|usd|eur|\$))/i
 const COUNTRY_MADE_RE = new RegExp(String.raw`\b(${COUNTRIES})\s+(?:made|origin|original)\b`, 'i')
+const COUNTRY_WORD_RE = new RegExp(String.raw`\b(?:${COUNTRIES})\b`, 'i')
 
 const AUTH_RE = new RegExp(
   String.raw`\b(?:genuine|original|brand\s+new|authentic|oem|refurbished|used|compatible|clone|copy|china\s+copy)\b(?:\s+(?:and\s+)?(?:new|original|genuine))?(?:\s+[A-Z][A-Za-z+&-]{2,20})?(?:\s*,\s*(?:${COUNTRIES}))?`,
@@ -365,7 +369,10 @@ function findOrigin(w: string, raw: string): ({ text: string } & Span) | null {
     start = Math.min(start, m.index)
     end = Math.max(end, m.index + m[0].length)
   }
-  const auth = AUTH_RE.exec(w)
+  // "Original NEW SIEMENS" alone says the part is genuine, not where it was made: it is kept only next to a country (owner, 20 Nov
+  // 2026: a Brand column of "Original NEW SIEMENS" on every row came out as "Made in Original NEW SIEMENS").
+  const countryAnywhere = COUNTRY_WORD_RE.test(w) || ORIGIN_LABEL_RE.test(w)
+  const auth = countryAnywhere ? AUTH_RE.exec(w) : null
   if (auth) {
     const txt = raw.slice(auth.index, auth.index + auth[0].length).replace(/\s+/g, ' ').trim()
     // "Genuine Siemens": keep a capitalised brand word, but not a sentence word ("Genuine Price").
@@ -432,6 +439,11 @@ function weightFromCell(cell: string, headUnit: WeightUnit | null): ParsedWeight
   return unit ? { value, unit } : null
 }
 
+// ------------------------------------------------------------------------------------------------ quote later (0145)
+
+/** "please wait", "advise for wait", "will quote later", "price to follow": this item is priced later. Not a refusal. */
+const WAIT_RE = /\b(?:pl(?:ease|s|z)\s+wait|advi[sc]e\s+(?:for\s+)?wait|wait(?:ing)?\s+for\s+(?:the\s+)?(?:price|quote|quotation|offer|confirmation)|(?:will|shall)\s+(?:quote|price|offer|advise|revert|update|confirm)\s+(?:you\s+)?(?:later|soon|shortly|asap)|quote\s+later|price\s+(?:to\s+follow|later|pending)|(?:still\s+)?checking(?:\s+(?:price|stock|with))?)\b/i
+
 // ------------------------------------------------------------------------------------------------ regret
 
 const REGRET_RE = new RegExp(
@@ -492,6 +504,8 @@ interface LineFields {
   qty: number | null
   declaredCurrency: ReplyCurrency | null
   regret: { kind: RegretKind; text: string } | null
+  /** 0145: the line says this item's price comes later ("please wait"). */
+  later?: boolean
   /** The line asks something. */
   question: boolean
 }
@@ -1377,6 +1391,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
   const drafts: Draft[] = []
   const pending: Draft[] = []
   const declined: DeclinedItem[] = []
+  const waiting: string[] = []
   const regretLines: Array<{ kind: RegretKind; text: string }> = []
   const questionLines: string[] = []
   const globals: LineFields = {
@@ -1436,6 +1451,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     // (A table row under a heading: its serial number is not a price either.)
     const analysable = cells && !rowCols && hasSerialCell(cells) ? cells.slice(1).join(String.fromCharCode(9)) : cells ? (cols && !rowCols && cells.length <= 2 && cols.num >= 0 && /^\d{1,3}$/.test(cells[0] ?? '') ? cells.slice(1).join(String.fromCharCode(9)) : line.text) : line.text.replace(/^\s*\d{1,2}\s*[.)]+\s*(?=[A-Za-z])/, '')
     const f = rowCols && rowCells ? analyseRow(rowCells, rowCols, opts.today) : analyse(analysable, opts.today)
+    if (f.prices.length === 0 && !f.regret && WAIT_RE.test(line.text)) f.later = true
     // A row whose empty cells were trimmed ends in "NA.": no price for this item.
     if (!f.regret && !rowCols && cells && cells.length >= 3 && f.prices.length === 0 && /^(?:n\.?\/?a\.?|nil|not\s+available|unavailable)$/i.test(cells[cells.length - 1] ?? '')) {
       f.regret = { kind: 'unavailable', text: line.text.trim() }
@@ -1471,6 +1487,15 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
           if (k !== keep && !declined.some(d => d.rfqItemId === it.id)) declined.push({ rfqItemId: it.id, kind: 'cannot_quote', snippet: snip(line.text.trim()) })
         })
       }
+      blankSince = false
+      continue
+    }
+
+    // 0145: "please wait" on an item's line: priced later. A line that names no item (a general "please wait") is not counted.
+    if (f.later) {
+      const target = match?.idx ?? numIdx
+      const it = target !== null && target !== undefined ? idx[target] : undefined
+      if (it && !waiting.includes(it.id)) waiting.push(it.id)
       blankSince = false
       continue
     }
@@ -1725,6 +1750,7 @@ export function parseSupplierReply(text: string, rfqItems: ReplyItemRef[], opts:
     regretKind: regret ? firstRegret?.kind ?? 'cannot_quote' : null,
     regretSnippet: regret ? snip(firstRegret?.text ?? '') : null,
     declined: finalDeclined,
+    waiting: waiting.filter(id => !finalDeclined.some(d => d.rfqItemId === id) && !offers.some(o => o.rfqItemId === id && o.unitPrice !== null)),
     question,
     questionSnippet: question ? snip(questionLines[0] ?? '') : null,
     replyCurrency,

@@ -456,6 +456,8 @@ export interface InquiryRow {
   noOfferReason: string | null
   /** A different reason for one item, by item id. */
   itemDeclines: Record<string, string>
+  /** 0145: the items this supplier said it will quote later ("please wait"), by item id. */
+  itemWaits?: Record<string, true>
   /** 0140: the items this supplier was asked about; null or absent means every item of the RFQ (lib/askedItems.ts). */
   askedItemIds?: string[] | null
   chaseCount: number
@@ -495,7 +497,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
   if (inq.length === 0) return []
   const supplierIds = [...new Set(inq.map(i => i.supplier_id))]
   const inquiryIds = inq.map(i => i.id)
-  const [companies, states, contacts, lines, recent, declines, legs] = await Promise.all([
+  const [companies, states, contacts, lines, recent, declines, legs, waits] = await Promise.all([
     db.from('companies').select('id, name, country, city').in('id', supplierIds),
     db.from('v_inquiry_state').select('inquiry_id, response_state, contact_state, items_quoted, quote_received_on').eq('rfq_id', rfqId),
     db.from('contacts').select('company_id, name, phone, email, job_title, created_at').in('company_id', supplierIds).order('created_at'),
@@ -518,7 +520,11 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       .not('currency', 'is', null)
       .order('created_at', { ascending: false })
       .limit(200),
+    db.from('inquiry_item_waits').select('inquiry_id, rfq_item_id').in('inquiry_id', inquiryIds),
   ])
+  // 0145 may not be on a database yet (the app can reach it first): then nobody is waiting, and the page still loads.
+  const waitsBy = new Map<string, Record<string, true>>()
+  for (const w of waits.error ? [] : (waits.data ?? [])) waitsBy.set(w.inquiry_id, { ...(waitsBy.get(w.inquiry_id) ?? {}), [w.rfq_item_id]: true })
   const declinesBy = new Map<string, Record<string, string>>()
   for (const d of unwrap(declines)) declinesBy.set(d.inquiry_id, { ...(declinesBy.get(d.inquiry_id) ?? {}), [d.rfq_item_id]: d.reason })
   const byCompany = new Map(unwrap(companies).map(c => [c.id, c]))
@@ -570,6 +576,7 @@ export async function listInquiries(rfqId: string, prices = true): Promise<Inqui
       noOfferOn: i.no_offer_on,
       noOfferReason: i.no_offer_reason,
       itemDeclines: declinesBy.get(i.id) ?? {},
+      itemWaits: waitsBy.get(i.id) ?? {},
       askedItemIds: i.asked_item_ids ?? null,
       chaseCount: i.chase_count,
       notes: i.notes,
@@ -674,6 +681,21 @@ export async function setItemDecline(input: { inquiryId: string; itemId: string;
   const { error } = await db
     .from('inquiry_item_declines')
     .upsert({ inquiry_id: input.inquiryId, rfq_item_id: input.itemId, reason: input.reason }, { onConflict: 'inquiry_id,rfq_item_id' })
+  if (error) throw error
+}
+
+/** 0145: the supplier will quote these items later ("please wait"), or (on: false) no longer. A price or a decline ends a wait by itself. */
+export async function setItemWaits(input: { inquiryId: string; itemIds: readonly string[]; on: boolean }): Promise<void> {
+  if (input.itemIds.length === 0) return
+  const db = requireSupabase()
+  if (!input.on) {
+    const { error } = await db.from('inquiry_item_waits').delete().eq('inquiry_id', input.inquiryId).in('rfq_item_id', [...input.itemIds])
+    if (error) throw error
+    return
+  }
+  const { error } = await db
+    .from('inquiry_item_waits')
+    .upsert(input.itemIds.map(id => ({ inquiry_id: input.inquiryId, rfq_item_id: id })), { onConflict: 'inquiry_id,rfq_item_id', ignoreDuplicates: true })
   if (error) throw error
 }
 

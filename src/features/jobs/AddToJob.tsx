@@ -431,8 +431,9 @@ function PickButton({ icon, label, accept, capture, onFiles }: { icon: typeof Ca
 /**
  * A supplier's reply read into prices: the suggestions are ticked (the unsure ones say "Check this") and "Accept N prices" saves
  * them through the reply save of the Suppliers asked row (the same plan, the same currency rules). Nothing is saved until then.
- * Each ticked price shows its lead time and the weight of one unit, filled in from the reply where it said them. Both are required
- * (owner, 16 Nov 2026): Accept says what is missing under the box and puts the cursor in the first one instead of saving.
+ * Each ticked price shows its lead time and the weight of one unit, filled in from the reply where it said them. The lead time is
+ * required (owner, 16 Nov 2026; the weight is optional since 20 Nov 2026): Accept says what is missing under the box and puts the
+ * cursor in the first one instead of saving.
  */
 function PriceSection({
   rfqId,
@@ -550,7 +551,7 @@ function PriceSection({
     const first = set.suggestions.find(s => s.itemId && ticked.has(s.itemId) && missing[s.itemId])
     if (first?.itemId) {
       setCheckDetails(true)
-      const id = fieldId(first.itemId, missing[first.itemId].leadTime ? 'lead' : 'weight')
+      const id = fieldId(first.itemId, 'lead')
       requestAnimationFrame(() => document.getElementById(id)?.focus())
       return
     }
@@ -639,8 +640,8 @@ function PriceSection({
           {checkDetails && Object.keys(missing).length > 0 ? (
             <p role="status" className="text-sm font-medium text-tone-danger-fg">
               {Object.keys(missing).length === 1
-                ? 'One price still needs a lead time or a weight. Add it, then accept.'
-                : `${Object.keys(missing).length} prices still need a lead time or a weight. Add them, then accept.`}
+                ? 'One price still needs a lead time. Add it, then accept.'
+                : `${Object.keys(missing).length} prices still need a lead time. Add them, then accept.`}
             </p>
           ) : null}
           <Button variant="secondary" size="touch" icon={Check} onClick={() => void accept()} disabled={selected.size === 0} busy={busy} busyLabel="Saving">
@@ -658,7 +659,7 @@ const WEIGHT_UNITS = [
   { value: 'lb', label: 'lb' },
 ]
 
-/** One ticked price's lead time and weight of one unit, both required before Accept saves (the reply form's rule). */
+/** One ticked price's lead time (required before Accept saves, the reply form's rule) and weight of one unit (optional). */
 function QuoteDetails({
   itemId,
   itemNumber,
@@ -676,7 +677,7 @@ function QuoteDetails({
   leadTime: string
   weight: number | null
   weightUnit: WeightUnit
-  missing: { leadTime: boolean; weight: boolean } | undefined
+  missing: { leadTime: boolean } | undefined
   fieldId: (itemId: string, what: 'lead' | 'weight') => string
   onChange: (p: { leadTime?: string; weight?: number | null; weightUnit?: WeightUnit }) => void
 }) {
@@ -706,14 +707,12 @@ function QuoteDetails({
       </span>
       <span className="grid gap-1">
         <label htmlFor={wt} className="text-sm font-semibold text-fg-2">
-          Weight of one unit
+          Weight of one unit <span className="font-normal text-fg-muted">(optional)</span>
         </label>
         <span className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
           <NumberInput
             id={wt}
             aria-label={`Weight of one unit, item ${itemNumber} from ${supplierName}`}
-            aria-invalid={missing?.weight ? true : undefined}
-            aria-describedby={missing?.weight ? `${wt}-problem` : undefined}
             value={weight}
             onChange={v => onChange({ weight: v })}
             placeholder="Weight"
@@ -727,11 +726,6 @@ function QuoteDetails({
             onChange={e => onChange({ weightUnit: e.target.value as WeightUnit })}
           />
         </span>
-        {missing?.weight ? (
-          <span id={`${wt}-problem`} className="text-sm font-medium text-tone-danger-fg">
-            Add the weight of one unit, above zero.
-          </span>
-        ) : null}
       </span>
     </span>
   )

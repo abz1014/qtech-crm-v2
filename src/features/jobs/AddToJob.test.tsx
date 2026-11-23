@@ -148,16 +148,12 @@ describe('Add to this job: a supplier price', () => {
     expect(await screen.findByTestId('guess-line')).toHaveTextContent('Supplier price from Rhein Automation GmbH')
     const accept = await screen.findByRole('button', { name: /Accept \d+ prices?/ })
     await waitFor(() => expect(accept).toHaveTextContent('Accept 2 prices'))
-    // The lead time the message stated is filled in for each price; the weight it did not state is asked for before saving.
+    // The lead time the message stated is filled in for each price; the weight it did not state is optional (20 Nov 2026), and
+    // one typed here is saved with the price.
     const lead1 = screen.getByRole('textbox', { name: 'Lead time, item 1 from Rhein Automation GmbH' })
     expect(lead1).toHaveValue('8 weeks')
-    await user.click(accept)
     const w1 = screen.getByRole('textbox', { name: 'Weight of one unit, item 1 from Rhein Automation GmbH' })
-    await waitFor(() => expect(w1).toHaveFocus())
-    expect(w1).toHaveAttribute('aria-invalid', 'true')
-    expect(w1).toHaveAccessibleDescription('Add the weight of one unit, above zero.')
-    expect(screen.getByText('2 prices still need a lead time or a weight. Add them, then accept.')).toBeInTheDocument()
-    expect(db.calls.some(c => c.target === 'supplier_quote_lines')).toBe(false)
+    expect(w1).not.toHaveAttribute('aria-invalid')
     await user.type(w1, '4.2')
     await user.type(screen.getByRole('textbox', { name: 'Weight of one unit, item 2 from Rhein Automation GmbH' }), '900')
     await user.selectOptions(screen.getByRole('combobox', { name: 'Weight unit, item 2 from Rhein Automation GmbH' }), 'g')

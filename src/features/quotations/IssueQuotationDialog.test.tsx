@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { RfqHeader } from '@/features/rfqs/api'
+import type { InquiryRow, RfqHeader } from '@/features/rfqs/api'
 import { IssueQuotationDialog } from '@/features/quotations/IssueQuotationDialog'
 import { installFakeDb, type FakeCall, type FakeResult } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
@@ -29,7 +29,7 @@ const RFQ: RfqHeader = {
 
 const PROFILE = { id: 1, legal_name: 'Q-Tech', address: 'Karachi', quotation_validity_days: 30, quotation_terms: null }
 
-function setup(memory: () => FakeResult, price: number | null = 1000, quotations: () => FakeResult = () => ({ data: [] })) {
+function setup(memory: () => FakeResult, price: number | null = 1000, quotations: () => FakeResult = () => ({ data: [] }), inquiries: InquiryRow[] = []) {
   const db = installFakeDb((c: FakeCall) => {
     if (c.target === 'quotations') return quotations()
     if (c.target === 'rfq_items') {
@@ -44,7 +44,7 @@ function setup(memory: () => FakeResult, price: number | null = 1000, quotations
     <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Sana', role: 'sales' } }}>
       <QueryClientProvider client={client}>
         <ToastProvider>
-          <IssueQuotationDialog rfq={RFQ} inquiries={[]} onClose={() => {}} />
+          <IssueQuotationDialog rfq={RFQ} inquiries={inquiries} onClose={() => {}} />
         </ToastProvider>
       </QueryClientProvider>
     </SessionContext.Provider>,
@@ -58,6 +58,19 @@ afterEach(() => {
 })
 
 describe('Issue quotation dialog', () => {
+  // The weight is optional when a reply is logged (owner, 20 Nov 2026): the items being quoted with no weight from any supplier are named.
+  const reply = (weight: number | null) =>
+    [{ id: 'q1', supplierId: 's1', supplierName: 'Rhein', sentOn: '2026-10-01', noOfferOn: null, itemDeclines: {}, lines: [{ id: 'l1', itemId: 'i1', unitPrice: 50, currency: 'USD', leadTime: '2 weeks', weight, weightUnit: 'kg' }] }] as unknown as InquiryRow[]
+  it('names an item being quoted that no supplier gave a weight for', async () => {
+    setup(() => ({ data: [] }), 1000, undefined, reply(null))
+    expect(await screen.findByTestId('no-weight-note')).toHaveTextContent('No supplier gave a weight for item 1. Ask for it if the freight depends on it.')
+  })
+  it('says nothing about weight when a supplier gave one', async () => {
+    setup(() => ({ data: [] }), 1000, undefined, reply(1.2))
+    await screen.findByRole('list', { name: 'Items to quote' })
+    expect(screen.queryByTestId('no-weight-note')).toBeNull()
+  })
+
   it('can still be issued when the price chips (customer_price_memory) fail to load', async () => {
     setup(() => ({ error: { code: 'XX000', message: 'boom' } }))
     const issue = await screen.findByRole('button', { name: 'Issue quotation' })
