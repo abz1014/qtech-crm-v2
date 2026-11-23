@@ -858,3 +858,33 @@ describe('RFQ-9: impossible dates are not read', () => {
     expect(findDate('29 Feb', '2027-10-28', true)?.iso).toBe('2028-02-29')
   })
 })
+
+describe('an email screenshot read by the picture reader', () => {
+  // Outlook's Cc column has no colon ("Ce" is how the reader sees "Cc"), and a round bullet comes out as "e".
+  const text = [
+    'Ce Imran Ali',
+    'Sara Khan',
+    '',
+    'Dear Sir,',
+    '',
+    'We trust this message finds you well,',
+    '',
+    'Please share the price and availability for the below mentioned supply.',
+    '',
+    'e',
+    'TOUCH MP 277 6AV6 643-0CB01-1AX1-01 Qty: 01 NOS',
+    '',
+    'Regards,',
+    '',
+    'Ahmed Raza',
+    'Deputy Manager',
+    'Purchase',
+    'North Star Textile Mills Limited, Gulberg, Lahore',
+  ].join('\n')
+
+  it('gives the one item, not the Cc names or the bullet', () => {
+    const r = parseEnquiry(text, { today: '2026-11-23' })
+    expect(r.items.map(i => [i.description, i.qty, i.unit])).toEqual([['TOUCH MP 277 6AV6 643-0CB01-1AX1-01', 1, 'nos']])
+    expect(r.facts.company?.name).toBe('North Star Textile Mills Limited')
+  })
+})
