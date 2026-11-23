@@ -189,7 +189,7 @@ export function CoverageBoard({
           </span>
         </div>
         <Legend />
-        <div className="max-h-[70vh] overflow-auto rounded-control border" data-board-scroll>
+        <div className="max-h-[70vh] overflow-auto rounded-control border [contain:inline-size]" data-board-scroll>
           <div role="table" aria-label="Items by supplier" aria-rowcount={shown.length + 1} className="grid w-full" style={cols}>
             <div role="row" className="contents">
               <span role="columnheader" className="sticky left-0 top-0 z-sticky flex items-end border-b border-r bg-deep px-4 py-2 text-sm font-semibold text-fg-2">
@@ -210,7 +210,7 @@ export function CoverageBoard({
                   </span>
                 )
               })}
-              <span role="columnheader" className="sticky right-0 top-0 z-sticky flex items-end border-b border-l bg-deep px-4 py-2 text-sm font-semibold text-fg-2">
+              <span role="columnheader" className="sticky top-0 z-sticky flex items-end border-b border-l bg-deep md:right-0 px-4 py-2 text-sm font-semibold text-fg-2">
                 Prices
               </span>
             </div>
@@ -262,7 +262,7 @@ export function CoverageBoard({
                           </span>
                         )
                       })}
-                      <span role="cell" className="sticky right-0 z-base grid content-center border-b border-l bg-surface px-4 py-2" data-prices={s.counts.priced}>
+                      <span role="cell" className="z-base grid content-center border-b border-l bg-surface md:sticky md:right-0 px-4 py-2" data-prices={s.counts.priced}>
                         <span className={cn('text-sm font-semibold', s.noPrice ? 'text-tone-danger-fg' : 'text-fg')}>{pricesWord(s.counts.priced)}</span>
                         {more ? <span className="whitespace-nowrap text-xs text-fg-muted">{more}</span> : null}
                       </span>
