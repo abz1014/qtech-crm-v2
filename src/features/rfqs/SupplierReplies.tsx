@@ -1,7 +1,7 @@
 import { readClipboardText } from '@/lib/docread/htmlTable'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Ban, ChevronDown, ClipboardPaste, MessageSquareReply, Undo2 } from 'lucide-react'
+import { Ban, ChevronDown, ClipboardPaste, Clock, MessageSquareReply, Undo2 } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { mapPgError } from '@/lib/pgErrors'
@@ -22,7 +22,7 @@ import type { readDocument as ReadDocument } from '@/features/rfqs/lib/readPdf'
 import { replyInputId } from '@/features/rfqs/replyFocus'
 import { askedAboutText } from '@/features/rfqs/lib/askedItems'
 import type { InquiryRow, RfqHeader, RfqItemRow } from '@/features/rfqs/api'
-import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline } from '@/features/rfqs/hooks'
+import { useSaveReply, useSetInquiryNoOffer, useSetItemDecline, useSetItemWaits } from '@/features/rfqs/hooks'
 import {
   CANT_QUOTE_REASONS,
   currencyForSupplier,
@@ -53,7 +53,7 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  * one row per supplier with "Enter reply" or "Edit reply". That opens this dialog (a bottom sheet on a phone), and only then the
  * price form: a price per item, the currency already filled in (the supplier's last currency, else the country map: "there is
  * nothing to pick"), and stock once for the whole reply. Each item also has its own lead time, weight of one unit and country of
- * origin; the lead time and the weight are required for every item that gets a price (owner, 16 Nov 2026), so Save reply says
+ * origin; the lead time is required for every item that gets a price (owner, 16 Nov 2026; the weight is optional since 20 Nov 2026), so Save reply says
  * what is missing under the box and puts the cursor in the first one instead of saving. A typed price stays in the currency chosen:
  * no PKR figure is shown under it (owner, 16 Nov 2026: no conversion until the person asks for it).
  *
@@ -136,6 +136,7 @@ export function SupplierReplyDialog({
   const save = useSaveReply(rfq.id)
   const noOffer = useSetInquiryNoOffer(rfq.id)
   const itemReason = useSetItemDecline(rfq.id)
+  const waits = useSetItemWaits(rfq.id)
 
   const prefill = currencyForSupplier(inquiry.lastCurrency, inquiry.supplierCountry)
   const existing = inquiry.lines.map(l => ({ itemId: l.itemId, unitPrice: l.unitPrice, currency: l.currency, leadTime: l.leadTime, inStock: l.inStock, weight: l.weight, weightUnit: l.weightUnit, origin: l.origin }))
@@ -145,7 +146,7 @@ export function SupplierReplyDialog({
   const [suggestions, setSuggestions] = useState<SuggestionSet | null>(null)
   /** What was typed in each price box, for the reason shown when it is not a price (HW-48). */
   const [priceText, setPriceText] = useState<Record<string, string>>({})
-  /** A save was tried with a lead time or a weight missing: from then on the missing ones say so under their boxes. */
+  /** A save was tried with a lead time missing: from then on the missing ones say so under their boxes. */
   const [checkDetails, setCheckDetails] = useState(false)
 
   const hasLines = inquiry.lines.length > 0
@@ -166,12 +167,12 @@ export function SupplierReplyDialog({
     if (!d.currency) return // no currency picked yet: nothing is saved (audit R1)
     const plan = planReplySave(existing, d)
     if (plan.prices.length === 0 && plan.removeItemIds.length === 0) return
-    // Every priced item needs its lead time and the weight of one unit: nothing is saved until they are in (16 Nov 2026).
+    // Every priced item needs its lead time: nothing is saved until they are in (16 Nov 2026).
     const missing = missingQuoteDetails(d)
     const firstMissing = items.find(it => missing[it.id])
     if (firstMissing) {
       setCheckDetails(true)
-      const id = `${replyInputId(inquiry.id, firstMissing.id)}-${missing[firstMissing.id].leadTime ? 'lead' : 'weight'}`
+      const id = `${replyInputId(inquiry.id, firstMissing.id)}-lead`
       requestAnimationFrame(() => document.getElementById(id)?.focus())
       return
     }
@@ -196,6 +197,33 @@ export function SupplierReplyDialog({
       toast({ title: 'Could not save the reply', body: mapPgError(err, { entity: 'reply' }).message, tone: 'danger' })
     } finally {
       saving.current = false
+    }
+  }
+
+  // 0145: the items the supplier has not priced, declined or put off yet. "The rest: quoting later" marks them all at once, as
+  // replies often price some items and say "please wait" for the rest (owner, 20 Nov 2026).
+  const isWaiting = (itemId: string) => inquiry.itemWaits?.[itemId] === true
+  const restIds = items
+    .filter(it => !inquiry.itemDeclines[it.id] && !isWaiting(it.id) && !inquiry.lines.some(l => l.itemId === it.id) && !(typeof draft.prices[it.id] === 'number' && (draft.prices[it.id] as number) > 0))
+    .map(it => it.id)
+  const markLater = async (itemIds: readonly string[], on: boolean) => {
+    try {
+      await waits.mutateAsync({ inquiryId: inquiry.id, itemIds, on })
+      if (on) {
+        toast({
+          title: itemIds.length === 1 ? 'Marked quoting later' : `${itemIds.length} items marked quoting later`,
+          body: inquiry.supplierName,
+          undo: {
+            onUndo: async () => {
+              await waits.mutateAsync({ inquiryId: inquiry.id, itemIds, on: false })
+            },
+            settledTitle: 'Marked quoting later',
+            undoneTitle: 'Quoting later taken back',
+          },
+        })
+      }
+    } catch (err) {
+      toast({ title: 'Could not save it', body: mapPgError(err).message, tone: 'danger' })
     }
   }
 
@@ -291,6 +319,9 @@ export function SupplierReplyDialog({
       for (const d of suggestions.declined) {
         if (inquiry.itemDeclines[d.itemId] !== d.reason) await itemReason.mutateAsync({ inquiryId: inquiry.id, itemId: d.itemId, reason: d.reason })
       }
+      // 0145: "please wait" rows are recorded as quoting later (a price saved for one of them later ends it).
+      const later = (suggestions.waiting ?? []).map(w => w.itemId).filter(id => !isWaiting(id) && !inquiry.itemDeclines[id])
+      if (later.length > 0) await waits.mutateAsync({ inquiryId: inquiry.id, itemIds: later, on: true })
     } catch (err) {
       toast({ title: 'Could not save the reasons', body: mapPgError(err).message, tone: 'danger' })
       return
@@ -324,6 +355,11 @@ export function SupplierReplyDialog({
           declinedAll ? undefined : (
             <>
               {!hasLines ? <CantQuoteMenu supplierName={inquiry.supplierName} busy={noOffer.isPending} onPick={r => void cantQuote(r)} className="mr-auto max-md:mr-0" /> : null}
+              {restIds.length > 0 && restIds.length < items.length ? (
+                <Button icon={Clock} onClick={() => void markLater(restIds, true)} busy={waits.isPending} busyLabel="Saving" className={hasLines ? 'mr-auto max-md:mr-0' : undefined}>
+                  {`The rest: quoting later (${restIds.length})`}
+                </Button>
+              ) : null}
               <Button variant="primary" onClick={() => void doSave()} disabled={!canSave} busy={save.isPending} busyLabel="Saving">
                 Save reply
               </Button>
@@ -413,8 +449,8 @@ export function SupplierReplyDialog({
               {missingCount > 0 ? (
                 <p role="status" className="text-sm font-medium text-tone-danger-fg" data-reply-missing="">
                   {missingCount === 1
-                    ? 'One priced item still needs a lead time or a weight. Add it, then save the reply.'
-                    : `${missingCount} priced items still need a lead time or a weight. Add them, then save the reply.`}
+                    ? 'One priced item still needs a lead time. Add it, then save the reply.'
+                    : `${missingCount} priced items still need a lead time. Add them, then save the reply.`}
                 </p>
               ) : null}
               <ul className="grid gap-3">
@@ -510,6 +546,15 @@ export function SupplierReplyDialog({
                         )}
                         </span>
                       </div>
+                      {!reason && isWaiting(it.id) && !inquiry.lines.some(l => l.itemId === it.id) ? (
+                        <p className="flex flex-wrap items-center gap-x-2 text-sm text-fg-muted" data-quoting-later={it.id}>
+                          <Icon icon={Clock} size="sm" />
+                          <span>Quoting later. A price typed here and saved ends it.</span>
+                          <Button size="sm" variant="quiet" icon={Undo2} disabled={waits.isPending} aria-label={`Take back quoting later, item ${it.number} from ${inquiry.supplierName}`} onClick={() => void markLater([it.id], false)}>
+                            Take back
+                          </Button>
+                        </p>
+                      ) : null}
                       {problem ? (
                         <p id={`${replyInputId(inquiry.id, it.id)}-problem`} className="text-sm font-medium text-tone-danger-fg sm:text-right">
                           {problem}
@@ -555,15 +600,13 @@ export function SupplierReplyDialog({
                           <div className="grid gap-1">
                             <span className="flex min-h-6 items-center">
                               <label htmlFor={`${base}-weight`} className="text-sm font-semibold text-fg-2">
-                                Weight of one unit
+                                Weight of one unit <span className="font-normal text-fg-muted">(optional)</span>
                               </label>
                             </span>
                             <span className="grid grid-cols-[minmax(0,1fr)_5.25rem] gap-2">
                               <NumberInput
                                 id={`${base}-weight`}
                                 aria-label={`Weight of one unit, item ${it.number} from ${inquiry.supplierName}`}
-                                aria-invalid={gap?.weight ? true : undefined}
-                                aria-describedby={gap?.weight ? `${base}-weight-problem` : undefined}
                                 value={x.weight}
                                 onChange={v => patch({ weight: v })}
                                 placeholder="Weight"
@@ -577,11 +620,6 @@ export function SupplierReplyDialog({
                                 onChange={e => patch({ weightUnit: e.target.value as WeightUnit })}
                               />
                             </span>
-                            {gap?.weight ? (
-                              <p id={`${base}-weight-problem`} className="text-sm font-medium text-tone-danger-fg">
-                                Add the weight of one unit, above zero.
-                              </p>
-                            ) : null}
                           </div>
                           <div className="grid gap-1">
                             <span className="flex min-h-6 items-center">

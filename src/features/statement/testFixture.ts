@@ -83,5 +83,6 @@ export function sampleData(itemCount: number, showNoReply = true): StatementPdfD
     date: '2026-10-29',
     preparedBy: 'Sana Sales',
     showNoReply,
+    grid: { items, inquiries, contact: 'Imran Ali', customerRef: 'ACM-REQ-77' },
   }
 }

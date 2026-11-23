@@ -1263,10 +1263,7 @@ test('HW-5: a pasted reply line "price on request" is stored as a price (the "2"
   const panel = page.getByRole('region', { name: `Read from the reply of ${de.name}` })
   await expect(panel).toBeVisible(T)
   await panel.getByRole('button', { name: /^Accept \d+ prices?$/ }).click()
-  // The reply stated the lead time, not the weight: it is asked for before the reply is saved.
-  const form = page.getByRole('dialog', { name: de.name, exact: true })
-  await form.getByLabel(`Weight of one unit, item 1 from ${de.name}`, { exact: true }).fill('3')
-  await form.getByRole('button', { name: 'Save reply' }).click()
+  // The reply stated the lead time, not the weight: the weight is optional (20 Nov 2026), so Accept saves it.
   await expect.poll(async () => (await linesOf(r.rfq.id, de.id)).length, T).toBeGreaterThan(0)
   await page.waitForTimeout(1000)
   const lines = await linesOf(r.rfq.id, de.id)

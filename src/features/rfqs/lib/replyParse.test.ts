@@ -684,3 +684,60 @@ describe('RFQ-8: one line quoting several items', () => {
     expect(one(r.offers, 'b').unitPrice).toBe(32000)
   })
 })
+
+// Owner, 20 Nov 2026: replies to Job 183 (31 items). A brand column of "Original NEW SIEMENS" is not a country, and "please wait"
+// on an item's row means it is priced later (0145), never a refusal.
+describe('Job 183 replies: brand column and "please wait"', () => {
+  const items: ReplyItemRef[] = [
+    { id: 'p12', description: 'Soft Starter ABB PSR85-600-70 45 kW (at 400V AC), 85A rated operational current', qty: 1 },
+    { id: 'p13', description: 'Manual Motor Starter (MPCB) ABB MS495-40 (Series MS495) Manual Motor Protective Circuit Breaker', qty: 2 },
+    { id: 'p16', description: 'Digital Temperature Controller Honeywell DC1040CR-701000-E 1/4 DIN PID', qty: 3 },
+    { id: 'p17', description: 'Remote I/O Station Module Mitsubishi Electric AJ65BTC1-32D MELSEC CC-Link', qty: 1 },
+    { id: 'p19', description: 'AC Servo Amplifier Drive Mitsubishi Electric MR-J2S-200A MELSERVO-J2-Super', qty: 1 },
+  ]
+
+  it('reads the brand column of a supplier table as no country of origin', () => {
+    const r = parseSupplierReply(
+      [
+        'P/N\tBrand/Manufacturer\tQty require\tUnit Price $ (EXW)\tLead time',
+        'PSR85-600-70\tOriginal NEW ABB\t1\t$ 311.8\t5-7 Day',
+        'DC1040CR-701000-E\tOriginal NEW Honeywell\t3\t$ 55.6\t5-7 Day',
+      ].join('\n'),
+      items,
+    )
+    expect(one(r.offers, 'p12')).toMatchObject({ unitPrice: 311.8, currency: 'USD' })
+    expect(one(r.offers, 'p12').origin ?? null).toBeNull()
+    expect(one(r.offers, 'p16').origin ?? null).toBeNull()
+    expect(r.waiting).toEqual([])
+  })
+
+  it('still reads "genuine Siemens, Germany" as the origin', () => {
+    const r = parseSupplierReply('Siemens SITRANS P320 pressure transmitter - USD 412.50 each, 3-4 weeks, genuine Siemens, Germany', ITEMS)
+    expect(one(r.offers, 'i1').origin).toMatch(/Germany/)
+  })
+
+  it('puts "please wait" rows down as priced later, and "can\'t quote" rows as declined', () => {
+    const r = parseSupplierReply(
+      [
+        'Item\tPart Number/Model\tManufacture\tQty\tUnit Price\tTotal Price\tLead Time',
+        '12\tPSR85-600-70\tABB\t1\tplease wait\t\t',
+        '13\tMS495-40 (Series MS495)\tABB\t2\tplease wait\t\t',
+        '16\tDC1040CR-701000-E\tHoneywell\t3\t$78.00\t$234.00\t1 week',
+        "17\tAJ65BTC1-32D\tMitsubishi Electric\t1\tcan't quote\t\t",
+        '19\tMR-J2S-200A\tMitsubishi Electric\t1\t$646.00\t$646.00\t1 week',
+      ].join('\n'),
+      items,
+    )
+    expect(one(r.offers, 'p16')).toMatchObject({ unitPrice: 78 })
+    expect(one(r.offers, 'p19')).toMatchObject({ unitPrice: 646 })
+    expect(r.waiting.sort()).toEqual(['p12', 'p13'])
+    expect(r.declined.map(d => d.rfqItemId)).toEqual(['p17'])
+    expect(r.regret).toBe(false)
+  })
+
+  it('reads "advise for wait" and "will quote later" as priced later', () => {
+    const r = parseSupplierReply('PSR85-600-70 advise for wait\nMS495-40 will quote later', items)
+    expect(r.waiting.sort()).toEqual(['p12', 'p13'])
+    expect(r.declined).toEqual([])
+  })
+})

@@ -62,6 +62,7 @@ function Downloads({ jobKey, rfqId, look = 'panel' }: { jobKey: string; rfqId: s
         date: businessToday(),
         preparedBy: session.status === 'signed-in' ? session.user.name : '',
         showNoReply: true,
+        grid: { items: items.data ?? [], inquiries: inquiries.data ?? [], contact: rfq.contact?.name ?? null, customerRef: rfq.customerRef },
       }
       const blob = kind === 'xlsx' ? await generateStatementXlsx(data, profile.data) : await generateStatementPdf(data, profile.data)
       const name = statementFileName(label, kind)
