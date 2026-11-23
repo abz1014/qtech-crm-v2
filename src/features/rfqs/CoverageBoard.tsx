@@ -135,7 +135,7 @@ export function CoverageBoard({
   const shown = useMemo(() => filterItems(items, asked, filter, search), [items, asked, filter, search])
   const groups = groupByBrand(shown)
   const grouped = groupByBrand(items).length > 1
-  const cols: CSSProperties = { gridTemplateColumns: `minmax(14rem, 1fr) repeat(${asked.length}, minmax(4.5rem, 5rem)) minmax(9rem, max-content)` }
+  const cols: CSSProperties = { gridTemplateColumns: `minmax(14rem, 1fr) repeat(${asked.length}, minmax(4.5rem, 5rem)) minmax(10rem, max-content)` }
   const opened = open ? items.find(it => it.id === open) : undefined
   // Under 5 items and 3 suppliers asked the items list says it all (EnquiryWork asks the same before drawing this).
   if (!showBoard(items.length, asked.length)) return null
@@ -190,7 +190,7 @@ export function CoverageBoard({
         </div>
         <Legend />
         <div className="max-h-[70vh] overflow-auto rounded-control border" data-board-scroll>
-          <div role="table" aria-label="Items by supplier" aria-rowcount={shown.length + 1} className="grid w-max min-w-full" style={cols}>
+          <div role="table" aria-label="Items by supplier" aria-rowcount={shown.length + 1} className="grid w-full" style={cols}>
             <div role="row" className="contents">
               <span role="columnheader" className="sticky left-0 top-0 z-sticky flex items-end border-b border-r bg-deep px-4 py-2 text-sm font-semibold text-fg-2">
                 Item
@@ -203,9 +203,9 @@ export function CoverageBoard({
                     role="columnheader"
                     title={i.supplierName}
                     aria-label={reach ? `${i.supplierName}, ${REACH_WORDS[reach]}` : i.supplierName}
-                    className="sticky top-0 z-base grid content-end justify-items-center border-b bg-deep px-2 py-2 text-center"
+                    className="sticky top-0 z-base grid content-end justify-items-center border-b bg-deep px-1 py-2 text-center"
                   >
-                    <span className="max-w-full truncate text-sm font-semibold text-fg">{short[n]}</span>
+                    <span className="max-w-full truncate text-xs font-semibold text-fg">{short[n]}</span>
                     {reach ? <span className="text-xs text-fg-muted">{reach === 'local' ? 'Local' : 'Intl'}</span> : null}
                   </span>
                 )
