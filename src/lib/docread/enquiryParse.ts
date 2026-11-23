@@ -85,6 +85,8 @@ const PRODUCT =
 const COURTESY =
   /\b(?:enquiry|inquiry|quotations?|quote|quoting|offers?|rfq|tender|attached|attachment|below|above|following|requirements?|arrange|reply|revert|respond|soonest|earliest|asap|needful|urgent(?:ly)?|thanks|thank|regards|kindly|please|plz|pls|best\s+price|lowest|rates?|prices?|hai|hain|bata|batao|bhejo|bhej|dein|jaldi|zaroor|chahiye|letterhead|invited|fyi|f\.y\.i|for\s+your\s+(?:information|reference|action)|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|need\s+(?:it|them)|hope\s+you|finds?\s+you\s+well|trust\s+(?:this|you)|necessary\s+action|for\s+action|look(?:ing)?\s+forward|valued\s+order|business\s+relationship|possible\s+cooperation|appreciate|reminder)\b/i
 /** A sentence that only greets ("Hi Ali, hope you are well."). */
+/** A word that makes a line a company's name, not a person's ("Chenab Textile Mills Limited"). */
+const COMPANY_WORD = /\b(?:limited|ltd|pvt|private|mills?|industries|company|co|corporation|corp|group|enterprises?|traders?|textiles?|engineering|solutions)\b/i
 const GREETING_SENTENCE = /^(?:hi|hello|hey|dear|respected|asalam\w*|salam|assalam\w*|aoa|good\s+(?:morning|afternoon|evening))\b[^.!?]*[.!?]?$|\bhope\s+(?:you|this|all)\b/i
 
 const SIGN_OFF =
@@ -1094,6 +1096,9 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     if (!due && rankShift === 0) due = findDue(t, today)
   }
 
+  // The first "Dear Sir" line. Above it, a screenshot of an email can carry the names from Outlook's To and Cc columns with no
+  // colon ("Cc  Ubaidullah Khalid; Kamran Hameed" read as "Ce Ubaidullah" / "Kamran Hameed"): never items.
+  const firstGreeting = src.findIndex(x => GREETING_SENTENCE.test(x.t.trim()))
   for (let k = 0; k < src.length; k++) {
     const s = src[k] as Src
     const t = s.t
@@ -1234,6 +1239,16 @@ export function parseEnquiry(raw: string, opts: EnquiryOptions = {}): EnquiryPar
     // A line with no Latin letter or digit (a greeting typed in Urdu): never an item, as a part is named in English.
     if (!/[A-Za-z0-9]/.test(t)) {
       skip(t, 'greeting')
+      continue
+    }
+    // A bullet the picture reader took for a letter ("e" for "•"): one or two letters alone are never an item.
+    if (/^[A-Za-z]{1,2}[.)]?$/.test(t.trim())) {
+      skip(t, 'greeting')
+      continue
+    }
+    // Names above the greeting (see firstGreeting): only capitalised words (Abc), no company word, no digit, nothing that looks like a part.
+    if (k < firstGreeting && drafts.length === 0 && /^(?:[A-Z][a-z][a-z'.-]*[;,]?\s*){1,4}$/.test(t.trim()) && !COMPANY_WORD.test(t) && !itemish(t)) {
+      skip(t, 'header')
       continue
     }
     // A sentence that wrapped onto this line ("The quotation" / "should mention delivery period ..."): skipped as its first
