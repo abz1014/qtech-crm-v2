@@ -337,6 +337,7 @@ export function ItemsPanel({
   suggestions,
   onAddItem,
   onCopyEnquiry,
+  board = false,
 }: {
   rfq: RfqHeader
   items: RfqItemRow[]
@@ -349,6 +350,12 @@ export function ItemsPanel({
   suggestions?: readonly SupplierSuggestion[]
   onAddItem: () => void
   onCopyEnquiry: (supplier: SupplierSuggestion, item: RfqItemRow) => void
+  /**
+   * The coverage board shows above (CoverageBoard.tsx): it says who has not replied on each item and the gap bar names the items
+   * with no price, so the "Waiting on" lines and the "N of M items have no price" box are left out here. The prices, the cannot
+   * quote rows, the quoting later line and every item action stay.
+   */
+  board?: boolean
 }) {
   const today = businessToday()
   // Every price (supplier, selling, spread) is for admin and sales only (owner decision 2026-10-22); an engineer's lines carry none.
@@ -393,7 +400,7 @@ export function ItemsPanel({
       })
       .map(it => it.id),
   )
-  const manyUncovered = uncoveredIds.size > 2
+  const manyUncovered = uncoveredIds.size > 2 && !board
   const listFolded = allWaiting && items.length > FOLD_FROM && !showItems
   return (
     <DetailPanel
@@ -559,7 +566,7 @@ export function ItemsPanel({
                       </div>
                     ) : null}
 
-                    {nobodyAsked || allWaiting ? null : entries.length > 0 || declined.length > 0 || (waiting.length > 0 && !phone) ? (
+                    {nobodyAsked || allWaiting ? null : entries.length > 0 || declined.length > 0 || (!phone && (board ? later.length > 0 : waiting.length > 0)) ? (
                       <div className="mt-3 lg:mt-1">
                         {entries.length > 0 && prices ? (
                           item.id !== headItemId ? null : <div className={HEAD} aria-hidden="true">
@@ -666,7 +673,7 @@ export function ItemsPanel({
                           {/* Phone: the chip says it is waiting and Suppliers asked says on whom; the line stays on desktop. Nothing back on any
                               item: the panel says it once, so no item repeats it. */}
                           {later.length > 0 ? <WaitingLine waiting={later} later /> : null}
-                          {waiting.length > 0 && !(phone && entries.length === 0 && declined.length === 0) ? <WaitingLine waiting={waiting} /> : null}
+                          {waiting.length > 0 && !board && !(phone && entries.length === 0 && declined.length === 0) ? <WaitingLine waiting={waiting} /> : null}
                         </ul>
                       </div>
                     ) : null}

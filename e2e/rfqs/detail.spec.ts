@@ -616,7 +616,11 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.locator('[data-price-row]')).toHaveCount(1)
     await expect(one.getByText('1 price so far', { exact: true })).toHaveCount(0) // said once, on the supplier's row
-    await expect(one.locator(`[data-waiting~="${s.china.id}"]`)).toHaveText('Waiting on 2 suppliers') // China and Germany, one line
+    // Three suppliers asked: the coverage board says who has not replied, so the item has no "Waiting on" line of its own.
+    const board = page.locator('[data-slot="coverage-board"]')
+    await expect(board.getByRole('button', { name: `${s.china.name}, item 1: no reply yet` })).toBeVisible()
+    await expect(board.getByRole('button', { name: `${s.germany.name}, item 1: no reply yet` })).toBeVisible()
+    await expect(one.locator('[data-waiting]')).toHaveCount(0)
     // A price is in: Issue quotation is the green button.
     await expect(page.getByRole('button', { name: 'Send quotation', exact: true })).toBeVisible()
     // The others answer something: nobody is waiting any more.
@@ -647,7 +651,11 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[0].id, 'discontinued']])
     await page.keyboard.press('Escape')
     await expect(one.locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
-    await expect(one.locator('[data-waiting]')).toHaveText('Waiting on 2 suppliers')
+    // The board says who still has to answer item 1 (three suppliers asked), not a line under the item.
+    const board = page.locator('[data-slot="coverage-board"]')
+    await expect(board.getByRole('button', { name: `${s.germany.name}, item 1: cannot quote` })).toBeVisible()
+    await expect(board.getByRole('button', { name: `${s.china.name}, item 1: no reply yet` })).toBeVisible()
+    await expect(one.locator('[data-waiting]')).toHaveCount(0)
   })
 
   test('the item row menu: Copy price, Remove reply with an Undo, Edit reply goes to the price box', async ({ page }) => {
