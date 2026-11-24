@@ -72,3 +72,21 @@ describe('payload', () => {
     expect(orderLineCount(items, splits)).toBe(4)
   })
 })
+
+describe('another supplier, typed at Mark won (quote first, 0146)', () => {
+  const one: ConvertItem = { id: 'i1', description: 'Panel', qty: 2, unit: 'pcs', quotedUnitPriceNet: null, brandName: null, familyName: null }
+  const two: ConvertItem = { ...one, id: 'i2', description: 'Relay' }
+  it('names the supplier, with its price and currency when one was typed, and never a quote line', () => {
+    const out = buildSplitPayload([one, two], { i1: 'typed', i2: 'typed' }, { i1: 50000, i2: 7000 }, {}, {
+      i1: { id: 's1', name: 'YonaNex', currency: 'USD', price: 35 },
+      i2: { id: 's2', name: 'ROMA', currency: 'USD', price: null },
+    })
+    expect(out).toEqual([
+      { rfq_item_id: 'i1', unit_price_net: 50000, supplier_id: 's1', supplier_unit_price: 35, currency: 'USD' },
+      { rfq_item_id: 'i2', unit_price_net: 7000, supplier_id: 's2' },
+    ])
+  })
+  it('sends nothing for the supplier while none was chosen (the dialog holds Create order until one is)', () => {
+    expect(buildSplitPayload([one], { i1: 'typed' }, { i1: 100 }, {})).toEqual([{ rfq_item_id: 'i1', unit_price_net: 100 }])
+  })
+})

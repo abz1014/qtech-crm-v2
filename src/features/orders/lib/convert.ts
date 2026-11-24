@@ -22,7 +22,22 @@ export interface ConvertPayloadLine {
   unit_price_net?: number
   qty?: number
   is_service?: boolean
+  /** A supplier typed at Mark won, with no reply entered (0146, quote first): its id, and optionally its unit price and currency. */
+  supplier_id?: string
+  supplier_unit_price?: number
+  currency?: string
 }
+
+/** "Another supplier" on a Mark won line: the supplier and, when known, the price it quoted (quote first, owner 24 Nov 2026). */
+export interface TypedSupplier {
+  id: string
+  name: string
+  currency: string
+  price: number | null
+}
+
+/** The picker value of a line whose supplier is typed. */
+export const TYPED = 'typed'
 
 /**
  * The p_items of convert_rfq_to_order. `typedPrices` holds a selling price for items the quotation never priced. A line with a

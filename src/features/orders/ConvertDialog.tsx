@@ -21,11 +21,14 @@ import { readIssueDraft } from '@/features/quotations/lib/issueDraft'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { FALLBACK_PAYMENT_TERMS_DAYS } from '@/features/settings/companyProfile'
 import { daysFromTermsText } from '@/features/orders/lib/termsDays'
-import { useConvertRfq, useLastTerms, useNextOrderNumber, useRankedQuotes } from '@/features/orders/hooks'
+import { useConvertRfq, useLastTerms, useNextOrderNumber, useRankedQuotes, useSupplierChoices } from '@/features/orders/hooks'
 import { useQuotations } from '@/features/quotations/hooks'
 import { quotationRef } from '@/features/quotations/lib/refs'
 import { RankedPicker } from '@/features/orders/RankedPicker'
-import { guessCommissioning, type ConvertItem, type SupplierChoice } from '@/features/orders/lib/convert'
+import { guessCommissioning, TYPED, type ConvertItem, type SupplierChoice, type TypedSupplier } from '@/features/orders/lib/convert'
+import { CURRENCIES } from '@/features/orders/lib/currencies'
+import { FindSupplier } from '@/features/rfqs/FindSupplier'
+import { Select } from '@/ui/form/Select'
 import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
 import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
@@ -41,6 +44,9 @@ import { orderRef } from '@/lib/refs'
  * with a quote starts on "Choose a supplier"; Create order waits until each ticked line has one, picked from its list of quotes (the list
  * lists each item's quotes by supplier name, with prices and no mark, rank or reason). An item nobody quoted needs no supplier. Splitting an item's quantity across
  * suppliers is opt-in, and a new part also starts on "Choose a supplier".
+ * QUOTE FIRST (owner, 24 Nov 2026): no supplier reply needs to be entered. "Another supplier" on any line searches every company
+ * (or adds a new one) and takes the price that supplier quoted, with its currency (optional, for the PO and the margin). Lines can go
+ * to different suppliers. The supplier orders are made per supplier and currency (0146).
  *
  * FE-2 entry burden, listed for the commit:
  *   required     nothing when a price is known. Every ticked line is sold at a price confirmed here, pre-filled from the latest issued
@@ -71,6 +77,7 @@ const GRID = 'lg:grid lg:grid-cols-[auto_minmax(0,1.25fr)_minmax(0,0.45fr)_minma
 /** The state of a supplier picker nobody has used: nothing is chosen for the person. */
 const UNCHOSEN = ''
 const EXTRAS = [
+  { value: TYPED, label: 'Another supplier' },
   { value: 'none', label: 'Not sourced yet' },
   { value: 'service', label: 'Service, no supplier' },
 ]
@@ -116,6 +123,10 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
 
   const [choices, setChoices] = useState<Record<string, SupplierChoice>>({})
   const [splits, setSplits] = useState<Record<string, Part[]>>({})
+  /** "Another supplier" lines: the supplier found or added, and the price it quoted. */
+  const [typedSup, setTypedSup] = useState<Record<string, TypedSupplier>>({})
+  const supplierChoices = useSupplierChoices(true)
+  const patchTyped = (id: string, patch: Partial<TypedSupplier>) => setTypedSup(t => (t[id] ? { ...t, [id]: { ...t[id], ...patch } } : t))
   const [po, setPo] = useState('')
   const [terms, setTerms] = useState<number | null>(null)
   const [termsTouched, setTermsTouched] = useState(false)
@@ -202,6 +213,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
         if (p >= 0) return { message: `Choose the supplier for part ${p + 1} of line ${n}.`, focusId: `convert-supplier-${it.id}-${p + 1}`, line: it.id }
       } else if (effective[it.id] === UNCHOSEN) {
         return { message: `Choose the supplier for line ${n}.`, focusId: `convert-supplier-${it.id}`, line: it.id }
+      } else if (effective[it.id] === TYPED && !typedSup[it.id]) {
+        return { message: `Search or add the supplier for line ${n}.`, focusId: `convert-supplier-${it.id}`, line: it.id }
       }
       const price = confirmed[it.id]
       if (price === null || price === undefined || !(price > 0)) return { message: `Type a selling price for line ${n}.`, focusId: `convert-price-${it.id}`, line: it.id }
@@ -218,6 +231,12 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     for (const it of ordered) {
       const lineIds = isSplit(splits[it.id]) ? splits[it.id].map(p => p.lineId) : [effective[it.id]]
       for (const lid of lineIds) {
+        const t = lid === TYPED ? typedSup[it.id] : undefined
+        if (t) {
+          const ccy = t.price !== null ? t.currency : ''
+          seen.set(`${t.id}:${ccy}`, ccy ? `${t.name} (${ccy})` : t.name)
+          continue
+        }
         const q = (byItem[it.id] ?? []).find(x => x.lineId === lid)
         if (q) seen.set(`${q.supplierId}:${q.currency}`, `${q.supplierName} (${q.currency})`)
       }
@@ -271,7 +290,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
       const id = await convert.mutateAsync({
         orderId: orderId.current,
         rfqId: rfq.id,
-        items: buildSplitPayload(ordered, effective, confirmed, splits),
+        items: buildSplitPayload(ordered, effective, confirmed, splits, typedSup),
         customerPo: po.trim() || null,
         paymentTermsDays: terms,
         needsCommissioning: needs,
@@ -376,7 +395,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
               Creates order {nextNo.data ? <b className="num font-medium">{orderRef(nextNo.data)}</b> : 'a new order'}, each item with the supplier chosen for it.
             </span>
             <InfoTip label="How the order is made">
-              No supplier is chosen automatically. Pick one for each item from its supplier prices, or split an item between two suppliers. Prices and terms copy from the quotation.
+              No supplier is chosen automatically. Pick one for each item from its supplier prices, or choose Another supplier and type the price it quoted. Items can go to different suppliers. Prices and terms copy from the quotation.
             </InfoTip>
           </p>
 
@@ -424,7 +443,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                 const chk = checks[it.id]
                 const choice = choiceOf(it.id)
                 const q = qs.find(x => x.lineId === choice)
-                const canSplit = qs.length >= 2 && (isSplitItem ? hasFreeQuote(qs, new Set(parts.map(p => p.lineId))) : choice !== 'none' && choice !== 'service' && choice !== UNCHOSEN)
+                const canSplit = qs.length >= 2 && (isSplitItem ? hasFreeQuote(qs, new Set(parts.map(p => p.lineId))) : choice !== 'none' && choice !== 'service' && choice !== UNCHOSEN && choice !== TYPED)
+                const typed = choice === TYPED ? typedSup[it.id] : undefined
                 return (
                   <div key={it.id} className="border-t border-line-strong first:border-t-0" data-testid={`convert-item-${n}`}>
                     <div className={cn('grid gap-2 px-4 py-3 text-sm leading-5', GRID)}>
@@ -464,14 +484,51 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                             label={`Supplier for line ${n}`}
                             value={choice}
                             quotes={qs}
-                            extras={EXTRAS.filter(e => e.value === 'service' || qs.length !== 1)}
+                            extras={EXTRAS.filter(e => e.value !== 'none' || qs.length !== 1)}
                             onChange={v => setChoices(c => ({ ...c, [it.id]: v }))}
                           />
-                          {supplierCell(q)}
+                          {typed ? (
+                            <div className="num text-sm lg:text-right" data-testid={`convert-item-${n}-typed-price`}>
+                              {typed.price !== null ? `${typed.currency} ${formatAmount(typed.price)}` : <span className="text-fg-muted">Price later</span>}
+                            </div>
+                          ) : (
+                            supplierCell(q)
+                          )}
                           {sellCell(it, n)}
                         </>
                       )}
                     </div>
+
+                    {!isSplitItem && choice === TYPED ? (
+                      <div className="grid gap-3 border-t border-dashed border-line-input bg-canvas px-4 pb-3 pt-2 text-sm" data-testid={`convert-item-${n}-another`}>
+                        {typed ? (
+                          <div className="flex flex-wrap items-end gap-3">
+                            <div className="grid min-w-0 gap-1">
+                              <span className="text-sm text-fg-muted">Supplier</span>
+                              <span className="flex flex-wrap items-center gap-2">
+                                <b className="font-medium [overflow-wrap:anywhere]">{typed.name}</b>
+                                <Button size="sm" variant="quiet" onClick={() => setTypedSup(t => Object.fromEntries(Object.entries(t).filter(([k]) => k !== it.id)))} aria-label={`Change the supplier, line ${n}`}>
+                                  Change
+                                </Button>
+                              </span>
+                            </div>
+                            <Field label="Currency" className="w-[8rem]">
+                              <Select value={typed.currency} onChange={e => patchTyped(it.id, { currency: e.target.value })} options={CURRENCIES.map(c => ({ value: c, label: c }))} aria-label={`Supplier currency, line ${n}`} />
+                            </Field>
+                            <Field label="Their unit price" requirement="optional" className="w-[12rem]">
+                              <NumberInput value={typed.price} onChange={v => patchTyped(it.id, { price: v === null ? null : Math.max(0, v) })} aria-label={`Supplier unit price, line ${n}`} data-testid={`convert-typed-price-${n}`} />
+                            </Field>
+                          </div>
+                        ) : (
+                          <FindSupplier
+                            onPick={f => {
+                              const last = supplierChoices.data?.find(c => c.id === f.id)?.lastCurrency
+                              setTypedSup(t => ({ ...t, [it.id]: { id: f.id, name: f.name, currency: last && CURRENCIES.includes(last) ? last : 'PKR', price: null } }))
+                            }}
+                          />
+                        )}
+                      </div>
+                    ) : null}
 
                     {isSplitItem
                       ? parts.map((p, i) => {
