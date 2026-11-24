@@ -60,7 +60,7 @@ describe('first-week checklist (learnability 5.1)', () => {
   it('marks items from the facts and the phone', () => {
     const rows = firstWeekRows(m, { u1: { rfq: '2026-10-16T09:00:00Z' } })
     expect(rows.filter(r => r.doneOn).map(r => r.id)).toEqual(['phone', 'rfq'])
-    expect(rows).toHaveLength(6)
+    expect(rows).toHaveLength(4)
   })
 
   it('keeps the earliest date per person and item', async () => {

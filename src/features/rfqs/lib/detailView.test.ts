@@ -13,7 +13,7 @@ describe('itemCoverage', () => {
     expect(itemCoverage(0, 1, 2, 3)).toEqual({ kind: 'uncovered', value: 'none' })
     expect(itemCoverage(0, 2, 0, 2)).toEqual({ kind: 'none', value: 'waiting' })
   })
-  it('no item chip while nobody is asked (the header says "Needs suppliers"); "No price yet" when everyone asked said no', () => {
+  it('no item chip while nobody is asked (the header says "Ready to quote"); "No price yet" when everyone asked said no', () => {
     expect(itemCoverage(0, 0, 0, 0)).toEqual({ kind: 'unasked', value: null })
     expect(itemCoverage(0, 0, 0, 2)).toEqual({ kind: 'uncovered', value: 'none' })
   })

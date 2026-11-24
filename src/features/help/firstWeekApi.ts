@@ -50,7 +50,7 @@ const SOURCES: Source[] = [
 
 /** Which sources a role's checklist needs, so a sales hire does not read the bank stamps. */
 const NEEDS: Record<string, FirstWeekItemId[]> = {
-  sales: ['rfq', 'ask', 'price', 'quotation', 'chase'],
+  sales: ['rfq', 'quotation', 'chase'],
   engineer: ['photo', 'delivered', 'commissioning'],
   admin: ['payment', 'expenses', 'invoice', 'tcs-fbr', 'bank'],
 }

@@ -19,6 +19,7 @@ import { useQuotations, useStorePdf } from '@/features/quotations/hooks'
 import { RevisionMenu } from '@/features/quotations/RevisionMenu'
 import { LastChanged } from '@/features/history/LastChanged'
 import { useIssueDialog } from '@/features/quotations/useIssueDialog'
+import { AttachQuote } from '@/features/quotations/AttachQuote'
 import { InfoTip } from '@/ui/InfoTip'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { generateQuotationPdf } from '@/features/quotations/pdf/generate'
@@ -143,11 +144,23 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
           Nothing was changed.
         </Banner>
       ) : rows.length === 0 ? (
-        <p className="border-t pt-3 text-fg-muted text-pretty">
-          {prices
-            ? 'Nothing issued yet. Issue quotation sets the price for each item, from a supplier price or an entered price, and makes the PDF.'
-            : 'Nothing issued yet. Sales issue the quotation.'}
-        </p>
+        <div className="grid gap-3 border-t pt-3" data-quote-first>
+          <p className="text-fg-muted text-pretty">
+            {!prices
+              ? 'Nothing issued yet. Sales issue the quotation.'
+              : rfq.quotedOn
+                ? `Quotation sent on ${formatDay(rfq.quotedOn)}, made outside the CRM. The file is in Notes and files.`
+                : 'Nothing sent yet. Issue quotation makes the PDF here, with a price typed for each item or taken from a supplier reply. Attach our quote saves a quote made outside the CRM and marks it sent.'}
+          </p>
+          {prices && isOpen ? (
+            <div className="flex flex-wrap gap-2">
+              <Button icon={FilePlus2} onClick={() => setOpen(true)}>
+                Issue quotation
+              </Button>
+              <AttachQuote rfq={rfq} />
+            </div>
+          ) : null}
+        </div>
       ) : (
         <>
           {prices && lacksPdf && gaps.length > 0 ? (

@@ -10,6 +10,6 @@ related: ask-suppliers, new-rfq
 2. The document is on the left and what was read is on the right. Look at anything marked [Check this].
 3. Select [Use <company>] when the customer is suggested, or choose the company.
 4. Select [Create job]. The job opens. No supplier is asked for a price yet.
-5. On the job, select Ask suppliers when you are ready.
+5. On the job, select Send quotation when you are ready.
 
 Tip: You can also paste the message anywhere on the page. A paste, a PDF, a photo and a spreadsheet are read the same way, on this device.

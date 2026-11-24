@@ -65,14 +65,14 @@ export const STATUS = {
   'rfq-outcome': { open: hid('Open', 'info'), won: def('Won', 'success'), closed: def('Closed', 'neutral') },
   // UI-only: the one stage of an RFQ (header chip, board and list Next step). Not a database value.
   'rfq-stage': {
-    suppliers: def('Needs suppliers', 'warning'),
+    suppliers: def('Ready to quote', 'warning'),
     prices: def('Waiting for prices', 'info'),
     ready: def('Ready to quote', 'warning'),
     sent: def('Quotation sent', 'info'),
     expired: def('Quotation expired', 'warning'),
   },
   sourcing: {
-    'not-floated': def('Needs suppliers', 'warning'),
+    'not-floated': def('Ready to quote', 'warning'),
     awaiting: def('Waiting for prices', 'info'),
     'partly-covered': def('Waiting for prices', 'info'),
     covered: def('Ready to quote', 'warning'),

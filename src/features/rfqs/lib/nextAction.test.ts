@@ -61,7 +61,7 @@ describe('the stage chip', () => {
   }
   it('is a registry key, in the board’s next-step words and tones', () => {
     expect(stageKey(base)).toBe('rfq-stage:suppliers')
-    expect(word(base).label).toBe('Needs suppliers')
+    expect(word(base).label).toBe('Ready to quote')
     expect(word(at({ sourcingState: 'floated_awaiting' })).label).toBe('Waiting for prices')
     expect(word(at({ sourcingState: 'partly_covered' })).label).toBe('Waiting for prices')
     expect(word(at({ sourcingState: 'covered' }))).toMatchObject({ label: 'Ready to quote', tone: 'warning' })

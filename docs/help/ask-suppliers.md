@@ -13,6 +13,6 @@ related: supplier-prices
 5. When it asks [Confirm the message was sent], select [Yes, sent]. Select [Not yet] if you did not. Until you say yes, the RFQ shows Asked, never Sent.
 6. Later, to ask more: open the RFQ and select [Ask more suppliers].
 
-Tip: An item with no supplier ticked is named under the list; select [Tick] to add the supplier that carries its brand. On an RFQ with no supplier asked yet, the green button is [Ask suppliers].
+Tip: An item with no supplier ticked is named under the list; select [Tick] to add the supplier that carries its brand.
 
 Safe to try: wrong supplier? Select [Undo] on the message at the bottom.

@@ -11,7 +11,7 @@ export interface Coverage {
   kind: CoverageKind
   /**
    * The item's one chip, an `item-price` registry value (consistency spec 1.5): Priced, Waiting for prices or No price yet. Null
-   * while nobody has been asked: the item then says so in a sentence, and the header's stage chip already reads "Needs suppliers".
+   * while nobody has been asked: the item then says so in a sentence, and the header's stage chip already reads "Ready to quote".
    */
   value: 'priced' | 'waiting' | 'none' | null
   /** The chip's mono detail: "3 prices", "1 price so far". */
