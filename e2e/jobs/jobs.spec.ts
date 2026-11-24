@@ -358,7 +358,9 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.locator('[data-stage-block]')).toContainText('Send the quotation')
     // the green button opens Issue quotation on the Quotation stage. Closed, the stage stays open with Attach our quote beside it
     await page.getByRole('button', { name: 'Send quotation' }).click()
+    await expect(page.getByRole('dialog', { name: 'Issue quotation' })).toBeVisible()
     await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Issue quotation' })).toBeHidden()
     const panel = page.locator('[data-slot="quotations"]')
     await panel.scrollIntoViewIfNeeded()
     await expect(panel.getByRole('button', { name: 'Issue quotation' })).toBeVisible()
