@@ -3,7 +3,7 @@
 // until the person types its quantity; the others are typed. The backend lets the parts add up to anything (a partial order is allowed):
 // the dialog warns when they do not add up to the RFQ quantity and never blocks on it.
 
-import type { ConvertItem, ConvertPayloadLine, SupplierChoice } from '@/features/orders/lib/convert'
+import { TYPED, type ConvertItem, type ConvertPayloadLine, type SupplierChoice, type TypedSupplier } from '@/features/orders/lib/convert'
 import type { RankedQuote } from '@/features/orders/lib/ranking'
 
 export interface Part {
@@ -65,6 +65,7 @@ export function buildSplitPayload(
   choices: Readonly<Record<string, SupplierChoice>>,
   typedPrices: Readonly<Record<string, number | null>>,
   splits: Splits,
+  typedSuppliers: Readonly<Record<string, TypedSupplier>> = {},
 ): ConvertPayloadLine[] {
   const out: ConvertPayloadLine[] = []
   for (const it of items) {
@@ -82,7 +83,17 @@ export function buildSplitPayload(
     const line: ConvertPayloadLine = { rfq_item_id: it.id, ...price }
     const c = choices[it.id] ?? 'none'
     if (c === 'service') line.is_service = true
-    else if (c !== 'none') line.quote_line_id = c
+    else if (c === TYPED) {
+      // Another supplier (0146): named by id, with its price and currency when one was typed. Never a quote line.
+      const t = typedSuppliers[it.id]
+      if (t) {
+        line.supplier_id = t.id
+        if (t.price !== null && t.price >= 0) {
+          line.supplier_unit_price = t.price
+          line.currency = t.currency
+        }
+      }
+    } else if (c !== 'none') line.quote_line_id = c
     out.push(line)
   }
   return out

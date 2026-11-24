@@ -126,6 +126,10 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^a service line cannot be split$/, message: () => 'A service line cannot be split. Split only goods lines.' },
   { match: /^choose a different supplier order from the one the line is on$/, message: () => 'Choose a different supplier order from the one the line is on.' },
   { match: /^name either an existing supplier order or a supplier to move the quantity to$/, message: () => 'Choose a supplier order or a supplier to move the quantity to.' },
+  // 0146 (quote first): a supplier typed at Mark won
+  { match: /^a typed supplier cannot go with a quote line or a service: (.+)$/, message: m => `Choose one supplier for "${m[1]}": a supplier reply or Another supplier.` },
+  { match: /^the chosen supplier was not found: (.+)$/, message: m => `The supplier chosen for "${m[1]}" is not on file any more. Search for it again.` },
+  { match: /^a supplier price needs its currency and cannot be below 0: (.+)$/, message: m => `Check the supplier price of "${m[1]}". It needs a currency and cannot be below 0.` },
   { match: /^split parts of an item must use different suppliers: (.+)$/, message: m => `Each part of "${m[1]}" needs a different supplier.` },
   { match: /^the quantity to move must be more than 0 and less than the line quantity \((.+?)\)$/, message: m => `The quantity to move must be more than 0 and less than ${m[1]}.` },
   { match: /^the supplier order is not a leg of this order$/, message: () => RELOAD },
