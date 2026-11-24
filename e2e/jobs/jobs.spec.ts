@@ -362,9 +362,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     const panel = page.locator('[data-slot="quotations"]')
     await panel.scrollIntoViewIfNeeded()
     await expect(panel.getByRole('button', { name: 'Issue quotation' })).toBeVisible()
-    await panel.getByTestId('attach-quote-input').setInputFiles({ name: 'QTS-test-quote.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4
-%test quote
-') })
+    await panel.getByTestId('attach-quote-input').setInputFiles({ name: 'QTS-test-quote.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test quote') })
     await expect(page.getByRole('status').filter({ hasText: 'Quote attached and marked sent' })).toBeVisible()
     await expect.poll(async () => (await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${rfq.id}&select=quoted_on`)))[0].quoted_on).toBe(karachiDay())
     const files = await must(rest<{ file_name: string; has_prices: boolean }[]>('admin', `attachments?rfq_id=eq.${rfq.id}&select=file_name,has_prices`))
