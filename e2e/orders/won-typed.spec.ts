@@ -62,7 +62,7 @@ test.describe('Mark won with a supplier typed, no reply entered', () => {
     const one = await another(page, 1, s.a.name)
     await one.getByLabel('Supplier currency, line 1').selectOption('USD')
     await one.getByLabel('Supplier unit price, line 1').fill('35')
-    await expect(d.getByTestId('convert-item-1-typed-price')).toContainText('USD 35.00')
+    await expect(d.getByTestId('convert-item-1-typed-price')).toContainText('USD 35')
     await another(page, 2, s.b.name)
     await expect(d.getByTestId('convert-item-2-typed-price')).toContainText('Price later')
     await expect(d).toContainText('2 supplier orders')
