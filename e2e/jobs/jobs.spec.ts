@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { db } from '../verify/support/db'
+import { openStage } from '../support/job'
 
 /*
  * Jobs (redesign phase 5), against the local CI stack: the list at /jobs, and the ONE search the Jobs box shares with the command
@@ -370,6 +371,8 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     const files = await must(rest<{ file_name: string; has_prices: boolean }[]>('admin', `attachments?rfq_id=eq.${rfq.id}&select=file_name,has_prices`))
     expect(files).toEqual([{ file_name: 'QTS-test-quote.pdf', has_prices: true }])
     await expect(page.locator('[data-stage-block]')).toContainText('Waiting for the customer to order')
+    // the job moved on to the Order stage, the Quotation stage still says how it was sent
+    await openStage(page, 'Quotation')
     await expect(panel).toContainText('made outside the CRM')
     await review(page, 'job-quote-attached-1440')
     expect(await axeViolations(page)).toEqual([])
