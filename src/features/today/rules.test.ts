@@ -253,7 +253,7 @@ describe('rule: relay answers', () => {
 describe('rule: not floated', () => {
   it('is raised for an open RFQ nobody has been asked about', () => {
     const [e] = ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'not_floated' })] }))
-    expect(e).toMatchObject({ rule: 'not_floated', title: 'Needs suppliers', ref: 'RFQ-0177' })
+    expect(e).toMatchObject({ rule: 'not_floated', title: 'Send the quotation', ref: 'RFQ-0177' })
   })
   it('is not raised once floated, or once the bid is out', () => {
     expect(ruleNotFloated(ctx({ rfqs: [rfq({ sourcingState: 'floated_awaiting' })] }))).toEqual([])

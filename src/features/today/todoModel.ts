@@ -29,7 +29,7 @@ export const BLOCK_TITLE: Record<TodoBlock, string> = { late: 'Late', today: 'To
 export const ACTION_LABEL: Record<RuleKey, string> = {
   chase_customer: 'Follow up',
   relay_answers: 'Send answers',
-  not_floated: 'Ask suppliers',
+  not_floated: 'Send quotation',
   chase_supplier: 'Follow up',
   bid_due: 'Send quotation',
   decision_overdue: 'Follow up',

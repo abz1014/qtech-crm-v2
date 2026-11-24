@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { db } from '../verify/support/db'
+import { openStage } from '../support/job'
 
 /*
  * Jobs (redesign phase 5), against the local CI stack: the list at /jobs, and the ONE search the Jobs box shares with the command
@@ -339,9 +340,41 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.locator('[data-stages] > [data-fold-row]')).toHaveCount(7)
     for (const b of await page.locator('[data-stages]').getByRole('button').all()) await expect(b).toHaveAttribute('aria-expanded', 'false')
     await expect(page.locator(ONE_ACTION)).toHaveCount(1)
-    await page.getByRole('button', { name: 'Ask suppliers' }).click()
+    // quote first (owner, 24 Nov 2026): the step is the quotation, asking suppliers is optional
+    await expect(page.locator('[data-stage-block]')).toContainText('Send the quotation')
+    await page.getByRole('button', { name: 'Send quotation' }).click()
+    await expect(page.getByRole('dialog', { name: 'Issue quotation' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Issue quotation' })).toBeHidden()
     await expect(page.locator('[data-stages]').getByRole('button', { name: /^Quotation/ })).toHaveAttribute('aria-expanded', 'true')
     await review(page, 'job-page-1440')
+    expect(await axeViolations(page)).toEqual([])
+  })
+
+  test('quote first: Attach our quote saves the quote with the job files, marks it sent, and the job waits for the order', async ({ page }) => {
+    const f = await seed()
+    const rfq = await createRfq(f.company.id, { customer_ref: `${f.ref}-Q`, due_on: karachiDay(7) })
+    await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Pressure switch', qty: 2 }, prefer: 'return=minimal' }))
+    await openAs(page, 'sales', `/jobs/${rfq.number}`)
+    await expect(page.locator('[data-stage-block]')).toContainText('Send the quotation')
+    // the green button opens Issue quotation on the Quotation stage. Closed, the stage stays open with Attach our quote beside it
+    await page.getByRole('button', { name: 'Send quotation' }).click()
+    await expect(page.getByRole('dialog', { name: 'Issue quotation' })).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Issue quotation' })).toBeHidden()
+    const panel = page.locator('[data-slot="quotations"]')
+    await panel.scrollIntoViewIfNeeded()
+    await expect(panel.getByRole('button', { name: 'Issue quotation' })).toBeVisible()
+    await panel.getByTestId('attach-quote-input').setInputFiles({ name: 'QTS-test-quote.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test quote') })
+    await expect(page.getByRole('status').filter({ hasText: 'Quote attached and marked sent' })).toBeVisible()
+    await expect.poll(async () => (await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${rfq.id}&select=quoted_on`)))[0].quoted_on).toBe(karachiDay())
+    const files = await must(rest<{ file_name: string; has_prices: boolean }[]>('admin', `attachments?rfq_id=eq.${rfq.id}&select=file_name,has_prices`))
+    expect(files).toEqual([{ file_name: 'QTS-test-quote.pdf', has_prices: true }])
+    await expect(page.locator('[data-stage-block]')).toContainText('Waiting for the customer to order')
+    // the job moved on to the Order stage, the Quotation stage still says how it was sent
+    await openStage(page, 'Quotation')
+    await expect(panel).toContainText('made outside the CRM')
+    await review(page, 'job-quote-attached-1440')
     expect(await axeViolations(page)).toEqual([])
   })
 

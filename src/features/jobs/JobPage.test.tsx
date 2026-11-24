@@ -366,10 +366,10 @@ describe('Job page: the stage list', () => {
     const { container } = mount(job({ stage: 'enquiry', stageDetail: null, orderId: null }), 'admin')
     await screen.findByRole('heading', { level: 1 })
     const stages = stagesOf(container)
-    // drawn: the action; heard: Needs action (the row is not a second "Ask suppliers" button)
+    // drawn: the action; heard: Needs action (the row is not a second "Send quotation" button)
     expect(stages.getByRole('button', { name: /^RFQ Now Needs action / })).toBeInTheDocument()
-    expect(stages.getByText('Ask suppliers')).toHaveAttribute('aria-hidden', 'true')
-    expect(stages.queryByRole('button', { name: /Ask suppliers/ })).toBeNull()
+    expect(stages.getByText('Send quotation')).toHaveAttribute('aria-hidden', 'true')
+    expect(stages.queryByRole('button', { name: /Send quotation/ })).toBeNull()
   })
 })
 

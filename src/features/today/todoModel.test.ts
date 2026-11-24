@@ -83,7 +83,7 @@ describe('the row buttons', () => {
   it('every rule has its own button words', () => {
     for (const label of Object.values(ACTION_LABEL)) expect(label.trim().length).toBeGreaterThan(0)
     expect(ACTION_LABEL.payment_overdue).toBe('Copy reminder')
-    expect(ACTION_LABEL.not_floated).toBe('Ask suppliers')
+    expect(ACTION_LABEL.not_floated).toBe('Send quotation')
     expect(ACTION_LABEL.bid_due).toBe('Send quotation')
     expect(ACTION_LABEL.delivered_not_invoiced).toBe('Create invoice')
   })

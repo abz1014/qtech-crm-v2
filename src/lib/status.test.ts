@@ -176,7 +176,7 @@ describe('labels use the plain-words glossary (DECISIONS 2026-10-19)', () => {
   })
 
   it('reads the glossary words', () => {
-    expect(resolveStatus('sourcing', 'not_floated').label).toBe('Needs suppliers')
+    expect(resolveStatus('sourcing', 'not_floated').label).toBe('Ready to quote')
     expect(resolveStatus('sourcing', 'floated_awaiting').label).toBe('Waiting for prices')
     expect(resolveStatus('sourcing', 'partly_covered').label).toBe('Waiting for prices')
     expect(resolveStatus('sourcing', 'covered').label).toBe('Ready to quote')

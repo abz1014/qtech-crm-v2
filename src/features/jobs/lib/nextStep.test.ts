@@ -41,6 +41,13 @@ describe('next step in words', () => {
     expect(jobNext({ stage: 'delivered', stageDetail: 'installation to plan', role: 'engineer' })).toMatchObject({ button: 'Plan installation', stop: 4 })
   })
 
+  it('quote first (owner, 24 Nov 2026): a new or half-asked enquiry asks for the quotation, asking suppliers is optional', () => {
+    for (const stage of ['enquiry', 'asking_suppliers']) {
+      expect(jobNext({ stage, stageDetail: null, role: 'sales' })).toMatchObject({ text: 'Send the quotation', tone: 'now', button: 'Send quotation', on: 'rfq', query: 'issue=1' })
+      expect(jobNext({ stage, stageDetail: null, role: 'engineer' })).toMatchObject({ text: 'Office is preparing the quotation', button: null })
+    }
+  })
+
   it('a late supplier is the red step', () => {
     expect(jobNext({ stage: 'supplier_ordered', stageDetail: 'supplier late', role: 'admin' }).tone).toBe('late')
   })

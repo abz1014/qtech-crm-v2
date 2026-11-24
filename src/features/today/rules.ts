@@ -252,7 +252,7 @@ export function ruleRelayAnswers(ctx: TodayInputs): Entry[] {
   return out
 }
 
-/** Not floated: an open RFQ with nobody asked for a price yet. */
+/** Not floated: an open RFQ with no quotation sent and nobody asked for a price. Quote first (owner, 24 Nov 2026): the task is the quotation, asking suppliers is optional. */
 export function ruleNotFloated(ctx: TodayInputs): Entry[] {
   const out: Entry[] = []
   for (const r of ctx.rfqs) {
@@ -263,10 +263,10 @@ export function ruleNotFloated(ctx: TodayInputs): Entry[] {
           rule: 'not_floated',
           subjectId: r.id,
           tab: tabFor('not_floated'),
-          title: 'Needs suppliers',
+          title: 'Send the quotation',
           ref: rfqRef(r.number),
           party: r.companyName,
-          actionDueOn: r.receivedOn, // due the day it arrived (+0): floating is the first thing to do
+          actionDueOn: r.receivedOn, // due the day it arrived (+0): the quotation is the first thing to do
           badge: dueBadge(r.receivedOn, ctx.today, 'not_floated'),
           isPriority: r.isPriority,
           rfqId: r.id,

@@ -140,7 +140,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await openStage(page, 'Quotation')
-    await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
+    await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing sent yet')
     await openIssue(page)
     await expect(dialog(page).getByRole('heading', { name: 'Issue quotation' })).toBeVisible()
     await shot(page, 'rfq-quotation-01-issue-dialog-1440')
@@ -502,7 +502,7 @@ for (const width of [1440, 768, 375]) {
     await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await openStage(page, 'Quotation')
-    await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing issued')
+    await expect(page.locator('[data-slot="quotations"]')).toContainText('Nothing sent yet')
     expect(await pageViolations(page)).toEqual([])
 
     await openIssue(page)

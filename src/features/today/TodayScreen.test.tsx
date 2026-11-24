@@ -49,7 +49,7 @@ describe('Today screen', () => {
   it('The "How Q-Tech CRM works" card is wired with the account created date: gone after 7 days, shown before (the expiry was dead code)', async () => {
     fake = install()
     const old = renderAs('sales', new Date(Date.now() - 40 * 86_400_000).toISOString())
-    expect(await screen.findByText('Needs suppliers')).toBeInTheDocument()
+    expect(await screen.findByText('Send the quotation')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /How Q-Tech CRM works/ })).toBeNull()
     old.unmount()
     renderAs('sales', new Date(Date.now() - 2 * 86_400_000).toISOString())
@@ -59,7 +59,7 @@ describe('Today screen', () => {
   it('lists an item with its title and reference', async () => {
     fake = install()
     renderAs('sales')
-    expect(await screen.findByText('Needs suppliers')).toBeInTheDocument()
+    expect(await screen.findByText('Send the quotation')).toBeInTheDocument()
     expect(screen.getAllByText('RFQ-0184').length).toBeGreaterThan(0)
     // no topic tabs any more: one list (redesign phase 3)
     expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
@@ -68,7 +68,7 @@ describe('Today screen', () => {
   it('counts it once in the header, and shows no number on the tabs (redesign phase 0)', async () => {
     fake = install()
     renderAs('sales')
-    await screen.findByText('Needs suppliers')
+    await screen.findByText('Send the quotation')
     expect(document.querySelector('[data-needs-you-count]')?.textContent).toBe('1')
     expect(screen.getAllByText(/due now/)).toHaveLength(1) // the header says it once; no second tally
     expect(document.querySelector('[data-needs-count]')).toBeNull()
@@ -80,9 +80,9 @@ describe('Today screen', () => {
     const fold = await screen.findByRole('region', { name: 'Older than 30 days' })
     expect(document.querySelector('[data-needs-you-count]')?.textContent).toBe('0')
     expect(screen.getByText('No tasks for today')).toBeInTheDocument()
-    expect(within(fold).queryByText('Needs suppliers')).toBeNull() // closed until opened
+    expect(within(fold).queryByText('Send the quotation')).toBeNull() // closed until opened
     fireEvent.click(within(fold).getByRole('button', { name: /Older than 30 days/ }))
-    expect(within(fold).getByText('Needs suppliers')).toBeInTheDocument()
+    expect(within(fold).getByText('Send the quotation')).toBeInTheDocument()
     expect(within(fold).getByText('since 27 Jan 2025')).toBeInTheDocument()
   })
 
@@ -104,9 +104,9 @@ describe('Today screen', () => {
     fake = install()
     renderAs('engineer')
     await waitFor(() => expect(fake?.calls.length).toBeGreaterThan(0))
-    // phase 7: an engineer's list is their jobs; a sales rule (Needs suppliers) never reaches it, even for an RFQ they own
+    // phase 7: an engineer's list is their jobs; a sales rule (Send the quotation) never reaches it, even for an RFQ they own
     await screen.findByText('No tasks for today')
-    expect(screen.queryByText('Needs suppliers')).toBeNull()
+    expect(screen.queryByText('Send the quotation')).toBeNull()
     expect(screen.queryByRole('radio', { name: /Money/ })).toBeNull()
     const targets = fake?.calls.map(c => c.target) ?? []
     expect(targets).not.toContain('rpc:order_receivables')
@@ -122,7 +122,7 @@ describe('Today screen', () => {
   it('Home: the heading says Home and the forest hero carries the one number with the role words', async () => {
     fake = install()
     renderAs('admin')
-    await screen.findByText('Needs suppliers')
+    await screen.findByText('Send the quotation')
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument()
     const hero = screen.getByRole('region', { name: 'Needs you now' })
     expect(hero).toHaveAttribute('data-surface', 'navy')
@@ -133,7 +133,7 @@ describe('Today screen', () => {
   it('Home: sales get the quotes hero; engineers get My day', async () => {
     fake = install()
     const s = renderAs('sales')
-    await screen.findByText('Needs suppliers')
+    await screen.findByText('Send the quotation')
     expect(screen.getByRole('region', { name: 'Quotes to send or follow up' })).toHaveTextContent(/^Sales, Ayesha/)
     s.unmount()
     fake.uninstall()
@@ -175,7 +175,7 @@ describe('Today screen', () => {
   it('admin and sales do request the receivables', async () => {
     fake = install()
     renderAs('admin')
-    await screen.findByText('Needs suppliers')
+    await screen.findByText('Send the quotation')
     expect(fake?.calls.map(c => c.target)).toContain('rpc:receivables_list')
   })
 
@@ -202,7 +202,7 @@ describe('Today screen', () => {
     expect(block).toHaveAttribute('data-block', 'today')
     expect(screen.queryByRole('region', { name: 'Late' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'This week' })).toBeNull()
-    expect(within(block).getByRole('button', { name: /^Ask suppliers/ })).toBeInTheDocument()
+    expect(within(block).getByRole('button', { name: /^Send quotation/ })).toBeInTheDocument()
     expect(within(block).getByRole('button', { name: 'Snooze' })).toBeInTheDocument()
   })
 
@@ -294,15 +294,15 @@ describe('Today screen', () => {
   it("only the admin has Mine / Team; Team opens each person's list, read only", async () => {
     fake = install()
     const first = renderAs('sales')
-    await screen.findByText('Needs suppliers')
+    await screen.findByText('Send the quotation')
     expect(screen.queryByRole('radio', { name: 'Team' })).toBeNull()
     first.unmount()
     fake.uninstall()
     fake = install()
     renderAs('admin')
-    await screen.findByText('Needs suppliers')
+    await screen.findByText('Send the quotation')
     fireEvent.click(screen.getByRole('radio', { name: 'Team' }))
     expect(await screen.findByText('No other team members yet')).toBeInTheDocument()
-    expect(screen.queryByText('Needs suppliers')).toBeNull()
+    expect(screen.queryByText('Send the quotation')).toBeNull()
   })
 })
