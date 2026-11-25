@@ -711,29 +711,20 @@
 
 /* Toasts never cover a dialog (src/ui/Toast.tsx, useClearOfDialog): when there is no room for them above or beside it, <html> gets
    data-toast-room and --toast-room (the height the toasts take at the top of the window). The dialog (src/ui/dialogImpl.tsx) then
-   starts below that strip and is shortened by as much, so its title, its chips and its buttons all stay in view. A side panel
-   (1360 px and wider) always has room beside it, so it is left alone there. */
+   starts below that strip, and the hook shortens it by as much (an inline max-height in px), so its title, its chips and its
+   buttons all stay in view and its body scrolls. A side panel (1360 px and wider) always has room beside it, so it is left alone there. */
 html[data-toast-room] [data-toast-room-overlay] {
   place-items: start center;
   padding-top: var(--toast-room);
 }
-html[data-toast-room] [data-toast-room-panel] {
-  max-height: calc(100dvh - var(--toast-room) - var(--sp-4));
-}
 @media (max-width: 767.98px) {
   html[data-toast-room] [data-toast-room-overlay] {
     place-items: end;
-  }
-  html[data-toast-room] [data-toast-room-panel] {
-    max-height: calc(100dvh - var(--toast-room));
   }
 }
 @media (min-width: 1360px) {
   html[data-toast-room] [data-toast-room-overlay="side"] {
     place-items: stretch end;
     padding-top: 0;
-  }
-  html[data-toast-room] [data-toast-room-overlay="side"] [data-toast-room-panel] {
-    max-height: none;
   }
 }

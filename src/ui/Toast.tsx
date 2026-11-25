@@ -235,7 +235,7 @@ const WIDE = 420
  *   1. the dialog's top is below the toasts: they stay at the top
  *   2. a wide screen with room on a side of the dialog: they move to that side, at the top, as wide as the room allows (300 to 420)
  *   3. otherwise the dialog makes room: <html data-toast-room> with --toast-room, the height the toasts need, moves a dialog drawn
- *      by dialogImpl.tsx below them and shortens it by as much (index.css). It stays so until the toasts or the dialog go, so the
+ *      by dialogImpl.tsx below them (index.css) and the hook shortens it by as much (inline max-height). It stays so until the toasts or the dialog go, so the
  *      dialog does not jump back and forth.
  * Returns the region's style for case 2, else null.
  */
@@ -249,16 +249,34 @@ function useClearOfDialog(region: RefObject<HTMLDivElement | null>, active: bool
     }
     const root = document.documentElement
     let room = false
+    let shrunk: HTMLElement | null = null
+    const watched = new Set<Element>()
+    // The dialog moved down by `need` is made as much shorter, so all of it stays in the window and its body scrolls (an e2e shot of
+    // Mark won at 1440 by 900: pushed down but as tall as before, the body ran under the footer and the footer off the bottom). Inline
+    // and in px, so no stylesheet rule can outweigh it; the window's resize measures again. A side panel from 1360 is left alone.
+    const fit = (panel: HTMLElement, need: number, phone: boolean) => {
+      if (shrunk && shrunk !== panel) shrunk.style.removeProperty('max-height')
+      if (panel.dataset.placement === 'side' && window.innerWidth >= 1360) return
+      shrunk = panel
+      // below the strip, and above the overlay's 16 px padding on a desktop (a phone sheet sits on the bottom edge)
+      panel.style.maxHeight = `${Math.max(0, window.innerHeight - need - (phone ? 0 : EDGE))}px`
+    }
     const measure = () => {
       const dialogs = [...document.querySelectorAll<HTMLElement>(ROOM_PANEL)]
       const panel = dialogs[dialogs.length - 1] ?? [...document.querySelectorAll<HTMLElement>(DIALOG)].pop()
       if (!panel) return
+      // a dialog that grows after it opens (Mark won once its lines load) is measured again
+      if (ro && !watched.has(panel)) {
+        watched.add(panel)
+        ro.observe(panel)
+      }
       const d = panel.getBoundingClientRect()
       const phone = window.matchMedia?.('(max-width: 767px)').matches ?? false
       const top = phone ? GAP : EDGE
       const need = top + box.offsetHeight + GAP
       if (room) {
         root.style.setProperty('--toast-room', `${need}px`)
+        if (panel.matches(ROOM_PANEL)) fit(panel, need, phone)
         return
       }
       if (d.height === 0 || d.top >= need) {
@@ -284,14 +302,16 @@ function useClearOfDialog(region: RefObject<HTMLDivElement | null>, active: bool
       setBeside(null)
       root.setAttribute('data-toast-room', '')
       root.style.setProperty('--toast-room', `${need}px`)
+      fit(panel, need, phone)
     }
-    measure()
-    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure)
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => measure())
     ro?.observe(box)
+    measure()
     window.addEventListener('resize', measure)
     return () => {
       ro?.disconnect()
       window.removeEventListener('resize', measure)
+      shrunk?.style.removeProperty('max-height')
       root.removeAttribute('data-toast-room')
       root.style.removeProperty('--toast-room')
     }
