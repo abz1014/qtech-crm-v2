@@ -1,7 +1,7 @@
-import { forwardRef, useEffect, useRef, useState, type InputHTMLAttributes } from 'react'
+import { forwardRef, useEffect, useId, useRef, useState, type InputHTMLAttributes } from 'react'
 import { CalendarDays } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
-import { formatDateText, parseDateText } from '@/lib/dateInput'
+import { farDateWarning, formatDateText, parseDateText } from '@/lib/dateInput'
 import { cn } from '@/lib/utils'
 import { controlClass, useControlProps } from '@/ui/form/fieldContext'
 import { Icon } from '@/ui/Icon'
@@ -30,10 +30,15 @@ interface DateInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'ty
   defaultToday?: boolean
   /** Classes for the box round the field and its calendar button. A width goes here, not on the input, so the button stays inside the field. */
   wrapperClassName?: string
+  /**
+   * A payment, expense, invoice or visit date: one more than a year from today gets a soft note to check the year
+   * ("01/01/2020" typed for 2026). It never blocks.
+   */
+  checkYear?: boolean
 }
 
 export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInput(
-  { value, onChange, defaultToday = true, max, className, wrapperClassName, onBlur, onFocus, onKeyDown, disabled, readOnly, ...rest },
+  { value, onChange, defaultToday = true, max, className, wrapperClassName, checkYear = false, onBlur, onFocus, onKeyDown, disabled, readOnly, ...rest },
   ref,
 ) {
   const a11y = useControlProps(rest)
@@ -82,6 +87,9 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
     }
   }
 
+  const warning = checkYear && !editing && !unreadable ? farDateWarning(value, businessToday()) : null
+  const warningId = `${useId()}-year`
+
   const openPicker = () => {
     const el = picker.current
     if (!el) return
@@ -92,6 +100,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
 
   return (
     // a span (block), not a div: callers wrap a control in a <label>, which takes phrasing content only (audit 1 minor 24)
+    <>
     <span className={cn('relative block w-full min-w-0', wrapperClassName)}>
       <input
         ref={ref}
@@ -103,6 +112,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
         {...rest}
         {...a11y}
         aria-invalid={unreadable ? true : a11y['aria-invalid']}
+        aria-describedby={[a11y['aria-describedby'], warning ? warningId : null].filter(Boolean).join(' ') || undefined}
         disabled={disabled}
         readOnly={readOnly}
         value={text}
@@ -152,5 +162,11 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function D
         }}
       />
     </span>
+    {warning ? (
+      <span id={warningId} role="status" className="block text-xs font-medium text-tone-warning-fg">
+        {warning}
+      </span>
+    ) : null}
+    </>
   )
 })

@@ -253,6 +253,100 @@ describe('Select, TextField, TextArea, Checkbox (U07)', () => {
   })
 })
 
+describe('NumberInput: amounts typed oddly (review 18)', () => {
+  function Amount({ money = false }: { money?: boolean }) {
+    const [v, setV] = useState<number | null>(null)
+    return (
+      <Field label="Amount" error={v === null ? 'Enter the amount' : undefined}>
+        <NumberInput value={v} onChange={setV} money={money} />
+        <output data-testid="v">{String(v)}</output>
+      </Field>
+    )
+  }
+
+  it('"1e5" says to type digits, once, on the Field line instead of "Enter the amount"', async () => {
+    const user = userEvent.setup()
+    render(<Amount money />)
+    const input = screen.getByLabelText('Amount')
+    await user.type(input, '1e5')
+    await user.tab()
+    expect(screen.getByRole('alert')).toHaveTextContent('Type the amount in digits, like 100000.')
+    expect(screen.queryByText('Enter the amount')).toBeNull()
+    expect(screen.getAllByText(/Type the amount in digits/)).toHaveLength(1)
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByTestId('v')).toHaveTextContent('null')
+  })
+
+  it('money: 0.001 stays on screen with the reason, never shown as 0', async () => {
+    const user = userEvent.setup()
+    render(<Amount money />)
+    const input = screen.getByLabelText('Amount')
+    await user.type(input, '0.001')
+    await user.tab()
+    expect(input).toHaveValue('0.001')
+    expect(screen.getByRole('alert')).toHaveTextContent('Amounts go to 2 decimals, so the smallest is 0.01.')
+  })
+
+  it('money: 100.555 is rounded to 100.56, reported so, and says it was rounded', async () => {
+    const user = userEvent.setup()
+    render(<Amount money />)
+    const input = screen.getByLabelText('Amount')
+    await user.type(input, '100.555')
+    await user.tab()
+    expect(input).toHaveValue('100.56')
+    expect(screen.getByTestId('v')).toHaveTextContent('100.56')
+    expect(screen.getByText('Rounded to 2 decimals.')).toBeInTheDocument()
+    expect(input).toHaveAccessibleDescription(/Rounded to 2 decimals/)
+  })
+
+  it('not money (a quantity): 0.125 keeps its third decimal on screen and in the value', async () => {
+    const user = userEvent.setup()
+    render(<Amount />)
+    const input = screen.getByLabelText('Amount')
+    await user.type(input, '0.125')
+    await user.tab()
+    expect(input).toHaveValue('0.125')
+    expect(screen.getByTestId('v')).toHaveTextContent('0.125')
+    expect(screen.queryByText('Rounded to 2 decimals.')).toBeNull()
+  })
+})
+
+describe('DateInput: a year that is most likely a typo (review 18)', () => {
+  function Paid({ checkYear }: { checkYear?: boolean }) {
+    const [v, setV] = useState('')
+    return (
+      <Field label="Date paid">
+        <DateInput value={v} onChange={setV} checkYear={checkYear} />
+        <output data-testid="iso">{v}</output>
+      </Field>
+    )
+  }
+  it('warns about a date more than a year back, and still takes it', async () => {
+    const user = userEvent.setup()
+    render(<Paid checkYear />)
+    const input = screen.getByLabelText('Date paid')
+    await user.clear(input)
+    await user.type(input, '01/01/2020')
+    await user.tab()
+    expect(screen.getByTestId('iso')).toHaveTextContent('2020-01-01')
+    expect(screen.getByText('That is more than a year ago. Check the year.')).toHaveAttribute('role', 'status')
+    expect(input).toHaveAccessibleDescription(/Check the year/)
+    expect(input).not.toHaveAttribute('aria-invalid', 'true')
+  })
+  it('says nothing for today, or when the field does not ask', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<Paid checkYear />)
+    expect(screen.queryByText(/Check the year/)).toBeNull()
+    unmount()
+    render(<Paid />)
+    const input = screen.getByLabelText('Date paid')
+    await user.clear(input)
+    await user.type(input, '01/01/2020')
+    await user.tab()
+    expect(screen.queryByText(/Check the year/)).toBeNull()
+  })
+})
+
 describe('NumberInput keeps a pre-filled amount grouped (U07)', () => {
   it('on focus the amount stays "1,600,764" and is selected, so typing replaces it', async () => {
     const user = userEvent.setup()

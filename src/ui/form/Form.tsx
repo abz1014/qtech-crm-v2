@@ -2,7 +2,7 @@
  * Form, FormField, FormSummary: the pieces that render a form built with useSubmitForm
  * (src/ui/form/useSubmitForm.ts holds the guard, the request id and the error mapping).
  */
-import { createContext, useContext, useLayoutEffect, useRef, type KeyboardEvent, type ReactElement, type ReactNode, type SyntheticEvent } from 'react'
+import { createContext, useCallback, useContext, useLayoutEffect, useRef, type KeyboardEvent, type ReactElement, type ReactNode, type SyntheticEvent } from 'react'
 import {
   FormProvider,
   useController,
@@ -29,15 +29,19 @@ interface FormProps<TIn extends FieldValues, TOut> {
 
 /** Each FormField's plain-text label by field name, so the summary never shows a field's code name. */
 const FieldLabels = createContext<Map<string, string> | null>(null)
+/** A control's own reason its text is refused, by field name, so the summary says the same as the field. */
+const ControlProblems = createContext<Map<string, string> | null>(null)
 
 export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children, className }: FormProps<TIn, TOut>) {
   const { form } = sf
   const fieldLabels = useRef(new Map<string, string>()).current
+  const controlProblems = useRef(new Map<string, string>()).current
   // Inside a Dialog, changes here make closing ask "Discard unsaved changes?" (learnability spec 3.3). Elsewhere a no-op.
   useReportDialogDirty(form.formState.isDirty && !sf.pending)
   return (
     <FormProvider {...(form as unknown as UseFormReturn<TIn>)}>
       <FieldLabels.Provider value={fieldLabels}>
+      <ControlProblems.Provider value={controlProblems}>
       <form id={sf.formId} noValidate onSubmit={sf.submit} className={className} aria-busy={sf.pending || undefined}>
         {/* While saving, controls are locked but keep focus (WCAG 2.4.3): a disabled fieldset drops focus to <body>. */}
         <fieldset
@@ -52,6 +56,7 @@ export function Form<TIn extends FieldValues, TOut>({ sf, labels = {}, children,
           {children}
         </fieldset>
       </form>
+      </ControlProblems.Provider>
       </FieldLabels.Provider>
     </FormProvider>
   )
@@ -75,6 +80,7 @@ export function FormSummary({ labels }: { labels: Partial<Record<string, string>
     setFocus,
   } = useFormContext()
   const fieldLabels = useContext(FieldLabels)
+  const controlProblems = useContext(ControlProblems)
   const names = Object.keys(errors).filter(n => errors[n]?.type !== 'server')
   if (!isSubmitted || names.length === 0) return null
   return (
@@ -85,7 +91,7 @@ export function FormSummary({ labels }: { labels: Partial<Record<string, string>
           <button type="button" onClick={() => setFocus(n)} className="rounded text-primary underline decoration-1 underline-offset-2">
             {labels[n] ?? fieldLabels?.get(n) ?? humaniseFieldName(n)}
           </button>
-          {`: ${summaryLine(errors[n]?.message)}`}
+          {`: ${summaryLine(controlProblems?.get(n) ?? errors[n]?.message)}`}
         </span>
       ))}
     </Banner>
@@ -127,9 +133,18 @@ export function FormField<TV extends FieldValues, N extends Path<TV> = Path<TV>>
   const { control } = useFormContext<TV>()
   const { field, fieldState } = useController({ control, name })
   const fieldLabels = useContext(FieldLabels)
+  const controlProblems = useContext(ControlProblems)
   useLayoutEffect(() => {
     if (fieldLabels && typeof label === 'string') fieldLabels.set(name, label)
   }, [fieldLabels, name, label])
+  const onControlProblem = useCallback(
+    (p: string | null) => {
+      if (!controlProblems) return
+      if (p) controlProblems.set(name, p)
+      else controlProblems.delete(name)
+    },
+    [controlProblems, name],
+  )
   return (
     <Field
       label={label}
@@ -139,6 +154,7 @@ export function FormField<TV extends FieldValues, N extends Path<TV> = Path<TV>>
       edited={fieldState.isDirty}
       error={fieldState.error?.message && renderError ? renderError(fieldState.error.message) : fieldState.error?.message}
       className={className}
+      onControlProblem={onControlProblem}
     >
       {children(field)}
     </Field>

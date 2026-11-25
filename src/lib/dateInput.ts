@@ -69,3 +69,27 @@ export function parseDateText(text: string, today: string): string | null {
   }
   return null
 }
+
+/** Whole days from `from` to `to` (both YYYY-MM-DD), counted on the calendar, not in local time. */
+function daysBetween(from: string, to: string): number {
+  const at = (s: string) => {
+    const [y, m, d] = s.split('-').map(Number)
+    return Date.UTC(y, m - 1, d)
+  }
+  return Math.round((at(to) - at(from)) / 86_400_000)
+}
+
+/** More than this many days from today, a payment, expense, invoice or visit date is most likely a typo in the year. */
+export const FAR_DATE_DAYS = 365
+
+/**
+ * A soft check for a date that is most likely a typo ("01/01/2020" for 2026): a sentence when `isoDate` is more than a
+ * year before or after `today`, else null. It warns, it never blocks: an old bill can still be entered.
+ */
+export function farDateWarning(isoDate: string | null | undefined, today: string): string | null {
+  if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return null
+  const days = daysBetween(today, isoDate)
+  if (days < -FAR_DATE_DAYS) return 'That is more than a year ago. Check the year.'
+  if (days > FAR_DATE_DAYS) return 'That is more than a year away. Check the year.'
+  return null
+}

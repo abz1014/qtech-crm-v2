@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { amountProblem, formatAmount, parseAmount } from '@/lib/number'
+import { amountProblem, beyondPaisa, formatAmount, paisaProblem, parseAmount } from '@/lib/number'
 
 describe('amount text (U07)', () => {
   it('groups PKR in thousands, not lakhs', () => {
@@ -50,5 +50,23 @@ describe('amount text (U07)', () => {
     expect(amountProblem('9999999999999999999999')).toBe('That number is too large.')
     expect(amountProblem('')).toBeNull()
     expect(amountProblem('1,234.50')).toBeNull()
+  })
+  it('review 18: refuses "1e5" with its own sentence, never reading it as 100000', () => {
+    for (const sci of ['1e5', '1E5', '2.5e3', '-1e-2', '.5e2']) {
+      expect(parseAmount(sci), sci).toBeNull()
+      expect(amountProblem(sci), sci).toBe('Type the amount in digits, like 100000.')
+    }
+  })
+  it('review 18: money below one paisa is refused, more decimals are rounded as the books keep them', () => {
+    expect(beyondPaisa(12.5)).toBeNull()
+    expect(beyondPaisa(100.55)).toBeNull()
+    expect(beyondPaisa(100.555)).toEqual({ rounded: 100.56 })
+    expect(beyondPaisa(1.005)).toEqual({ rounded: 1.01 })
+    expect(beyondPaisa(0.001)).toEqual({ rounded: null })
+    expect(paisaProblem(0.001)).toBe('Amounts go to 2 decimals, so the smallest is 0.01.')
+    expect(paisaProblem(0.004)).toMatch(/smallest is 0.01/)
+    expect(paisaProblem(0.005)).toBeNull()
+    expect(paisaProblem(100.555)).toBeNull()
+    expect(paisaProblem(null)).toBeNull()
   })
 })

@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { CircleAlert, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { FieldContext } from '@/ui/form/fieldContext'
@@ -32,17 +32,23 @@ interface FieldProps {
   className?: string
   children: ReactNode
   id?: string
+  /** Hears the control's own reason its text is refused (FormField puts it in the form summary). */
+  onControlProblem?: (problem: string | null) => void
 }
 
-export function Field({ label, requirement, help, error, source, edited = false, className, children, id: idProp }: FieldProps) {
+export function Field({ label, requirement, help, error: given, source, edited = false, className, children, id: idProp, onControlProblem }: FieldProps) {
   const auto = useId()
   const id = idProp ?? auto
+  // The control's own reason ("Type the amount in digits") is more exact than the form's "Enter the amount": it wins.
+  const [controlProblem, setControlProblem] = useState<string | null>(null)
+  useEffect(() => onControlProblem?.(controlProblem), [onControlProblem, controlProblem])
+  const error = controlProblem ?? given
   const helpId = help ? `${id}-help` : undefined
   const errId = error ? `${id}-err` : undefined
   const srcId = source ? `${id}-src` : undefined
   const describedBy = [errId, srcId, helpId].filter(Boolean).join(' ') || undefined
   return (
-    <FieldContext.Provider value={{ id, invalid: Boolean(error), describedBy, required: requirement === 'required' }}>
+    <FieldContext.Provider value={{ id, invalid: Boolean(error), describedBy, required: requirement === 'required', reportProblem: setControlProblem }}>
       <div className={cn('grid min-w-0 content-start gap-[6px]', className)}>
         <div className="flex items-baseline gap-2">
           <label htmlFor={id} className="text-sm font-card text-fg">
@@ -54,7 +60,7 @@ export function Field({ label, requirement, help, error, source, edited = false,
         </div>
         {children}
         {error ? (
-          <p id={errId} className="flex items-start gap-1 text-xs font-card text-tone-danger-fg">
+          <p id={errId} role={controlProblem ? 'alert' : undefined} className="flex items-start gap-1 text-xs font-card text-tone-danger-fg">
             <Icon icon={CircleAlert} size="sm" className="mt-[calc((var(--lh-xs)-14px)/2)]" />
             <span className="min-w-0 text-pretty">{error}</span>
           </p>
