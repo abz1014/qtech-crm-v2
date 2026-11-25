@@ -21,6 +21,7 @@ import { preloadDialog } from '@/ui/dialogStore'
 import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
 import { useKeyboardScroll } from '@/app/shell/useKeyboardScroll'
+import { OfflineSkeletonNotice } from '@/ui/OfflineNotOpened'
 
 /*
  * The top bar's counts read the whole Today list (a dozen requests). They load, with the Today rules, once the page has its
@@ -122,6 +123,8 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
       <TopBar user={user} onSearch={palette.open} />
       <MobileBar user={user} title={title} onSearch={palette.open} />
       <main ref={mainRef} id="main" tabIndex={-1} className="relative min-h-0 min-w-0 overflow-y-auto focus:outline-none">
+        {/* Offline on a page this device never kept: says so above its placeholders instead of leaving them to pulse. */}
+        <OfflineSkeletonNotice root={mainRef} />
         <ErrorBoundary key={pathname} variant="inline">
           <NavCountsContext.Provider value={nav.ready ? counts : null}>
             <Outlet />
