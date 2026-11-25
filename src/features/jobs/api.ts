@@ -170,6 +170,12 @@ export function quotationNumberOf(text: string): number | null {
   return m ? Number(m[1]) : null
 }
 
+/** "QTS-IFL-4810" or "qts ifl 4810": a quotation number with its customer code (0147). */
+export function quotationCodeRefOf(text: string): { code: string; number: number } | null {
+  const m = /^qts[-\s]*([a-z]{2,6})[-\s]*(\d{1,9})$/i.exec(text.trim())
+  return m ? { code: m[1].toUpperCase(), number: Number(m[2]) } : null
+}
+
 const FETCH_LIMIT = 25
 
 /**
@@ -177,7 +183,7 @@ const FETCH_LIMIT = 25
  *  - its number: "139", "Job 139", "O-45";
  *  - what the palette search already finds: RFQ and ORD numbers, customer reference, customer PO, supplier PO numbers, invoice
  *    numbers (admin and sales; the database returns none to an engineer), order items, and a company or contact (all its jobs);
- *  - a quotation number "QT-26-0031" (admin and sales: engineers cannot read quotations);
+ *  - a quotation number "QTS-IFL-4810", or an older "QT-26-0031" (admin and sales: engineers cannot read quotations);
  *  - an enquiry's item words, which the palette's own search does not cover.
  * `hits` lets the palette hand over the search_all answer it already has, so it asks the database once.
  */
@@ -198,9 +204,14 @@ export async function findJobs(text: string, signal?: AbortSignal, hits?: Search
   }
   const key = jobKeyOf(q)
   const qt = quotationNumberOf(q)
+  const qts = quotationCodeRefOf(q)
   const like = `%${q.replace(/[\\%_]/g, c => `\\${c}`)}%`
   // two small reads that may fail without failing the search (an engineer cannot read quotations)
   const quoteIds = async (): Promise<string[]> => {
+    if (qts) {
+      const r = await db.from('quotations').select('rfq_id').eq('number', qts.number).eq('quote_code', qts.code).limit(25)
+      return r.error ? [] : r.data.map(x => x.rfq_id)
+    }
     if (qt === null) return []
     const r = await db.from('quotations').select('rfq_id').eq('number', qt).limit(25)
     return r.error ? [] : r.data.map(x => x.rfq_id)
@@ -246,6 +257,8 @@ export interface JobFacts {
   customerRef: string | null
   receivedOn: string | null
   dueOn: string | null
+  /** The day our quotation was marked sent (rfqs.quoted_on): issued, attached or Mark quotation sent. Absent on older fixtures. */
+  quotedOn?: string | null
   /** The enquiry's notes (rfqs.notes), else the order's. */
   notes: string | null
   closedOn: string | null
@@ -270,6 +283,7 @@ interface HeadJoin {
   customer_ref?: string | null
   received_on?: string | null
   due_on?: string | null
+  quoted_on?: string | null
   closed_on?: string | null
   close_reason?: string | null
 }
@@ -295,7 +309,7 @@ export async function getJobFacts(key: string): Promise<JobFacts | null> {
         .maybeSingle()
     : db
         .from('rfqs')
-        .select(embeds('rfqs', 'id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason'))
+        .select(embeds('rfqs', 'id, number, notes, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason'))
         .eq('number', number)
         .maybeSingle()
   // whether it came from the old CRM: the id only, in the same round
@@ -336,7 +350,7 @@ export async function getJobFactsFromOld(kind: 'rfq' | 'order', id: string): Pro
       db.from('v_jobs').select(JOB_COLUMNS).eq('rfq_id', id).limit(1).maybeSingle(),
       db
         .from('rfqs')
-        .select(`id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')}`)
+        .select(`id, number, notes, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason, ${person('rfqs')}`)
         .eq('id', id)
         .maybeSingle(),
       flag(db.from('rfqs').select('id').eq('id', id).not('legacy_source', 'is', null).limit(1)),
@@ -348,7 +362,7 @@ export async function getJobFactsFromOld(kind: 'rfq' | 'order', id: string): Pro
     db.from('v_jobs').select(JOB_COLUMNS).eq('order_id', id).limit(1).maybeSingle(),
     db
       .from('orders')
-      .select(`rfq:rfqs!orders_rfq_id_fkey(id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')})`)
+      .select(`rfq:rfqs!orders_rfq_id_fkey(id, number, notes, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason, ${person('rfqs')})`)
       .eq('id', id)
       .maybeSingle(),
     flag(db.from('rfqs').select('id, orders!orders_rfq_id_fkey!inner(id)').eq('orders.id', id).not('legacy_source', 'is', null).limit(1)),
@@ -390,6 +404,7 @@ function factsOf(v: JobView | null, h: HeadJoin | null, direct: boolean, number:
     customerRef: h.customer_ref ?? null,
     receivedOn: h.received_on ?? null,
     dueOn: h.due_on ?? null,
+    quotedOn: h.quoted_on ?? null,
     notes: h.notes ?? null,
     closedOn: h.closed_on ?? null,
     closeReason: h.close_reason ?? null,

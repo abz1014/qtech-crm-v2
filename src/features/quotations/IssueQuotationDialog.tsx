@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Download, Eye, FileCheck, FileText, Info, RotateCcw, Share2, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
@@ -22,6 +23,9 @@ import { TextArea, TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { RfqHeader, InquiryRow } from '@/features/rfqs/api'
 import { useCompanyProfile } from '@/features/settings/hooks'
+import { listQuoteCodes, setQuoteCode } from '@/features/companies/api'
+import { normalizeQuoteCode, quoteCodeProblem, suggestQuoteCode } from '@/features/companies/quoteCode'
+import { qk } from '@/features/queryKeys'
 import { StatementDownloads } from '@/features/statement/StatementDownloads'
 import { loadPdfData, loadSignatory, type PdfData, type QuotationRow, type PriceMemory, type QuoteItem } from '@/features/quotations/api'
 import { useCompanyContacts, useIssueQuotation, usePriceMemory, useQuoteItems, useQuotations, useStorePdf } from '@/features/quotations/hooks'
@@ -119,6 +123,12 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const storePdf = useStorePdf(rfq.id)
 
   const previous = quotations.data?.[0] ?? null
+  // 0147: a first quotation is numbered QTS-<customer code>-<number>. A customer with no code yet gets one here, typed or the suggestion.
+  const needsCode = quotations.isSuccess && !previous && !rfq.company.quoteCode
+  const takenCodes = useQuery({ queryKey: [...qk.companies.lists(), 'quote-codes'], queryFn: listQuoteCodes, enabled: needsCode, staleTime: 60_000 })
+  const [code, setCode] = useState<string | null>(null)
+  const codeText = code ?? (takenCodes.data ? suggestQuoteCode(rfq.company.name, takenCodes.data) : takenCodes.isError ? suggestQuoteCode(rfq.company.name) : '')
+  const codeIssue = needsCode ? quoteCodeProblem(codeText) : null
   const firstIssuedOn = quotations.data && quotations.data.length > 0 ? quotations.data[quotations.data.length - 1].issuedOn : null
   const nextRevision = previous ? previous.revision + 1 : 0
   const profile = profileQ.data
@@ -222,7 +232,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   }
 
   const firstYear = firstIssuedOn ?? businessToday()
-  const refOf = (m: PriceMemory) => (m.quotedNumber !== null && m.quotedOn ? quotationRef(m.quotedNumber, m.quotedOn) : null)
+  const refOf = (m: PriceMemory) => (m.quotedNumber !== null && m.quotedOn ? quotationRef(m.quotedNumber, m.quotedOn, undefined, m.quotedCode) : null)
 
   const list = items.data ?? []
   const isIn = (id: string) => included[id] === true
@@ -238,7 +248,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const zero = chosen.filter(i => prices[i.id] === 0)
   const tooBig = chosen.filter(i => (prices[i.id] ?? 0) > MAX_AMOUNT)
   const totalTooBig = tooBig.length === 0 && (totals.net > MAX_PAISA || totals.gst > MAX_PAISA)
-  const ready = seeded.current && chosen.length > 0 && missing.length === 0 && zero.length === 0 && tooBig.length === 0 && !totalTooBig && validUntil !== ''
+  const ready = seeded.current && chosen.length > 0 && missing.length === 0 && zero.length === 0 && tooBig.length === 0 && !totalTooBig && validUntil !== '' && codeIssue === null
   const loading = items.isPending || quotations.isPending || profileQ.isPending || contacts.isPending || memory.isPending
   const loadFailed = items.isError || quotations.isError || profileQ.isError || contacts.isError
   const busy = issue.isPending || storePdf.isPending
@@ -276,9 +286,22 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
       if ((latest?.id ?? null) !== builtOn.current && latest?.id !== claimId.current) {
         builtOn.current = latest?.id ?? null
         setError(
-          `${latest ? quotationRef(latest.number, firstYear, latest.revision) : 'A quotation'} was just issued for this RFQ, from another tab or by another user. Nothing was issued now. Check it first. Select Issue again only to make a revision.`,
+          `${latest ? quotationRef(latest.number, firstYear, latest.revision, latest.code) : 'A quotation'} was just issued for this RFQ, from another tab or by another user. Nothing was issued now. Check it first. Select Issue again only to make a revision.`,
         )
         return
+      }
+      if (needsCode) {
+        try {
+          await setQuoteCode(rfq.company.id, codeText)
+        } catch (err) {
+          const m = mapPgError(err, { entity: 'customer code' })
+          setError(
+            m.kind === 'unique'
+              ? `Another customer already has the code ${normalizeQuoteCode(codeText)}. Nothing was issued. Choose a different code, then issue again.`
+              : m.message,
+          )
+          return
+        }
       }
       const q = await issue.mutateAsync({
         id: claimId.current,
@@ -328,6 +351,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         quotation: {
           id: 'preview',
           number: previous?.number ?? 0,
+          code: previous ? previous.code : null,
           revision: nextRevision,
           issuedOn: today,
           validUntil,
@@ -351,13 +375,21 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
         },
         previous: previous ? { revision: previous.revision, issuedOn: previous.issuedOn } : null,
         firstIssuedOn: firstIssuedOn ?? today,
-        customer: { name: rfq.company.name, country: rfq.company.country },
+        customer: {
+          name: rfq.company.name,
+          country: rfq.company.country,
+          city: rfq.company.city ?? null,
+          code: rfq.company.quoteCode ?? (needsCode && codeIssue === null ? normalizeQuoteCode(codeText) : null),
+          address: rfq.company.address ?? null,
+        },
         siteName: rfq.site?.name ?? null,
         siteAddress: rfq.site?.address ?? null,
         attention: contact?.name ?? null,
         attentionTitle: contact?.jobTitle ?? null,
         customerRef: rfq.customerRef,
         rfqNumber: rfq.number,
+        receivedOn: rfq.receivedOn,
+        brands: Object.fromEntries(picked.filter(i => i.brandName).map(i => [i.id, i.brandName as string])),
         signatory: sig,
       }
       const blob = await generateQuotationPdf(data, profile)
@@ -373,7 +405,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     }
   }
 
-  const filename = (q: QuotationRow) => `${quotationRef(q.number, firstYear, q.revision).replace(/ /g, '-')}.pdf`
+  const filename = (q: QuotationRow) => `${quotationRef(q.number, firstYear, q.revision, q.code).replace(/ /g, '-')}.pdf`
 
   const retryPdf = async (q: QuotationRow) => {
     const made = await makePdf(q)
@@ -383,7 +415,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   const share = async (q: QuotationRow, pdf: Blob) => {
     setSharing(true)
     try {
-      const result = await sharePdf(pdf, filename(q), `${quotationRef(q.number, firstYear, q.revision)} for ${rfq.company.name}`)
+      const result = await sharePdf(pdf, filename(q), `${quotationRef(q.number, firstYear, q.revision, q.code)} for ${rfq.company.name}`)
       if (result === 'downloaded') toast({ title: 'PDF downloaded', body: filename(q) })
     } finally {
       setSharing(false)
@@ -391,11 +423,11 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
   }
 
   // On screen a re-issue is "Revise quotation QT-26-0042" (plain words, 2026-10-19); the PDF and its file name keep the R number.
-  const title = previous ? `Revise quotation ${quotationRef(previous.number, firstYear)}` : 'Issue quotation'
+  const title = previous ? `Revise quotation ${quotationRef(previous.number, firstYear, undefined, previous.code)}` : 'Issue quotation'
 
   if (stage.kind === 'done') {
     const { quotation: q, pdf, pdfError } = stage
-    const base = quotationRef(q.number, firstYear)
+    const base = quotationRef(q.number, firstYear, undefined, q.code)
     return (
       <Dialog open onOpenChange={o => (o ? null : onClose())} busy={storePdf.isPending}>
         <DialogContent
@@ -550,6 +582,28 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                 />
               </Field>
             </div>
+
+            {needsCode ? (
+              <Field
+                label="Customer code"
+                error={code !== null ? (codeIssue ?? undefined) : undefined}
+                help={
+                  codeIssue === null
+                    ? `The first quotation for ${rfq.company.name}. Its number starts QTS-${normalizeQuoteCode(codeText)}, and the code is saved on the customer.`
+                    : 'Letters only, 2 to 6 of them, for example IFL. Saved on the customer.'
+                }
+                className="md:max-w-sm"
+              >
+                <TextField
+                  value={codeText}
+                  maxLength={6}
+                  autoComplete="off"
+                  className="uppercase"
+                  placeholder={suggestQuoteCode(rfq.company.name)}
+                  onChange={e => setCode(e.target.value)}
+                />
+              </Field>
+            ) : null}
 
             {inquiries.some(i => i.lines.length > 0) ? <StatementDownloads jobKey={String(rfq.number)} rfqId={rfq.id} look="inline" /> : null}
 

@@ -230,7 +230,7 @@ function Work({ rfq, itemList, inquiryList, jobKey }: { rfq: RfqHeader; itemList
       {lastAsk ? <SendToEachCard ask={lastAsk} inquiries={inquiryList} onClose={clearLastAsk} /> : null}
       {nobodyAsked ? null : (
         <Suspense fallback={null}>
-          <GapBar items={itemList} inquiries={inquiryList} onShow={showGap} onAsk={askForGap} />
+          <GapBar items={itemList} inquiries={inquiryList} sent={sent} onShow={showGap} onAsk={askForGap} />
         </Suspense>
       )}
       <Suspense fallback={<Skeleton className="h-[10rem] w-full" />}>

@@ -17,6 +17,7 @@ import { StickyActionBar } from '@/ui/StickyActionBar'
 import { TextArea } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
 import type { OrderHeader, OrderLegRow } from '@/features/orders/api'
+import { goodsOrdered } from '@/features/jobs/lib/goods'
 import { deleteCapture, safely } from '@/lib/capture/store'
 import { appendNotesSafely } from '@/features/capture/api'
 import { appendLine } from '@/features/capture/model'
@@ -45,6 +46,9 @@ export const OFFLINE_TEXT = 'No connection. The note is kept and can be saved la
 
 const NOTE_KEEP = 'qtech.engineer.note.'
 
+/** The quiet line in place of Installed today while the goods are not ordered yet. */
+export const INSTALL_WAITS = 'Installation can be marked once the goods are ordered.'
+
 /** The big On site button (Forest 43 engineer, .dv-card): the whole width of its cell; its words may take two lines (the supplier under them). */
 const BIG = 'h-auto min-h-control-lg w-full justify-center whitespace-normal py-2 text-center leading-tight'
 
@@ -54,13 +58,9 @@ function LegDelivered({ order, leg, variant, offline, supplier }: { order: Order
   return (
     <Button size="lg" variant={variant} icon={Truck} className={BIG} disabled={offline} busy={actions.pending} busyLabel="Saving" onClick={() => void actions.doStamp()} aria-label={label}>
       {supplier ? (
-        // Two orders on their way: which supplier, in visible words on a second line (the hidden comma keeps the words one sentence).
-        <span className="grid min-w-0 gap-px">
-          <span>
-            Delivered today<span className="sr-only">, </span>
-          </span>
-          <span className="text-sm font-medium [overflow-wrap:anywhere]">{supplier}</span>
-        </span>
+        // Two orders on their way: which supplier, on a second line. One text node, so the words people see are exactly the
+        // button's name (axe label-content-name-mismatch flagged the old two-span version).
+        <span className="min-w-0 whitespace-pre-line [overflow-wrap:anywhere]">{`Delivered today,\n${supplier}`}</span>
       ) : (
         label
       )}
@@ -92,10 +92,14 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
 
   const cancelled = order?.cancelledOn != null
   const toDeliver = order && !cancelled ? legs.filter(l => l.placedOn && !l.deliveredOn) : []
-  const canInstall = Boolean(order && !cancelled && order.needsCommissioning && !order.doneOn)
+  const installOpen = Boolean(order && !cancelled && order.needsCommissioning && !order.doneOn)
+  // Installed today only once the goods are ordered (live review 24 Nov: offered while the office was still placing the supplier order).
+  const ready = goodsOrdered(data.orderItems.data, data.legs.data)
+  const canInstall = installOpen && ready === true
   const hasDelivered = toDeliver.length > 0
   const hasButtons = hasDelivered || canInstall
-  const visit = Boolean(order && order.needsCommissioning && !order.doneOn && !cancelled)
+  // the visit plan works whatever the goods: Visit type and the Visits list stay
+  const visit = installOpen
   const buttons = (
     <>
       {toDeliver.map((l, n) => (
@@ -134,6 +138,11 @@ export function EngineerActions({ facts, data }: { facts: JobFacts; data: JobDat
         ) : null}
         {/* Forest 43 (engineer): the buttons share the card's width two by two, the first that applies green, the rest white. */}
         {hasButtons && !phone ? <div className="grid items-stretch gap-3 md:grid-cols-2">{buttons}</div> : null}
+        {installOpen && ready === false ? (
+          <p className="text-base text-fg-2" data-install-waits>
+            {INSTALL_WAITS}
+          </p>
+        ) : null}
         {visit ? (
           <div className="flex flex-wrap items-center gap-2">
             <VisitButton order={order as OrderHeader} size={phone ? 'lg' : 'md'} />

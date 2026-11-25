@@ -87,6 +87,28 @@ test.describe('phone platform', () => {
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()
     await noSidewaysScroll(page)
 
+    // A page this test never opened (review 24 Nov, screen 11): it never sits on grey placeholders without saying why. Either it
+    // drew from what the device kept, or it says it has not been opened here yet.
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/money/receivables')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const main = document.getElementById('main')
+            const said = (main?.innerText ?? '').includes('This page has not been opened on this device yet. It loads when the connection is back.')
+            return said || main?.querySelector('.skeleton') === null
+          }),
+        { timeout: 10_000 },
+      )
+      .toBe(true)
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/todo')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    })
+
     // Signal returns: the banner goes without a reload or a sign-in.
     await context.setOffline(false)
     await expect(banner(page)).toHaveCount(0, { timeout: 20_000 })

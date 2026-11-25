@@ -25,7 +25,7 @@ export function Letterhead({ profile, logoSrc }: { profile: CompanyProfile; logo
 export function PageFooter({ left, middle }: { left: string; middle?: string }) {
   return (
     <View style={s.foot} fixed>
-      <Text style={[s.mono, { flex: 1 }]}>{left}</Text>
+      <Text style={[s.num, { flex: 1 }]}>{left}</Text>
       <Text style={{ flex: 1, textAlign: 'center' }}>{middle ?? ''}</Text>
       <Text style={{ flex: 1, textAlign: 'right' }} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
     </View>

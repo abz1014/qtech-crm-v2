@@ -30,7 +30,8 @@ const C = {
 
 const s = StyleSheet.create({
   page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 40, paddingHorizontal: 36 },
-  mono: { fontFamily: 'Geist Mono' },
+  // Figures and references: the same Geist as the text, never a monospace face (owner rule: no mono anywhere).
+  num: { fontFamily: 'Geist' },
   muted: { color: C.muted },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 14, borderBottomWidth: 1.5, borderBottomColor: C.ink },
   logo: { width: 150, height: 36.5, objectFit: 'contain' },
@@ -115,7 +116,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
           <View style={s.company}>
             <Text style={[s.companyName, s.right]}>{companyName}</Text>
             {profile.address ? <Text style={[s.right, s.muted]}>{profile.address}</Text> : null}
-            {taxLine ? <Text style={[s.right, s.muted, s.mono]}>{taxLine}</Text> : null}
+            {taxLine ? <Text style={[s.right, s.muted, s.num]}>{taxLine}</Text> : null}
             {contactLine ? <Text style={[s.right, s.muted]}>{contactLine}</Text> : null}
           </View>
         </View>
@@ -125,7 +126,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
             <Text style={s.h1}>Purchase order</Text>
             {data.previous ? (
               <Text style={[s.muted, { marginTop: 3 }]}>
-                Supersedes <Text style={s.mono}>{`${ref} R${data.previous.revision}`}</Text> of {plainDay(data.previous.issuedOn)}
+                Supersedes <Text style={s.num}>{`${ref} R${data.previous.revision}`}</Text> of {plainDay(data.previous.issuedOn)}
               </Text>
             ) : (
               <Text style={[s.muted, { marginTop: 3 }]}>First issue</Text>
@@ -134,11 +135,11 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
           <View style={s.meta}>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>PO number</Text>
-              <Text style={[s.metaValue, s.mono]}>{ref}</Text>
+              <Text style={[s.metaValue, s.num]}>{ref}</Text>
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Revision</Text>
-              <Text style={[s.metaValue, s.mono]}>R{po.revision}</Text>
+              <Text style={[s.metaValue, s.num]}>R{po.revision}</Text>
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Date</Text>
@@ -147,7 +148,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
             {data.supplierReference ? (
               <View style={s.metaRow}>
                 <Text style={s.metaLabel}>Your proforma</Text>
-                <Text style={[s.metaValue, s.mono]}>{data.supplierReference}</Text>
+                <Text style={[s.metaValue, s.num]}>{data.supplierReference}</Text>
               </View>
             ) : null}
           </View>
@@ -197,17 +198,17 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
                 <Text style={s.strongText}>{d.title}</Text>
                 {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
-              <Text style={[s.cQty, s.mono]}>{qtyText(Number(l.qty))}</Text>
+              <Text style={[s.cQty, s.num]}>{qtyText(Number(l.qty))}</Text>
               <Text style={s.cUnit}>{l.unit ?? ''}</Text>
-              <Text style={[s.cPrice, s.mono]}>{unitPriceText(Number(l.unit_price))}</Text>
-              <Text style={[s.cAmt, s.mono]}>{money(l.amount)}</Text>
+              <Text style={[s.cPrice, s.num]}>{unitPriceText(Number(l.unit_price))}</Text>
+              <Text style={[s.cAmt, s.num]}>{money(l.amount)}</Text>
             </View>
           )
         })}
 
         <View style={s.total} wrap={false}>
           <Text style={s.strongText}>Total ({ccy})</Text>
-          <Text style={[s.mono, { fontWeight: 500, fontSize: 11 }]}>
+          <Text style={[s.num, { fontWeight: 500, fontSize: 11 }]}>
             {ccy} {money(total)}
           </Text>
         </View>
@@ -250,7 +251,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
           <Text style={s.secTitle}>Terms of this order</Text>
           {printedTerms.map((t, i) => (
             <View key={i} style={s.termRow}>
-              <Text style={[s.termNo, s.mono]}>{i + 1}.</Text>
+              <Text style={[s.termNo, s.num]}>{i + 1}.</Text>
               <Text style={{ flex: 1 }}>{t}</Text>
             </View>
           ))}
@@ -270,7 +271,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
         </View>
 
         <View style={s.foot} fixed>
-          <Text style={[s.mono, { flex: 1 }]}>{refRev}</Text>
+          <Text style={[s.num, { flex: 1 }]}>{refRev}</Text>
           <Text style={{ flex: 1, textAlign: 'center' }}>{data.supplier.name}</Text>
           <Text style={{ flex: 1, textAlign: 'right' }} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>

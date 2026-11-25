@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { currentStopIndex, stageModel, STOPS } from '@/features/jobs/lib/stages'
+import { currentStopIndex, invoiceStanding, stageModel, STOPS } from '@/features/jobs/lib/stages'
+
+describe('invoiceStanding', () => {
+  it('reads the order state, and the invoices listed when the state is not read', () => {
+    expect(invoiceStanding('fully_invoiced', 1)).toBe('full')
+    expect(invoiceStanding('part', 1)).toBe('part')
+    // a voided invoice is still listed but the order is not invoiced
+    expect(invoiceStanding('not_invoiced', 1)).toBeNull()
+    expect(invoiceStanding(null, 1)).toBe('full')
+    expect(invoiceStanding(undefined, 0)).toBeNull()
+  })
+})
 
 const model = (stage: string, stageDetail: string | null = null, kind: 'enquiry' | 'direct' = 'enquiry') => stageModel({ stage, stageDetail, kind })
 const states = (m: ReturnType<typeof stageModel>) => m.stops.map(s => s.state)

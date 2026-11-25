@@ -15,10 +15,6 @@ Font.register({
   family: 'Geist',
   fonts: [400, 500, 600].map(w => ({ src: path.join(files, `geist-sans/files/geist-sans-latin-${w}-normal.woff`), fontWeight: w })),
 })
-Font.register({
-  family: 'Geist Mono',
-  fonts: [400, 500].map(w => ({ src: path.join(files, `geist-mono/files/geist-mono-latin-${w}-normal.woff`), fontWeight: w })),
-})
 Font.registerHyphenationCallback(word => [word])
 
 // a 1 x 1 transparent PNG stands in for the wordmark

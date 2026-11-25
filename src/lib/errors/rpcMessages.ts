@@ -101,6 +101,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^set the currency of this supplier order before issuing a PO$/, message: () => "The PO was not issued. Choose the supplier's currency on this supplier order, then issue the PO.", help: 'issue-po' },
   { match: /^an issued (.+?) cannot be changed; issue a new revision$/, message: () => 'An issued quotation or PO cannot be edited. Use Revise.', help: 'revise-quotation' },
   { match: /^the PDF of this issued (.+?) is already attached; only an admin can replace it$/, message: m => `This ${m[1]} already has its PDF. Only an admin can replace it.` },
+  // 0147 (quote template): the customer's code in QTS-<code>-<number>
+  { match: /^a quote code is set by admin and sales only$/, message: () => ADMIN_SALES },
   { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'The RFQ has no items. Add at least one item, then try again.' },
   // 0077: already plain; Create order opens that order instead (existingOrderOf in src/features/orders/api.ts).
   { match: /^This RFQ is already order ORD-.+\.$/ },
@@ -191,7 +193,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^This order has an expense recorded against it\. / },
   // 0136: a cost tied to an enquiry or a visit (HINT visit_order_mismatch, rfq_order_mismatch, rfq_has_costs)
   { match: /^That visit belongs to a different order\.$/ },
-  { match: /^That order was made from a different enquiry\.$/ },
+  { match: /^That order was made from a different enquiry\.$/, message: () => 'That order was made from a different RFQ.' },
   { match: /^This RFQ has costs recorded on it\. / },
   { match: /^This order has an issued purchase order\. / },
   { match: /^This invoice has its tax deposit ticked against the (.+?) bank statement\. /, action: BANK },
@@ -239,7 +241,7 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^Only an admin cancels a supplier order with the supplier\./ },
   { match: /^That supplier order was not found\./ },
   { match: /^This supplier order was never placed, so there is nothing to cancel with the supplier\./ },
-  { match: /^Only an admin can change who owns an enquiry, job or order\./ },
+  { match: /^Only an admin can change who owns an enquiry, job or order\./, message: () => 'Only an admin can change who owns an RFQ, job or order.' },
   { match: /^Choose a current salesperson or admin as the new owner\./ },
   { match: /^Only an admin can see a person's open work\./ },
   { match: /^Choose someone else to take the work over\./ },

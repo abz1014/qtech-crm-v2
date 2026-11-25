@@ -91,14 +91,14 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
         toast({ title: 'The PDF needs the company profile', body: `Add the ${gaps.join(' and ')} in Settings, Company.`, tone: 'danger' })
         return
       }
-      const name = `${quotationRef(q.number, first, q.revision).replace(/ /g, '-')}.pdf`
+      const name = `${quotationRef(q.number, first, q.revision, q.code).replace(/ /g, '-')}.pdf`
       if (what === 'open') {
         const url = URL.createObjectURL(blob)
         if (tab) tab.location.href = url
         else downloadBlob(blob, name)
         setTimeout(() => URL.revokeObjectURL(url), 60_000)
       } else {
-        const result = await sharePdf(blob, name, `${quotationRef(q.number, first, q.revision)} for ${rfq.company.name}`)
+        const result = await sharePdf(blob, name, `${quotationRef(q.number, first, q.revision, q.code)} for ${rfq.company.name}`)
         if (result === 'downloaded') toast({ title: 'PDF downloaded', body: name })
       }
     } catch (err) {
@@ -189,7 +189,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
               {rows.map((q, i) => {
                 const latest = i === 0
                 const expired = latest && isExpired(q.validUntil, today) && isOpen
-                const base = quotationRef(q.number, first)
+                const base = quotationRef(q.number, first, undefined, q.code)
                 const gp = gross(q)
                 return (
                   <div

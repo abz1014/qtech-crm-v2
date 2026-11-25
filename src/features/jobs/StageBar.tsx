@@ -38,6 +38,9 @@ const DOT: Record<StopState, string> = {
   office: 'border-dashed border-line-strong bg-surface text-fg-muted',
 }
 
+/** A stop's note that is a plain fact, not a task (quote first, owner 24 Nov 2026: asking suppliers is optional): drawn neutral. */
+const QUIET_NOTE = /suppliers not asked yet/
+
 function Mark({ s }: { s: StopView }) {
   // A heavy stroke (the mockup's 3): at 16 px the default 1.75 stroke is too faint to read as a tick on the forest dot.
   const Glyph = s.state === 'done' ? Check : s.state === 'none' ? Minus : s.state === 'stopped' ? X : null
@@ -71,7 +74,7 @@ export function StageTrack({ job }: { job: JobStanding }) {
               {s.shown}
               <span className="sr-only">{`, ${STATE_WORD[s.state]}`}</span>
             </span>
-            {s.note ? <span className="min-w-0 text-sm text-tone-warning-fg [overflow-wrap:anywhere] max-md:hidden">{s.note}</span> : null}
+            {s.note ? <span className={cn('min-w-0 text-sm [overflow-wrap:anywhere] max-md:hidden', QUIET_NOTE.test(s.note) ? 'text-fg-2' : 'text-tone-warning-fg')}>{s.note}</span> : null}
             {s.state === 'none' ? <span className="text-sm text-fg-muted max-md:hidden">none</span> : null}
             {s.state === 'office' ? <span className="text-sm text-fg-muted max-md:hidden">office</span> : null}
           </li>

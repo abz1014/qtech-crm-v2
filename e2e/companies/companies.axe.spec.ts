@@ -39,7 +39,7 @@ for (const { label, width, height } of WIDTHS) {
       const company = await createCompany(uniqueName('Axe Customer'), { country: 'Pakistan', notes: 'Pays on the 10th.' })
       const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
       await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', phone: '0300 1234567', email: 'naveed@example.test', notes: 'Finance' } }))
-      await createRfq(company.id, { site_id: site.id, customer_ref: 'ENQ-2211' })
+      await createRfq(company.id, { site_id: site.id, customer_ref: 'RFQ-2211' })
       await openAs(page, 'sales', `/companies/${company.id}`)
       await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()
       await expect(page.getByText('Naveed Akhtar')).toBeVisible()

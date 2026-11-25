@@ -40,7 +40,8 @@ select is((select count(*)::int from pg_trigger t
   'fx_rates and company_profile carry the audit trigger');
 select columns_are('public', 'company_profile',
   array['id', 'legal_name', 'address', 'phone', 'email', 'website', 'ntn', 'strn', 'bank_name', 'bank_account_title',
-        'bank_iban', 'quotation_validity_days', 'quotation_terms', 'po_terms', 'updated_at', 'updated_by', 'default_payment_terms_days'],
+        'bank_iban', 'quotation_validity_days', 'quotation_terms', 'po_terms', 'updated_at', 'updated_by', 'default_payment_terms_days',
+        'quote_next_number', 'sales_email', 'sales_phone', 'quotation_warranty', 'quotation_closing'],   -- 0147: the quotation template
   'company_profile has the section 2.27 columns');
 
 select set_config('request.jwt.claims', '{"sub":"a0000000-0000-4000-8000-000000000001","role":"authenticated"}', true);

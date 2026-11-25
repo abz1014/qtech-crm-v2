@@ -18,8 +18,8 @@ $f$;
 -- ------------------------------------------------------------------ structure
 select columns_are('public', 'quotations',
   array['id', 'created_at', 'created_by', 'rfq_id', 'number', 'revision', 'issued_on', 'valid_until', 'contact_id',
-        'lines', 'net_total', 'gst_total', 'delivery_text', 'payment_terms', 'notes', 'signatory_id', 'pdf_path'],
-  'quotations has the section 2.25 columns');
+        'lines', 'net_total', 'gst_total', 'delivery_text', 'payment_terms', 'notes', 'signatory_id', 'pdf_path', 'quote_code'],
+  'quotations has the section 2.25 columns (quote_code, 0147)');
 select columns_are('public', 'purchase_orders',
   array['id', 'created_at', 'created_by', 'supplier_order_id', 'number', 'revision', 'issued_on', 'currency', 'lines',
         'total', 'incoterm', 'delivery_terms', 'payment_terms', 'ship_to', 'notes', 'signatory_id', 'pdf_path'],

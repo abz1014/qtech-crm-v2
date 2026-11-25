@@ -197,7 +197,8 @@ export function monthBefore(iso: string, back: number) {
 export const ref = {
   rfq: (n: number) => `RFQ-${String(n).padStart(4, '0')}`,
   order: (n: number) => `ORD-${String(n).padStart(4, '0')}`,
-  quotation: (n: number, issuedOn: string) => `QT-${issuedOn.slice(2, 4)}-${String(n).padStart(4, '0')}`,
+  /** 0147: QTS-<customer code>-<number>; an older quotation (no code) is QT-YY-NNNN. */
+  quotation: (n: number, issuedOn: string, code?: string | null) => (code ? `QTS-${code}-${n}` : `QT-${issuedOn.slice(2, 4)}-${String(n).padStart(4, '0')}`),
   po: (n: number, issuedOn: string) => `PO-${issuedOn.slice(2, 4)}-${String(n).padStart(4, '0')}`,
 }
 

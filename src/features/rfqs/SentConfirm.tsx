@@ -37,7 +37,7 @@ export function SentConfirm({ rfqId, inquiry, variant = 'ask' }: { rfqId: string
             tone: 'success',
             undo: ids.length > 0 ? { onUndo: () => confirm.mutateAsync({ ids, undo: true }).then(() => undefined), undoneTitle: 'Back to asked' } : undefined,
           }),
-        onError: err => toast({ title: 'Could not save it', body: mapPgError(err, { entity: 'enquiry' }).message, tone: 'danger' }),
+        onError: err => toast({ title: 'Could not save it', body: mapPgError(err, { entity: 'supplier request' }).message, tone: 'danger' }),
       },
     )
   if (variant === 'later') {

@@ -750,10 +750,9 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     if (!pdfIsValid(pdf)) note(info, { kind: 'observation', where: `${W} PDF`, what: 'the stored PDF is missing or not valid', detail: q.pdf_path })
     const text = pdf ? pdfText(pdf) : null
     if (text) {
-      for (const [what, n] of [['net', exp0.net], ['GST', exp0.gst], ['gross', exp0.gross]] as const)
+      for (const [what, n] of [['net', exp0.net]] as const)
         if (!hasFigure(text, n)) note(info, { kind: 'observation', where: `${W} PDF`, what: `the PDF does not print the ${what} ${amount(n)}`, detail: text.slice(0, 1500) })
       if (!text.includes('2.5')) note(info, { kind: 'observation', where: `${W} PDF`, what: 'the decimal quantity 2.5 is not printed as such' })
-      if (!/exempt/i.test(text)) note(info, { kind: 'observation', where: `${W} PDF`, what: 'the PDF does not say which line is GST-exempt' })
     }
     await dialog(page).getByRole('button', { name: 'Done' }).click()
     await openStage(page, 'Quotation') // the Quotations block lives in the Quotation step, which may have folded
@@ -794,7 +793,7 @@ test('quotation at desktop: GST mix and decimals vs DB vs PDF, double Issue, rev
     if (!pdfIsValid(old)) note(info, { kind: 'observation', where: `${W} revise`, what: 'R0 PDF is no longer readable after the revise' })
     const pdf1 = b?.pdf_path ? await fetchStoredPdf('sales', 'generated-docs', b.pdf_path) : null
     const text = pdf1 ? pdfText(pdf1) : null
-    if (text && !hasFigure(text, exp1.gross)) note(info, { kind: 'observation', where: `${W} revise PDF`, what: `R1 PDF does not print the gross ${amount(exp1.gross)}` })
+    if (text && !hasFigure(text, exp1.net)) note(info, { kind: 'observation', where: `${W} revise PDF`, what: `R1 PDF does not print the gross without GST ${amount(exp1.net)}` })
     if (!(await page.getByTestId('quotation-0').innerText()).includes('Replaced by revision 1')) note(info, { kind: 'observation', where: `${W} revise`, what: 'R0 row does not say it was replaced' })
     await layout(page, info, `${W} two revisions`)
     await shot(page, `${W}-two-revisions`)
@@ -947,7 +946,7 @@ test('quotation at phone: issue and revise at 375 with layout', async ({ browser
     if (num(q.net_total) !== exp.net || num(q.gst_total) !== exp.gst) note(info, { kind: 'observation', where: `${W} stored totals`, what: `DB net ${q.net_total} GST ${q.gst_total}, expected ${exp.net} / ${exp.gst}` })
     const pdf = q.pdf_path ? await fetchStoredPdf('sales', 'generated-docs', q.pdf_path) : null
     const text = pdf ? pdfText(pdf) : null
-    if (text && !hasFigure(text, exp.gross)) note(info, { kind: 'observation', where: `${W} PDF`, what: `the PDF does not print the gross ${amount(exp.gross)}`, detail: text.slice(0, 1200) })
+    if (text && !hasFigure(text, exp.net)) note(info, { kind: 'observation', where: `${W} PDF`, what: `the PDF does not print the gross without GST ${amount(exp.net)}`, detail: text.slice(0, 1200) })
     if (text && !text.includes('1.25')) note(info, { kind: 'observation', where: `${W} PDF`, what: 'the decimal quantity 1.25 is not printed as such' })
   })
   await probe(info, page, `${W} revise`, async () => {

@@ -31,7 +31,7 @@ test('company profile: the legal name, NTN and validity typed by the admin are w
     await as('sales', 'company_profile?id=eq.1', { method: 'PATCH', body: { legal_name: 'Not allowed' } })
     expect((await db.one<{ legal_name: string }>('company_profile?id=eq.1&select=legal_name')).legal_name).toBe(name)
 
-    // The next quotation: valid 45 days from today, and the PDF prints the new name and NTN.
+    // The next quotation: valid 45 days from today, and the PDF prints the new name (the owner's template has no NTN line).
     const r = await rfq({ items: [{ description: `Profile check item ${letters()}`, qty: 1 }] })
     const sup = await supplier('Verify Profile Supplier', 'Pakistan')
     await quote(r.rfq.id, sup, [{ itemId: r.items[0].id, price: 900 }], 'PKR')
@@ -48,7 +48,7 @@ test('company profile: the legal name, NTN and validity typed by the admin are w
     const text = pdf ? pdfText(pdf) : null
     if (text) {
       expect(text).toContain(name)
-      expect(text).toContain('7654321-0')
+      expect(text).toContain('45 Days.')
     }
     await sales.close()
   } finally {

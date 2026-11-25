@@ -8,7 +8,8 @@ import { ToastContext, type ToastApi, type ToastInput } from '@/ui/useToast'
  * Toast (INVENTORY: U03; D08 section 08, g2-today-b2 "Copied"). Forest .qb-toast: the brand-950 surface,
  * e3 shadow, a lime glyph, 12 px corners, 420px (never under 300) on desktop and full width minus the 16px gutters on a phone
  * (above the tab bar and the home-bar inset); on a phone the card wraps so the words keep at least 10rem. At most three show, newest at the bottom; the oldest
- * is settled and removed first.
+ * is settled and removed first. While a dialog or sheet is open they move to the top (useDialogOpen), so they never sit on its
+ * buttons. The title is clamped to two lines and the context line to three.
  *
  * Undo toast: the window is 10 s. A ring in the Undo button empties and the
  * seconds count down; a bar along the bottom shrinks. Hovering or focusing the
@@ -143,12 +144,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         ref={region}
         role="region"
         aria-label="Notifications"
+        // aria-live="off" is not a live region of its own (the alerts and the polite region inside it speak). It is there because a
+        // modal dialog hides the rest of the page from screen readers (Radix, through aria-hidden) but leaves anything with an
+        // aria-live attribute alone: without it an error toast raised behind an open dialog ("Could not save the reply") was silent.
+        aria-live="off"
         data-over-dialog={overDialog || undefined}
         style={lift && !overDialog ? { bottom: lift } : undefined}
         className={cn(
-          'pointer-events-none fixed bottom-4 right-4 z-toast flex w-[420px] min-w-[300px] max-w-[calc(100vw-2rem)] flex-col gap-2 max-md:inset-x-4 max-md:bottom-[calc(var(--tabbar-h)+var(--sp-1)+env(safe-area-inset-bottom,0px))] max-md:w-auto max-md:min-w-0 max-md:max-w-none',
-          // A phone with a dialog open: at the top, clear of the dialog's buttons (they sit at its bottom).
-          overDialog && 'max-md:bottom-auto max-md:top-[calc(env(safe-area-inset-top)+8px)]',
+          'pointer-events-none fixed z-toast flex w-[420px] min-w-[300px] max-w-[calc(100vw-2rem)] flex-col gap-2 max-md:inset-x-4 max-md:w-auto max-md:min-w-0 max-md:max-w-none',
+          overDialog
+            ? // A dialog or sheet is open: its buttons sit at its bottom (a "Reopened" toast hid Mark won's Cancel and Mark won, an
+              // error hid the supplier reply's Save). The toasts go to the top centre on a desktop and to the top on a phone, clear of
+              // every footer. Focus stays in the dialog: the toasts are outside its focus trap and never take focus.
+              'left-1/2 top-4 -translate-x-1/2 max-md:left-4 max-md:top-[calc(env(safe-area-inset-top,0px)+0.5rem)] max-md:translate-x-0'
+            : 'bottom-4 right-4 max-md:bottom-[calc(var(--tabbar-h)+var(--sp-1)+env(safe-area-inset-bottom,0px))]',
         )}
       >
         {/* WCAG 4.1.3: errors speak for themselves as role="alert". Every other toast goes into one persistent polite
@@ -164,14 +173,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * On a phone the toasts sit over the bottom of the page. While any show, the scrolling page (#main) gets that much room at its
- * end, so the last card and its buttons can be scrolled clear of the toast ("Open in WhatsApp" was under the Undo toast).
+ * The toasts sit over the bottom of the page. While any show, the scrolling page (#main) gets that much room at its end, so the
+ * last card and its buttons can be scrolled clear of the toast ("Open in WhatsApp" was under the Undo toast on a phone; on a
+ * desktop a toast sat on the job page's Contact and Money card).
  */
 function useClearance(region: RefObject<HTMLDivElement | null>, active: boolean) {
   useEffect(() => {
     const main = typeof document === 'undefined' ? null : document.getElementById('main')
     const box = region.current
-    if (!active || !main || !box || typeof window === 'undefined' || !window.matchMedia?.('(max-width: 767px)').matches) return
+    if (!active || !main || !box) return
     const apply = () => void (main.style.paddingBottom = `${box.offsetHeight + 16}px`)
     apply()
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(apply)
@@ -186,8 +196,9 @@ function useClearance(region: RefObject<HTMLDivElement | null>, active: boolean)
 const DIALOG = '[role="dialog"],[role="alertdialog"]'
 
 /**
- * Whether a dialog or sheet is open, watched only while a toast is showing. On a phone the toasts then move to the top
- * of the screen: at the bottom they sat on the dialog's buttons (an Undo toast hid "Preview PDF" and "Cancel").
+ * Whether a dialog or sheet is open, watched only while a toast is showing. The toasts then move to the top of the screen, on
+ * every width: at the bottom they sat on the dialog's buttons (an Undo toast hid "Preview PDF" and "Cancel", a "Reopened" toast
+ * hid Mark won's own button).
  */
 function useDialogOpen(watch: boolean): boolean {
   const [open, setOpen] = useState(false)
@@ -317,9 +328,11 @@ function ToastCard({
       )}
     >
       <Icon icon={tone === 'danger' ? CircleAlert : phase === 'undone' ? Undo2 : CircleCheck} className={cn('shrink-0 max-md:col-start-1 max-md:row-start-1 max-md:mt-[2px]', tone !== 'danger' && 'text-lime-300')} />
-      <div className="grid min-w-0 flex-1 text-pretty max-md:col-start-2 max-md:row-start-1">
-        <span className="font-bold">{title}</span>
-        {body ? <span className={cn('text-xs font-medium', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
+      {/* A long name (a 300-character company) filled a phone screen: the title keeps two lines and the context line three, then
+          an ellipsis. The whole sentence stays in the page, so a screen reader still reads all of it. */}
+      <div data-toast-text className="grid min-w-0 flex-1 text-pretty [overflow-wrap:anywhere] max-md:col-start-2 max-md:row-start-1">
+        <span className="line-clamp-2 font-bold">{title}</span>
+        {body ? <span className={cn('line-clamp-3 text-xs font-medium', tone === 'danger' ? 'opacity-90' : 'opacity-80')}>{body}</span> : null}
         {undoable ? <span className="sr-only">{` Undo is available for ${u?.seconds ?? 10} seconds, or press Control+Z.`}</span> : null}
       </div>
       {undoable ? (

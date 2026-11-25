@@ -230,7 +230,15 @@ function JobView({ facts }: { facts: JobFacts }) {
 
   const items = data.orderItems.data
   const keyFacts = job.orderId
-    ? jobKeyFacts({ order: data.order.data, legs: data.legs.data, money: ctx.money, cancelled: Boolean(data.order.data?.cancelledOn), servicesOnly: Boolean(items && items.length > 0 && items.every(i => i.isService)), today: businessToday() })
+    ? jobKeyFacts({
+        order: data.order.data,
+        legs: data.legs.data,
+        money: ctx.money,
+        cancelled: Boolean(data.order.data?.cancelledOn),
+        servicesOnly: Boolean(items && items.length > 0 && items.every(i => i.isService)),
+        toSource: items ? items.filter(i => !i.isService && !i.legId).length : 0,
+        today: businessToday(),
+      })
     : null
 
   return (

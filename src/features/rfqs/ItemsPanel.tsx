@@ -429,7 +429,9 @@ export function ItemsPanel({
       {!nobodyAsked && rateBar.length > 0 ? <RateBar entries={rateBar} /> : null}
       {nobodyAsked && items.length > 0 ? (
         <p className="mt-4 rounded-control border border-dashed px-4 py-3 text-fg-2">
-          <b className="font-semibold text-fg">Ask a supplier first.</b> Replies are entered under Suppliers asked.
+          {/* Quote first (owner, 24 Nov 2026): asking suppliers is optional, never a step that must come first. */}
+          <b className="font-semibold text-fg">Asking suppliers is optional.</b>{' '}
+          {prices ? 'Type the prices in Issue quotation. If you ask a supplier, the replies show here.' : 'If a supplier is asked, the replies show here.'}
         </p>
       ) : null}
       {allWaiting ? (
@@ -449,7 +451,7 @@ export function ItemsPanel({
         <div role="status" className="mt-3 flex items-start gap-3 rounded-control border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3" data-many-uncovered={uncoveredIds.size}>
           <Icon icon={TriangleAlert} className="mt-1 text-tone-danger-fg" />
           <p className="text-fg-2">
-            <b className="font-semibold text-fg">{`${uncoveredIds.size} of ${items.length} items have no price.`}</b> The suppliers who replied did not quote them. Ask another supplier before the quotation is due.
+            <b className="font-semibold text-fg">{`${uncoveredIds.size} of ${items.length} items have no price.`}</b> The suppliers who replied did not quote them.{prices ? ' Type their prices in Issue quotation, or ask another supplier.' : ''}
           </p>
         </div>
       ) : null}
@@ -522,7 +524,7 @@ export function ItemsPanel({
                     </span>
                   </p>
                   {/* "Priced" is said once, on each supplier's row (Suppliers asked): an item with prices shows its price rows, not a second chip. */}
-                  {/* An item others were asked about but nobody about this one says so folded too: Needs suppliers. */}
+                  {/* An item others were asked about but nobody about this one says so folded too: Not asked yet. */}
                   {unasked || (cov.value && cov.value !== 'priced' && !allWaiting) ? (
                     <span className="col-start-2 row-start-3 justify-self-start lg:col-start-3 lg:row-start-1">
                       <StatusBadge dimension="item-price" value={unasked ? 'unasked' : (cov.value as string)} detail={cov.detail} />
@@ -550,7 +552,7 @@ export function ItemsPanel({
                                 : 'Every supplier asked said they cannot quote it.'}
                             </b>{' '}
                             {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}
-                            Ask another supplier before the quotation is due.
+                            {prices ? 'Type its price in Issue quotation, or ask another supplier.' : ''}
                           </p>
                         </div>
                         <AskForItem suggestions={forThis} item={item} onCopyEnquiry={onCopyEnquiry} />
@@ -560,7 +562,8 @@ export function ItemsPanel({
                     {unasked ? (
                       <div className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-0 px-0" data-unasked={item.id}>
                         <p role="status" className={cn('border bg-deep px-4 py-3 text-fg-2', forThis.length > 0 ? 'rounded-t-control' : 'rounded-control')}>
-                          <b className="font-semibold text-fg">No supplier has been asked about this item.</b> Ask a supplier before the quotation is due.
+                          <b className="font-semibold text-fg">No supplier has been asked about this item.</b>
+                          {prices ? ' Type its price in Issue quotation, or ask a supplier.' : ''}
                         </p>
                         <AskForItem suggestions={forThis} item={item} onCopyEnquiry={onCopyEnquiry} />
                       </div>

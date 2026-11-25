@@ -272,6 +272,22 @@ describe('the supplier comparison', () => {
   })
 })
 
+describe('nobody asked (quote first, owner 24 Nov 2026)', () => {
+  it('says asking suppliers is optional, and sales can type the prices in Issue quotation', () => {
+    renderPanel([])
+    const panel = document.querySelector('[data-slot="items"]') as HTMLElement
+    expect(panel).toHaveTextContent('Asking suppliers is optional. Type the prices in Issue quotation. If you ask a supplier, the replies show here.')
+    expect(panel.textContent).not.toMatch(/Ask a supplier first/)
+  })
+
+  it('an engineer is not told about Issue quotation', () => {
+    renderPanel([], [item], 'engineer')
+    const panel = document.querySelector('[data-slot="items"]') as HTMLElement
+    expect(panel).toHaveTextContent('Asking suppliers is optional. If a supplier is asked, the replies show here.')
+    expect(panel.textContent).not.toMatch(/Issue quotation/)
+  })
+})
+
 describe('supplier flow D: items a supplier was asked about (0140)', () => {
   const three: RfqItemRow[] = [item, { ...item, id: 'it-2', number: 2, description: 'pH probe' }, { ...item, id: 'it-3', number: 3, description: 'Buffer kit' }]
 
@@ -286,6 +302,19 @@ describe('supplier flow D: items a supplier was asked about (0140)', () => {
     const third = screen.getByRole('article', { name: 'Item 3' })
     expect(within(third).getByText('No supplier has been asked about this item.')).toBeInTheDocument()
     expect(within(third).queryByText('Keller GmbH')).toBeNull()
+    // Quote first (owner, 24 Nov 2026): asking is optional. The chip is a grey fact, and the note offers Issue quotation, never a demand.
+    expect(within(third).getByText('Not asked yet')).toBeInTheDocument()
+    expect(within(third).queryByText('Needs suppliers')).toBeNull()
+    expect(third).toHaveTextContent('Type its price in Issue quotation, or ask a supplier.')
+    expect(third.textContent).not.toMatch(/before the quotation is due/)
+  })
+
+  it('an engineer reads the same note without the Issue quotation hint', () => {
+    const scoped: InquiryRow = { ...inquiry('w', 'Keller GmbH', []), responseState: 'awaiting', itemsQuoted: 0, askedItemIds: ['it-1', 'it-2'] }
+    renderPanel([scoped], three, 'engineer')
+    const third = screen.getByRole('article', { name: 'Item 3' })
+    expect(third).toHaveTextContent('No supplier has been asked about this item.')
+    expect(third.textContent).not.toMatch(/Issue quotation|Ask a supplier/)
   })
 
   it('an old whole-RFQ ask (no list) still counts for every item', () => {
@@ -312,6 +341,8 @@ describe('supplier flow D: items a supplier was asked about (0140)', () => {
     const four = Array.from({ length: 4 }, (_, n) => ({ ...item, id: `it-${n + 1}`, number: n + 1, description: `Part ${n + 1}` }))
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])], four)
     expect(document.querySelector('[data-many-uncovered]')).toHaveTextContent('3 of 4 items have no price.')
+    expect(document.querySelector('[data-many-uncovered]')).toHaveTextContent('Type their prices in Issue quotation, or ask another supplier.')
+    expect(document.body.textContent).not.toMatch(/before the quotation is due/)
     expect(screen.queryByText(/None of the 1 supplier who replied quoted this item/)).toBeNull()
   })
 

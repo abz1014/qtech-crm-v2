@@ -196,6 +196,9 @@ async function signOutHard(page: Page): Promise<void> {
 
 const leg = (page: Page, letter: string) => page.getByTestId(`leg-${letter}`)
 
+/** Leg A placed too: Installed today is offered only once every supplier order is placed (live review 24 Nov). */
+const placeLegA = (s: OrderSeed) => must(rest('admin', `supplier_orders?id=eq.${s.legA}`, { method: 'PATCH', body: { placed_on: karachiDay(-1), expected_on: karachiDay(5) }, prefer: 'return=minimal' }))
+
 // ------------------------------------------------------------------------------------------------ O01 convert
 
 /** Issues a real quotation (R0, then R1 on a second call) of just these items, as the Issue quotation dialog does. */
@@ -320,7 +323,7 @@ test.describe('O01: Mark won creates the order', () => {
     const dialog = page.getByRole('dialog')
     await expect(price(dialog, 1)).toHaveValue('1,000')
     await expect(dialog.getByRole('checkbox', { name: 'Include line 3' })).not.toBeChecked()
-    await expect(dialog.getByTestId('convert-item-3-not-in')).toContainText(/Not in QT-\d\d-\d{4}/)
+    await expect(dialog.getByTestId('convert-item-3-not-in')).toContainText(/Not in (QTS-[A-Z]{2,6}-\d+|QT-\d\d-\d{4})/)
     await expect(dialog.getByText('Creates 2 order lines.')).toBeVisible()
     await dialog.getByRole('button', { name: 'Supplier for line 1' }).click()
     await page.getByRole('option', { name: new RegExp(s.supplierA.name) }).click()
@@ -602,6 +605,7 @@ test.describe('O03: items', () => {
 test.describe('O03: commissioning and cancel', () => {
   test('the engineer marks commissioning done in 1 tap, typing nothing (the On site card)', async ({ page }) => {
     const s = await seedOrder()
+    await placeLegA(s)
     const t = tapper()
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
     const onSite = page.getByRole('region', { name: 'On site' })
@@ -709,10 +713,12 @@ test.describe('O03: role views', () => {
     expect(text).not.toMatch(/No PO yet|EUR/)
     expect(text).not.toMatch(/PKR|48,500|96,500|135,000|Margin|Terms|Exempt|Costs|Balance|Add line|Add supplier|Issue PO|Record payment|Add expense|Create invoice/i)
     await expect(page.locator('.sr-only', { hasText: 'Not set' })).toHaveCount(0)
-    // the page leads with the engineer's job: Delivered today and Installed today
+    // the page leads with the engineer's job: Delivered today for the placed supplier order. Leg A is not placed yet, so Installed
+    // today waits and a quiet line says why (live review 24 Nov)
     const onSite = page.getByRole('region', { name: 'On site' })
     await expect(onSite.getByRole('button', { name: 'Delivered today' })).toBeVisible()
-    await expect(onSite.getByRole('button', { name: 'Installed today' })).toBeVisible()
+    await expect(onSite.getByRole('button', { name: 'Installed today' })).toHaveCount(0)
+    await expect(onSite.getByText('Installation can be marked once the goods are ordered.')).toBeVisible()
 
     const forbidden = /unit_price_net|supplier_unit_price|gst_rate|order_receivables|\/invoices|payments_in|expenses|order_costs|v_order_money|v_order_items_total|invoicing_state|[,=(]gross|[,=(]net\b|invoiced/
     const leaks = urls.filter(u => forbidden.test(u.replace(/^https?:\/\/[^/]+/, '')))
@@ -809,6 +815,7 @@ test.describe('O03: the command palette finds an order by number and customer PO
 for (const width of [1440, 375]) {
   test(`axe (WCAG 2.2 AA) and review screenshots at ${width}: the job page of an order for admin and engineer, the Mark won dialog`, async ({ page }) => {
     const s = await seedOrder()
+    await placeLegA(s)
     const r = await seedRfq()
     await page.setViewportSize({ width, height: width > 800 ? 900 : 812 })
 

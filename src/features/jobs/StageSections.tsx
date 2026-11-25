@@ -20,7 +20,7 @@ import type { JobData } from '@/features/jobs/useJobData'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
 import { stageSlot } from '@/features/jobs/slotRegistry'
 import { quotationRef } from '@/features/jobs/lib/refs'
-import { STOPS, type StageModel, type StopName, type StopState } from '@/features/jobs/lib/stages'
+import { invoiceStanding, STOPS, type StageModel, type StopName, type StopState } from '@/features/jobs/lib/stages'
 
 // The enquiry side's real components (P5-D1): downloaded when the Quotation stage is first opened, not with the job page.
 const EnquiryWork = lazyWithReload(() => import('@/features/jobs/EnquiryWork'))
@@ -138,7 +138,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         <Table
           head={['Quotation', 'Issued', 'Valid until']}
           label="Quotations"
-          rows={quotes.map(q => [<span key="n" className="num font-medium">{`${quotationRef(q.number, q.issuedOn)}${q.revision ? ` R${q.revision}` : ''}`}</span>, day(q.issuedOn), day(q.validUntil)])}
+          rows={quotes.map(q => [<span key="n" className="num font-medium">{`${quotationRef(q.number, q.issuedOn, q.code)}${q.revision ? ` R${q.revision}` : ''}`}</span>, day(q.issuedOn), day(q.validUntil)])}
         />
       ) : null}
     </div>
@@ -244,11 +244,21 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         : delivered > 0
           ? `${delivered} of ${legs.length} delivered`
           : 'Not delivered yet'
+  // Quote first (owner, 24 Nov 2026): once the quotation is sent the row says so ("QTS-IFL-4810 · Sent 24 Nov"), not how many
+  // suppliers answered. Before that it counts the answers, and with nobody asked it says no quotation is recorded.
+  const latest = quotes.reduce<(typeof quotes)[number] | null>((a, q) => (!a || q.revision > a.revision ? q : a), null)
+  const sentOn = facts.quotedOn ?? latest?.issuedOn ?? null
+  const latestRef = latest ? `${quotationRef(latest.number, latest.issuedOn, latest.code)}${latest.revision ? ` R${latest.revision}` : ''}` : null
+  const quotationSummary = sentOn
+    ? [latestRef, `Sent ${formatShortDate(sentOn, today)}`].filter(Boolean).join(' · ')
+    : asked
+      ? `${answered} of ${asked} answered`
+      : 'No quotation in the CRM'
   const summaries: ReactNode[] = [
     direct
       ? 'No RFQ: this job started as an order'
       : [facts.receivedOn ? formatShortDate(facts.receivedOn, today) : null, items.length ? `${items.length} ${items.length === 1 ? 'item' : 'items'}` : null].filter(Boolean).join(' · ') || 'RFQ',
-    direct ? 'No quotation' : asked ? `${answered} of ${asked} answered` : 'No supplier asked yet',
+    direct ? 'No quotation' : quotationSummary,
     job.orderId ? (order?.orderedOn ? `Ordered ${formatShortDate(order.orderedOn, today)}` : orderRef(order?.number ?? 0)) : 'Waiting for the customer',
     legs.length ? (delivered > 0 ? `${delivered} of ${legs.length} delivered` : `${legs.length} supplier ${legs.length === 1 ? 'order' : 'orders'}`) : job.orderId ? 'To source and place' : 'Not yet',
     detailFor(4) ?? (installation && !order?.doneOn ? installation : deliveryState),
@@ -283,6 +293,11 @@ const OFFICE_CHIP: FoldRowChip = { icon: Building2, word: 'Office', tone: 'neutr
 /** The office's Payment row while an advance is in (the ruler's half-filled stop): not "Not yet" (audit 2: the row contradicted the ruler). */
 const ADVANCE_CHIP: FoldRowChip = { icon: CircleDot, word: 'Advance in', tone: 'info' }
 const OFFICE_STATE = { icon: Building2, word: WITH_OFFICE, className: 'text-fg-muted' }
+/** The Invoice row while an invoice is in before the job reaches that step (live review 24 Nov: "Not yet" over a listed invoice). */
+const INVOICED: Record<'full' | 'part', { state: { icon: LucideIcon; word: string; className: string }; chip: FoldRowChip }> = {
+  full: { state: { icon: CircleCheck, word: 'Invoiced', className: 'text-tone-success-fg' }, chip: { icon: CircleCheck, word: 'Invoiced', tone: 'success' } },
+  part: { state: { icon: CircleDot, word: 'Part invoiced', className: 'text-fg' }, chip: { icon: CircleDot, word: 'Part invoiced', tone: 'info' } },
+}
 
 const STATE: Record<StopState, { icon: LucideIcon; word: string; className: string }> = {
   done: { icon: CircleCheck, word: 'Done', className: 'text-tone-success-fg' },
@@ -305,6 +320,8 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
   // A job that began as an order has no enquiry and no quotation: one grey row says so, instead of two rows that each say it.
   const merged = facts.job.kind === 'direct'
   const sections = merged ? built.slice(2) : built
+  // An invoice raised before the job reached the Invoice step (an early or imported invoice): the row says what is there, not "Not yet".
+  const invoiced = ctx.money && facts.job.orderId ? invoiceStanding(data.order.data?.state?.invoicing, data.invoices.data?.length ?? 0) : null
   return (
     <div className="grid min-w-0 overflow-hidden rounded-card border bg-surface shadow-e1 max-md:[&>:last-child]:border-b-0 md:gap-2 md:overflow-visible md:rounded-none md:border-0 md:bg-transparent md:shadow-none" data-stages>
       {merged ? (
@@ -324,6 +341,7 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
         const withOffice = !ctx.money && (s.stop === 'Invoice' || s.stop === 'Payment' || (s.state === 'current' && s.stop === 'Quotation'))
         const current = s.state === 'current'
         const advance = !withOffice && s.state === 'future' && model.stops[s.index]?.half === true
+        const early = !withOffice && s.stop === 'Invoice' && s.state === 'future' && invoiced !== null ? INVOICED[invoiced] : null
         return (
           <FoldRow
             key={s.stop}
@@ -331,14 +349,14 @@ export function StageSections({ facts, data, model, ctx, open, onToggle, meta, t
             dataStage={s.stop}
             controlsId={`stage-body-${s.index}`}
             bodyLabel={`${s.shown} stage`}
-            state={withOffice && !current ? OFFICE_STATE : STATE[s.state]}
+            state={withOffice && !current ? OFFICE_STATE : early ? early.state : STATE[s.state]}
             title={s.shown}
-            summary={withOffice ? WITH_OFFICE : advance ? s.summary : s.state === 'future' ? 'Not yet' : s.summary}
-            chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : chipOf(s.state, tone, chip, action)}
+            summary={withOffice ? WITH_OFFICE : advance || early ? s.summary : s.state === 'future' ? 'Not yet' : s.summary}
+            chip={withOffice ? OFFICE_CHIP : advance ? ADVANCE_CHIP : early ? early.chip : chipOf(s.state, tone, chip, action)}
             cardFrom="md"
             // The green outline is drawn over the row (after:), so the header's hover shade cannot cover it.
             className={cn(CARD, current && 'relative before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-brand-500 md:before:hidden md:after:pointer-events-none md:after:absolute md:after:inset-0 md:after:rounded-[calc(var(--radius-card)-1px)] md:after:ring-2 md:after:ring-inset md:after:ring-brand-500')}
-            muted={(s.state === 'future' && !advance) || none || s.state === 'stopped'}
+            muted={(s.state === 'future' && !advance && !early) || none || s.state === 'stopped'}
             disabled={none}
             open={isOpen}
             onToggle={() => onToggle(s.index)}

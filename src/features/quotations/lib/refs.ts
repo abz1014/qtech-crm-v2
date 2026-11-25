@@ -1,7 +1,9 @@
-/** "QT-26-0042" from the number and the year it was first issued; with a revision, "QT-26-0042 R2". */
-export function quotationRef(number: number, issuedOn: string, revision?: number): string {
-  const yy = issuedOn.slice(2, 4)
-  const base = `QT-${yy}-${String(number).padStart(4, '0')}`
+/**
+ * The quotation number as printed. A quotation with a customer code (0147) is "QTS-IFL-4810": the code and the running number. An
+ * older one has no code and keeps "QT-26-0042" (the number and the year it was first issued). With a revision, " R2" is added.
+ */
+export function quotationRef(number: number, issuedOn: string, revision?: number, code?: string | null): string {
+  const base = code ? `QTS-${code}-${number}` : `QT-${issuedOn.slice(2, 4)}-${String(number).padStart(4, '0')}`
   return revision === undefined ? base : `${base} R${revision}`
 }
 

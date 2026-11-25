@@ -20,10 +20,6 @@ Font.register({
   family: 'Geist',
   fonts: [400, 500, 600].map(w => ({ src: path.join(files, `geist-sans/files/geist-sans-latin-${w}-normal.woff`), fontWeight: w })),
 })
-Font.register({
-  family: 'Geist Mono',
-  fonts: [400, 500].map(w => ({ src: path.join(files, `geist-mono/files/geist-mono-latin-${w}-normal.woff`), fontWeight: w })),
-})
 Font.registerHyphenationCallback(word => [word])
 
 // a 1 x 1 transparent PNG stands in for the wordmark
@@ -44,6 +40,11 @@ const PROFILE: CompanyProfile = {
   default_payment_terms_days: 30,
   quotation_terms: null,
   po_terms: null,
+  sales_email: null,
+  sales_phone: null,
+  quotation_warranty: null,
+  quotation_closing: null,
+  quote_next_number: 4810,
   updated_at: '2026-10-20T00:00:00Z',
 }
 

@@ -105,6 +105,20 @@ export function currentStopIndex(stage: string | null, detail: string | null): n
   }
 }
 
+/**
+ * How far the order is invoiced, from what is really there (admin and sales only): 'full', 'part' or null for none. The stage word
+ * cannot say it while goods are still to order (v_jobs puts the job at Supplier order and its detail leaves invoicing out), so an
+ * invoice raised early, or an imported one, would leave the Invoice step at "Not yet" while it lists the invoice (live review 24 Nov).
+ * `invoicing` is v_order_state.invoicing_state ('not_invoiced', 'partly_invoiced', 'fully_invoiced'); `count` the invoices listed.
+ */
+export function invoiceStanding(invoicing: string | null | undefined, count: number): 'full' | 'part' | null {
+  if (invoicing === 'fully_invoiced') return 'full'
+  if (invoicing && invoicing !== 'not_invoiced') return 'part'
+  if (invoicing === 'not_invoiced') return null
+  // the state is not read (yet): the invoices listed decide
+  return count > 0 ? 'full' : null
+}
+
 const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
 
 /**

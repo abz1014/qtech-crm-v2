@@ -24,7 +24,7 @@ export function ServiceReportDocument({ doc, profile, logoSrc }: { doc: ServiceR
           <View style={s.meta}>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Order</Text>
-              <Text style={[s.metaValue, s.mono, s.strongText]}>{doc.orderRef}</Text>
+              <Text style={[s.metaValue, s.num, s.strongText]}>{doc.orderRef}</Text>
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Visit type</Text>
@@ -59,12 +59,12 @@ export function ServiceReportDocument({ doc, profile, logoSrc }: { doc: ServiceR
             {doc.customerPo ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Your PO</Text>
-                <Text style={[s.strongText, s.mono]}>{doc.customerPo}</Text>
+                <Text style={[s.strongText, s.num]}>{doc.customerPo}</Text>
               </View>
             ) : null}
             <View style={s.refRow}>
               <Text style={s.refLabel}>Our order</Text>
-              <Text style={[s.strongText, s.mono]}>{doc.orderRef}</Text>
+              <Text style={[s.strongText, s.num]}>{doc.orderRef}</Text>
             </View>
           </View>
         </View>
@@ -94,7 +94,7 @@ export function ServiceReportDocument({ doc, profile, logoSrc }: { doc: ServiceR
                 <Text style={s.strongText}>{d.title}</Text>
                 {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
-              <Text style={[s.cQty, s.mono]}>{i.unit ? `${qty(i.qty)} ${i.unit}` : qty(i.qty)}</Text>
+              <Text style={[s.cQty, s.num]}>{i.unit ? `${qty(i.qty)} ${i.unit}` : qty(i.qty)}</Text>
               <Text style={s.cSerial}> </Text>
             </View>
           )

@@ -32,7 +32,8 @@ const C = {
 
 const s = StyleSheet.create({
   page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 44, paddingHorizontal: 36 },
-  mono: { fontFamily: 'Geist Mono' },
+  // Figures and references: the same Geist as the text, never a monospace face (owner rule: no mono anywhere).
+  num: { fontFamily: 'Geist' },
   muted: { color: C.muted },
   strongText: { fontWeight: 600 },
   right: { textAlign: 'right' },
@@ -58,7 +59,7 @@ const s = StyleSheet.create({
   tr: { flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: C.strong, paddingVertical: 6, fontSize: 9.5 },
   cNo: { width: 18, paddingLeft: 3 },
   cDesc: { flex: 1, paddingRight: 6 },
-  // numeric columns fit 10,000,000.00 in mono 8.5 with a 4pt gap, so two amounts never run together (checked in a browser render)
+  // numeric columns fit 10,000,000.00 in Geist 8.5 with a 4pt gap, so two amounts never run together (checked in a browser render)
   cQty: { width: 46, textAlign: 'right', paddingLeft: 4 },
   cPrice: { width: 68, textAlign: 'right', paddingLeft: 4 },
   cNet: { width: 78, textAlign: 'right', paddingLeft: 4 },
@@ -124,7 +125,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
           <View style={s.company}>
             <Text style={[s.companyName, s.right]}>{companyName}</Text>
             {profile.address ? <Text style={[s.right, s.muted]}>{profile.address}</Text> : null}
-            {taxLine ? <Text style={[s.right, s.mono]}>{taxLine}</Text> : null}
+            {taxLine ? <Text style={[s.right, s.num]}>{taxLine}</Text> : null}
             {contactLine ? <Text style={[s.right, s.muted]}>{contactLine}</Text> : null}
           </View>
         </View>
@@ -137,7 +138,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
           <View style={s.meta}>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Invoice no.</Text>
-              <Text style={[s.metaValue, s.mono, s.strongText]}>{doc.number}</Text>
+              <Text style={[s.metaValue, s.num, s.strongText]}>{doc.number}</Text>
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Date</Text>
@@ -159,11 +160,11 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
             <Text>{doc.buyer.address}</Text>
             <View style={[s.refRow, { marginTop: 4 }]}>
               <Text style={s.refLabel}>NTN / CNIC</Text>
-              <Text style={s.mono}>{doc.buyer.ntn ?? ''}</Text>
+              <Text style={s.num}>{doc.buyer.ntn ?? ''}</Text>
             </View>
             <View style={s.refRow}>
               <Text style={s.refLabel}>STRN</Text>
-              {doc.buyer.registered && doc.buyer.strn ? <Text style={s.mono}>{doc.buyer.strn}</Text> : <Text>Not registered for sales tax</Text>}
+              {doc.buyer.registered && doc.buyer.strn ? <Text style={s.num}>{doc.buyer.strn}</Text> : <Text>Not registered for sales tax</Text>}
             </View>
           </View>
           <View style={[s.box, s.boxR]}>
@@ -171,7 +172,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
             {doc.customerPo ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Your PO</Text>
-                <Text style={[s.strongText, s.mono]}>
+                <Text style={[s.strongText, s.num]}>
                   {doc.customerPo}
                   {doc.poDate ? <Text style={[s.muted, { fontFamily: 'Geist', fontWeight: 400 }]}>{`  of ${longDay(doc.poDate)}`}</Text> : null}
                 </Text>
@@ -180,7 +181,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
             {doc.orderRef ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Our order</Text>
-                <Text style={[s.strongText, s.mono]}>{doc.orderRef}</Text>
+                <Text style={[s.strongText, s.num]}>{doc.orderRef}</Text>
               </View>
             ) : null}
             {doc.siteName ? (
@@ -218,12 +219,12 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
                 <Text style={s.strongText}>{d.title}</Text>
                 {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
-              <Text style={[s.cQty, s.mono]}>{l.unit ? `${qtyText(l.qty)} ${l.unit}` : qtyText(l.qty)}</Text>
-              <Text style={[s.cPrice, s.mono]}>{money(l.unitPrice)}</Text>
-              <Text style={[s.cNet, s.mono]}>{money(l.net)}</Text>
-              <Text style={[s.cRate, s.mono]}>{rateText(l.ratePercent)}</Text>
-              <Text style={[s.cTax, s.mono]}>{money(l.gst)}</Text>
-              <Text style={[s.cGross, s.mono]}>{money(l.gross)}</Text>
+              <Text style={[s.cQty, s.num]}>{l.unit ? `${qtyText(l.qty)} ${l.unit}` : qtyText(l.qty)}</Text>
+              <Text style={[s.cPrice, s.num]}>{money(l.unitPrice)}</Text>
+              <Text style={[s.cNet, s.num]}>{money(l.net)}</Text>
+              <Text style={[s.cRate, s.num]}>{rateText(l.ratePercent)}</Text>
+              <Text style={[s.cTax, s.num]}>{money(l.gst)}</Text>
+              <Text style={[s.cGross, s.num]}>{money(l.gross)}</Text>
             </View>
           )
         })}
@@ -233,25 +234,25 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
           <View style={s.totals}>
             <View style={s.totRow}>
               <Text>Value excluding sales tax</Text>
-              <Text style={s.mono}>PKR {money(f.net)}</Text>
+              <Text style={s.num}>PKR {money(f.net)}</Text>
             </View>
             {f.byRate
               .filter(r => r.ratePercent > 0)
               .map(r => (
                 <View key={r.ratePercent} style={s.totRow}>
                   <Text>Sales tax at {rateText(r.ratePercent)}</Text>
-                  <Text style={s.mono}>PKR {money(r.gst)}</Text>
+                  <Text style={s.num}>PKR {money(r.gst)}</Text>
                 </View>
               ))}
             {exempt ? (
               <View style={s.totRow}>
                 <Text style={s.muted}>Exempt supplies (value, no sales tax)</Text>
-                <Text style={[s.mono, s.muted]}>PKR {money(exempt.net)}</Text>
+                <Text style={[s.num, s.muted]}>PKR {money(exempt.net)}</Text>
               </View>
             ) : null}
             <View style={s.gross}>
               <Text style={s.strongText}>Value including sales tax</Text>
-              <Text style={[s.mono, { fontWeight: 500, fontSize: 11 }]}>PKR {money(f.gross)}</Text>
+              <Text style={[s.num, { fontWeight: 500, fontSize: 11 }]}>PKR {money(f.gross)}</Text>
             </View>
             <Text style={[s.right, s.muted, { fontSize: 9.5, marginTop: 5 }]}>{doc.words}</Text>
           </View>
@@ -260,13 +261,13 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
             <View style={{ marginTop: 10 }} wrap={false}>
               <Text style={s.secTitle}>Bank details</Text>
               <Text>{[profile.bank_account_title, profile.bank_name].filter(Boolean).join(', ')}</Text>
-              {profile.bank_iban ? <Text style={s.mono}>IBAN {profile.bank_iban}</Text> : null}
+              {profile.bank_iban ? <Text style={s.num}>IBAN {profile.bank_iban}</Text> : null}
             </View>
           ) : null}
 
           <View style={s.sign} wrap={false}>
             <Text style={s.note}>
-              Sales tax invoice issued under section 23 of the Sales Tax Act, 1990. Please quote <Text style={s.mono}>{doc.number}</Text> with your payment.
+              Sales tax invoice issued under section 23 of the Sales Tax Act, 1990. Please quote <Text style={s.num}>{doc.number}</Text> with your payment.
             </Text>
             <View style={s.signBox}>
               <Text style={s.muted}>{signatureLines(companyName)[0]}</Text>
@@ -276,7 +277,7 @@ export function InvoiceDocument({ doc, profile, logoSrc }: { doc: InvoiceDoc; pr
         </View>
 
         <View style={s.foot} fixed>
-          <Text style={[s.mono, { flex: 1 }]}>{doc.number}</Text>
+          <Text style={[s.num, { flex: 1 }]}>{doc.number}</Text>
           <Text style={{ flex: 1, textAlign: 'center' }}>{copy}</Text>
           <Text style={{ flex: 1, textAlign: 'right' }} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>

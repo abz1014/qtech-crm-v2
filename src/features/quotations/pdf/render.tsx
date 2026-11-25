@@ -6,6 +6,6 @@ import type { CompanyProfile } from '@/features/settings/companyProfile'
 
 export async function renderQuotationPdf(data: PdfData, profile: CompanyProfile): Promise<Blob> {
   registerFonts()
-  const logoSrc = new URL(`${import.meta.env.BASE_URL}brand/logo-wordmark.png`, window.location.origin).href
+  const logoSrc = new URL(`${import.meta.env.BASE_URL}brand/quote-letterhead.png`, window.location.origin).href
   return pdf(<QuotationDocument data={data} profile={profile} logoSrc={logoSrc} />).toBlob()
 }

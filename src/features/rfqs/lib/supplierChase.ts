@@ -116,7 +116,7 @@ export function generateSupplierChase(input: SupplierChaseInput): SupplierChase 
 
   const list = items.map(itemLine).join('\n')
   const thanks = input.pricedNumbers.length > 0 ? ` Thank you for pricing ${numbersText(input.pricedNumbers)}.` : ''
-  const enquiry = sent ? `our enquiry of ${bold(sent)}` : 'our enquiry'
+  const enquiry = sent ? `our request of ${bold(sent)}` : 'our request'
   const reminder = 'Please attach the data sheet and share pictures of the quoted items (these 2 requirements are very important).'
 
   const lines: string[] = [greeting, '']

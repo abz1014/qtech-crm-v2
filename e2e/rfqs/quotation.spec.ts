@@ -95,12 +95,15 @@ interface Q {
   payment_terms: string | null
   notes: string | null
   pdf_path: string | null
+  quote_code: string | null
   lines: { rfq_item_id: string; unit_price_net: number; gst_rate: number; lead_time: string | null }[]
 }
 const quotationsOf = (rfqId: string) =>
-  must(rest<Q[]>('admin', `quotations?rfq_id=eq.${rfqId}&select=id,number,revision,issued_on,valid_until,net_total,gst_total,delivery_text,payment_terms,notes,pdf_path,lines&order=revision`))
+  must(rest<Q[]>('admin', `quotations?rfq_id=eq.${rfqId}&select=id,number,quote_code,revision,issued_on,valid_until,net_total,gst_total,delivery_text,payment_terms,notes,pdf_path,lines&order=revision`))
 const rfqOf = (id: string) => must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${id}&select=quoted_on`)).then(r => r[0])
-const refOf = (q: Q, first: Q = q) => `QT-${first.issued_on.slice(2, 4)}-${String(q.number).padStart(4, '0')}`
+// 0147: a quotation issued from the dialog is QTS-<customer code>-<number>; one issued straight through the RPC for a customer with no
+// code keeps the older QT-YY-NNNN.
+const refOf = (q: Q, first: Q = q) => (q.quote_code ? `QTS-${q.quote_code}-${q.number}` : `QT-${first.issued_on.slice(2, 4)}-${String(q.number).padStart(4, '0')}`)
 
 const openIssue = async (page: Page) => {
   // The job page's one green button, Send quotation (in the next-step band; on a phone, in the sticky bar at the foot).
@@ -153,7 +156,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect(sold).toContainText(/\(ORD-\d{4}\)/)
     await expect(quoted).toContainText('Last quoted')
     await expect(quoted).toContainText('PKR 1,200')
-    await expect(quoted).toContainText(/\(QT-\d\d-\d{4}\)/)
+    await expect(quoted).toContainText(/\((QTS-[A-Z]{2,6}-\d+|QT-\d\d-\d{4})\)/)
     // The supplier's reply is not ranked or called "best": the line only says one supplier replied; the replies are compared in the
     // comparative statement, downloaded as Excel or PDF from one line above the items (no link to a statement page any more).
     await expect(dialog(page).getByTestId('supplier-replies-1')).toHaveText('1 supplier reply')
@@ -215,14 +218,18 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     expect(pdfIsValid(stored)).toBe(true)
     const text = stored ? pdfText(stored) : null
     if (text) {
+      // the owner's template (0147): Quote Ref, the gross without GST, the terms, the signature
+      expect(refOf(q)).toMatch(/^QTS-[A-Z]{2,6}-\d+$/)
       expect(text).toContain(refOf(q))
-      expect(text).toContain('Quotation')
+      expect(text).toContain('Quote Ref:')
       expect(text).toContain('Q-Tech Solutions (Pvt) Ltd')
-      expect(text).toContain('PKR 2,891.50')
-      expect(text).toContain('Pakistani rupees (PKR)')
-      expect(text).toContain('Procurement Manager') // Attention: name, job title
-      expect(text).toContain('+92 300 1234567') // users.phone in the signature block; Prepared by is the name only (E-QT-01)
-      expect(text).toContain('First issue')
+      expect(text).toContain('Gross Amount W/O GST')
+      expect(text).toContain('2,450.50')
+      expect(text).not.toContain('2,891.50') // no total with GST (owner's choice)
+      expect(text).toContain('Prices are in PKR, exclusive of GST')
+      expect(text).toContain('Procurement Manager') // To: Mr. name (job title)
+      expect(text).toContain('+92 300 1234567') // the cell number in the signature block (the user's phone when the profile has no sales cell)
+      expect(text).toContain('Terms and Conditions:')
       expect(text).not.toContain('₨')
     }
     if (stored && process.env.REVIEW_DIR) renderPdfPng(stored, process.env.REVIEW_DIR, 'rfq-quotation-pdf-r0-page1')
@@ -270,7 +277,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared?: unknown[] }).__shared?.length ?? 0)).toBe(1)
     const shared = await page.evaluate(() => (window as unknown as { __shared: { name: string; type: string; size: number }[] }).__shared[0])
     expect(shared.type).toBe('application/pdf')
-    expect(shared.name).toMatch(/^QT-\d\d-\d{4}-R0\.pdf$/)
+    expect(shared.name).toMatch(/^QTS-[A-Z]{2,6}-\d+-R0\.pdf$/)
     expect(shared.size).toBeGreaterThan(2000)
   })
 })
@@ -331,7 +338,8 @@ test.describe('re-issue', () => {
     const text = pdf1 ? pdfText(pdf1) : null
     if (text) {
       expect(text).toContain(`${refOf(b, a)}`)
-      expect(text).toContain('Revised quotation (1st revision), replaces the one of') // words, not the R1 / Supersedes codes (R2-18)
+      expect(text).toContain('Rev 1') // the owner's template: "Rev 1" next to the Quote Ref, the number itself unchanged
+      expect(text).toContain('Payment Terms: 50% advance.')
       expect(text).not.toContain('Supersedes')
     }
     if (pdf1 && process.env.REVIEW_DIR) renderPdfPng(pdf1, process.env.REVIEW_DIR, 'rfq-quotation-pdf-r1-revised-page1')
@@ -409,7 +417,7 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
 })
 
 test.describe('a long quotation', () => {
-  test('runs onto more pages with the table header repeated and the page count in the footer', async ({ page, context }) => {
+  test('runs onto more pages with the table header repeated on each page', async ({ page, context }) => {
     await setProfile(true)
     const co = await createCompany(uniqueName('Long Quote Customer'))
     const rfq = await createRfq(co.id, { customer_ref: 'LONG-1' })
@@ -429,9 +437,9 @@ test.describe('a long quotation', () => {
     expect(pdfIsValid(pdf)).toBe(true)
     const text = pdf ? pdfText(pdf) : null
     if (text) {
-      expect(text).toMatch(/Page 1 of [2-9]/)
-      expect((text.match(/Lead time/g) ?? []).length).toBeGreaterThanOrEqual(2) // the header is repeated on each page
-      expect(text).toContain('item 30')
+      // the owner's template has no page count: the table header (Sr#, Item Description) repeats on each page instead
+      expect((text.match(/Item Description/g) ?? []).length).toBeGreaterThanOrEqual(2)
+      expect(text).toMatch(/item 30/i)
     }
     if (pdf && process.env.REVIEW_DIR) renderPdfPng(pdf, process.env.REVIEW_DIR, 'rfq-quotation-pdf-long-page1')
   })
@@ -485,8 +493,9 @@ test.describe('partial quotations and Preview PDF', () => {
     expect(pdfIsValid(pdf)).toBe(true)
     const text = pdf ? pdfText(pdf) : null
     if (text) {
-      expect(text).toContain('Pressure transmitter')
-      expect(text).not.toContain('Flow meter')
+      // item descriptions print in capitals, as on the owner's template
+      expect(text).toMatch(/Pressure transmitter/i)
+      expect(text).not.toMatch(/Flow meter/i)
     }
     // Item 1 was left alone: no price was written to it.
     const rows = await must(rest<{ id: string; quoted_unit_price_net: number | null }[]>('admin', `rfq_items?id=eq.${s.items[0].id}&select=id,quoted_unit_price_net`))
@@ -547,7 +556,7 @@ test.describe('what an engineer sees on the quotation screens (owner decision 20
     await openAs(page, 'engineer', `/rfqs/${s.rfq.id}?issue=1`)
     await openStage(page, 'Quotation')
     const block = page.locator('[data-slot="quotations"]')
-    await expect(block.getByRole('row', { name: /QT-/ })).toHaveCount(1)
+    await expect(block.getByRole('row', { name: /QTS?-/ })).toHaveCount(1)
     await page.waitForLoadState('networkidle')
     await expect(dialog(page)).toHaveCount(0)
     for (const name of [/^Issue quotation$/, /^Revise quotation$/, /^Mark won$/, /^Open PDF$/, /^Share$/]) await expect(page.getByRole('button', { name })).toHaveCount(0)

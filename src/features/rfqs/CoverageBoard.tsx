@@ -84,17 +84,44 @@ function Legend() {
   )
 }
 
-/** The items nobody has priced yet, with the two ways forward. Renders nothing when every item has a price. */
-export function GapBar({ items, inquiries, onShow, onAsk }: { items: readonly RfqItemRow[]; inquiries: readonly InquiryRow[]; onShow: () => void; onAsk: (itemIds: string[]) => void }) {
+/**
+ * The items nobody has priced yet. Quote first (owner, 24 Nov 2026): asking suppliers is optional, so this is a quiet box, never a
+ * red alarm. Before the quotation is sent it says the price can be typed in Issue quotation (admin and sales), with "Show them" and
+ * "Ask another supplier" as options. Once the quotation is sent it is one muted line with no buttons. Renders nothing when every
+ * item has a price.
+ */
+export function GapBar({
+  items,
+  inquiries,
+  sent = false,
+  onShow,
+  onAsk,
+}: {
+  items: readonly RfqItemRow[]
+  inquiries: readonly InquiryRow[]
+  /** The quotation is already sent: the gap is history, not a task. */
+  sent?: boolean
+  onShow: () => void
+  onAsk: (itemIds: string[]) => void
+}) {
+  const prices = useSeesPrices()
   const gap = useMemo(() => gapOf(items, inquiries), [items, inquiries])
   if (gap.items.length === 0 || !inquiries.some(isAsked)) return null
   const t = gapText(gap)
   const n = gap.items.length
+  if (sent) {
+    return (
+      <p className="min-w-0 text-sm text-fg-muted" data-gap-note={n}>
+        {`${n === 1 ? '1 item had' : `${n} items had`} no supplier price: ${t.list} The quotation is already sent.`}
+      </p>
+    )
+  }
   return (
-    <div role="status" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-control border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3" data-gap-bar={n}>
+    <div role="status" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-3 rounded-control border bg-deep px-4 py-3" data-gap-bar={n}>
       <p className="min-w-0 flex-1 basis-[16rem] text-fg-2">
-        <b className="font-semibold text-tone-danger-fg">{t.lead}</b> {t.list}
+        <b className="font-semibold text-fg">{t.lead}</b> {t.list}
         {t.open ? ` ${t.open}` : null}
+        {prices ? ` ${n === 1 ? 'Its price' : 'Their prices'} can be typed in Issue quotation.` : null}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" onClick={onShow}>

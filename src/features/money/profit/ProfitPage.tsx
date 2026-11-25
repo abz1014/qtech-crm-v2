@@ -337,7 +337,7 @@ function LostEnquiries({ rows, isError, onRetry }: { rows: LostEnquiryCost[] | u
           columns={columns}
           rows={rows}
           getRowId={r => r.rfqId}
-          footerLabel={`Total of ${rows.length} ${rows.length === 1 ? 'enquiry' : 'enquiries'}`}
+          footerLabel={`Total of ${rows.length} ${rows.length === 1 ? 'RFQ' : 'RFQs'}`}
           mobileRow={r => (
             <span className="grid gap-1">
               <span className="font-medium">

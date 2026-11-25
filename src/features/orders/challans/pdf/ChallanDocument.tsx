@@ -22,7 +22,7 @@ export function ChallanDocument({ doc, profile, logoSrc }: { doc: ChallanDoc; pr
           <View style={s.meta}>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Challan no.</Text>
-              <Text style={[s.metaValue, s.mono, s.strongText]}>{doc.number}</Text>
+              <Text style={[s.metaValue, s.num, s.strongText]}>{doc.number}</Text>
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Date</Text>
@@ -30,7 +30,7 @@ export function ChallanDocument({ doc, profile, logoSrc }: { doc: ChallanDoc; pr
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Our order</Text>
-              <Text style={[s.metaValue, s.mono]}>{doc.orderRef}</Text>
+              <Text style={[s.metaValue, s.num]}>{doc.orderRef}</Text>
             </View>
           </View>
         </View>
@@ -46,7 +46,7 @@ export function ChallanDocument({ doc, profile, logoSrc }: { doc: ChallanDoc; pr
             {doc.customerPo ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Your PO</Text>
-                <Text style={[s.strongText, s.mono]}>{doc.customerPo}</Text>
+                <Text style={[s.strongText, s.num]}>{doc.customerPo}</Text>
               </View>
             ) : null}
             {doc.contactName ? (
@@ -72,7 +72,7 @@ export function ChallanDocument({ doc, profile, logoSrc }: { doc: ChallanDoc; pr
                 <Text style={s.strongText}>{d.title}</Text>
                 {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
-              <Text style={[s.cQty, s.mono]}>{l.unit ? `${qty(l.qty)} ${l.unit}` : qty(l.qty)}</Text>
+              <Text style={[s.cQty, s.num]}>{l.unit ? `${qty(l.qty)} ${l.unit}` : qty(l.qty)}</Text>
             </View>
           )
         })}

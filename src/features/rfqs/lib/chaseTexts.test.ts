@@ -110,7 +110,7 @@ describe('customer clarification chase', () => {
     const t = generateCustomerChase({ ...base, askCount: 2, lastAskedOn: '2026-11-25', dueOn: '2026-12-11' })
     expect(t.kind).toBe('third')
     expect(t.body).toContain('We are writing once more about your RFQ *#74037*. The points below are still open from our messages of 21 and 25 November:')
-    expect(t.body).toContain('If these items are no longer required, please let us know and we will close the enquiry. Otherwise, kindly confirm by *Thursday 10 December*.')
+    expect(t.body).toContain('If these items are no longer required, please let us know and we will close the RFQ. Otherwise, kindly confirm by *Thursday 10 December*.')
   })
 
   it('the very first ask is not a reminder', () => {
@@ -127,7 +127,7 @@ describe('customer clarification chase', () => {
     expect(FIRM_AFTER_DAYS).toBe(30)
     expect(at31.kind).toBe('firm')
     expect(at31.body).toContain('It is now over a month since we first asked')
-    expect(at31.body).toContain('Without your reply by *Wednesday 2 December* we will close the enquiry.')
+    expect(at31.body).toContain('Without your reply by *Wednesday 2 December* we will close the RFQ.')
   })
 
   it('never invents a question: no open questions, no numbered lines', () => {
@@ -137,7 +137,7 @@ describe('customer clarification chase', () => {
 
   it('without a customer reference it names ours', () => {
     const t = generateCustomerChase({ ...base, customerRef: null })
-    expect(t.body).toContain('your enquiry (our ref *RFQ-0177*)')
+    expect(t.body).toContain('your RFQ (our ref *RFQ-0177*)')
     expect(generateCustomerChase({ ...base, customerRef: '#74037' }).body).toContain('*#74037*')
   })
 
@@ -178,10 +178,10 @@ describe('supplier quote chase (R07 text, now with the firmer wording)', () => {
   })
   it('is firmer after 30 days, in both variants', () => {
     const w = generateSupplierChase({ ...base, ageDays: 31 })
-    expect(w.body).toContain('It is now over a month since our enquiry of *Monday 23 November*,')
+    expect(w.body).toContain('It is now over a month since our request of *Monday 23 November*,')
     expect(w.body).toContain('Without a reply we will take it that you cannot offer them and move on.')
     const e = generateSupplierChase({ ...base, ageDays: 45, variant: 'email' })
-    expect(e.body).toContain('It is now over a month since our enquiry of Monday 23 November,')
+    expect(e.body).toContain('It is now over a month since our request of Monday 23 November,')
     expect(e.body).toContain('move on.')
     expect(e.subject).toBe('Request for quotation: reminder for 1 item')
     expect(e.body + (e.subject ?? '')).not.toMatch(/RFQ|assalam|our ref/i)

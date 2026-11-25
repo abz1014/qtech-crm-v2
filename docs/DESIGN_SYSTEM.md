@@ -230,7 +230,7 @@ Icon overrides are allowed only for: `CircleDashed` (dashed edge, not firm: Is G
 | 5 | Quotation expired | now | Validity passed without an answer | `rfq-stage:expired`, `bid:expired` |
 | 6 | Won | done | | `rfq-outcome:won` |
 | 7 | Closed | inert | RFQ closed for a reason; month closed (`Lock`) | `rfq-outcome:closed`, `month:closed` |
-| 8 | Not asked yet | inert | On the list, no message sent | `inquiry:shortlisted` |
+| 8 | Not asked yet | inert | On the list, no message sent, or others were asked, nobody about this item | `inquiry:shortlisted`, `item-price:unasked` |
 | 9 | Priced | done | A supplier or an item has a price ("2 of 3", "3 prices") | `inquiry:quoted`, `item-price:priced` |
 | 10 | No price yet | now | Everyone who replied left this item out | `item-price:none` |
 | 11 | Can't quote | inert (`Ban`) | The supplier said no | `inquiry:no-offer` |
