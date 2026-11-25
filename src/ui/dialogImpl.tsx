@@ -150,6 +150,8 @@ export function DialogContentImpl({
           'fixed inset-0 z-dialog grid animate-fade-in place-items-center bg-scrim p-4 max-md:place-items-end max-md:p-0',
           placement === 'side' && SIDE_OVERLAY,
         )}
+        // Toasts never cover a dialog: with no room above or beside it, Toast.tsx asks for room and index.css moves this dialog down.
+        data-toast-room-overlay={placement === 'side' ? 'side' : ''}
       >
         <RadixDialog.Content
           ref={contentRef}
@@ -187,6 +189,7 @@ export function DialogContentImpl({
             className,
           )}
           data-placement={placement === 'side' ? 'side' : undefined}
+          data-toast-room-panel=""
         >
           {/* Bottom sheet below 768: the 40 by 4 grab handle (Forest .qb-sheet__grab). */}
           <span aria-hidden="true" data-grab className="absolute left-1/2 top-2 h-1 w-10 -translate-x-1/2 rounded-pill bg-line-input md:hidden" />

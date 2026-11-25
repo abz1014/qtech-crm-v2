@@ -125,8 +125,9 @@ export default {
       'on-navy': v('shadow-on-navy'),
       current: v('ring-current'),
     },
-    // sans and display are both Geist (Forest: heavy titles in the same face); mono is Geist Mono for job / invoice / PO numbers.
-    fontFamily: { sans: v('font-sans'), display: v('font-display'), mono: v('font-mono') },
+    // sans and display are both Geist (Forest: heavy titles in the same face). No mono key: there is no font-mono class, so no
+    // monospace can creep back (owner rule). Numbers use .num, Geist with tabular figures.
+    fontFamily: { sans: v('font-sans'), display: v('font-display') },
     fontSize: {
       // 14 px, timestamps only. Everything else read is 16 px or more (xs, sm and base are all 16).
       stamp: [v('text-stamp'), v('lh-stamp')],

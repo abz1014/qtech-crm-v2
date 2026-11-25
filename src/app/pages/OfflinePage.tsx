@@ -14,9 +14,11 @@ import { Icon } from '@/ui/Icon'
  *    update, or the very first open), so the shell cannot be drawn. It opens by itself when the session confirms.
  *  - OfflineSignInPage: signed out and offline. Signing in needs signal, so the form is not shown at all.
  */
+// Screen review 24 Nov 2026: "Saved records are shown" over a page never opened on this device (nothing saved, grey placeholders)
+// promised what was not there. Only pages opened before have anything kept; OfflineNotOpened says so on the others.
 const COPY: Record<Exclude<Connection, 'online'>, { title: string; body: string }> = {
-  offline: { title: 'No connection', body: 'Saved records are shown. Changes need a connection.' },
-  reconnecting: { title: 'Reconnecting', body: 'Saved records are shown. Changes need a connection.' },
+  offline: { title: 'No connection', body: 'Pages opened before still show. Changes need a connection.' },
+  reconnecting: { title: 'Reconnecting', body: 'Pages opened before still show. Changes need a connection.' },
 }
 
 export function OfflineBanner({ connection }: { connection: Exclude<Connection, 'online'> }) {

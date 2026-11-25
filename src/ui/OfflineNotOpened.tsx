@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
 
 /*
- * Offline and nothing kept for this page (review 24 Nov, screen 11). The banner says "Saved records are shown", but a page that
+ * Offline and nothing kept for this page (review 24 Nov, screen 11). The banner said "Saved records are shown" (now "Pages opened before still show"), but a page that
  * was never opened on this device has nothing saved: its code or its data cannot download, TanStack pauses the reads, and the
  * page sat on grey placeholders for good. Two shared places say so instead:
  *  - PageLoading (the route fallback while a page's code downloads) shows this message in place of its placeholders;
