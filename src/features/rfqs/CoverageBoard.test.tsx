@@ -141,10 +141,26 @@ describe('GapBar', () => {
     renderAs('engineer', <GapBar items={items} inquiries={inquiries} onShow={onShow} onAsk={onAsk} />)
     const bar = screen.getByRole('status')
     expect(bar).toHaveTextContent('3 items have no price yet: item 3 (Siemens), item 4 (WIKA), item 5 (WIKA). 3 of them still have a supplier to answer.')
+    expect(bar.textContent).not.toMatch(/Issue quotation/) // an engineer never issues a quotation
     await user.click(screen.getByRole('button', { name: 'Show them' }))
     expect(onShow).toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Ask another supplier for these 3' }))
     expect(onAsk).toHaveBeenCalledWith(['it3', 'it4', 'it5'])
+  })
+
+  it('is a quiet box, not a red alarm, and tells sales the prices can be typed in Issue quotation', () => {
+    renderAs('sales', <GapBar items={items} inquiries={inquiries} onShow={() => undefined} onAsk={() => undefined} />)
+    const bar = screen.getByRole('status')
+    expect(bar.className).not.toMatch(/danger/)
+    expect(bar).toHaveTextContent('Their prices can be typed in Issue quotation.')
+    expect(bar.textContent).not.toMatch(/before the quotation is due/)
+  })
+
+  it('once the quotation is sent it is one muted line with no buttons', () => {
+    const { container } = renderAs('sales', <GapBar items={items} inquiries={inquiries} sent onShow={() => undefined} onAsk={() => undefined} />)
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(container.querySelector('[data-gap-note]')).toHaveTextContent('3 items had no supplier price: item 3 (Siemens), item 4 (WIKA), item 5 (WIKA). The quotation is already sent.')
   })
 
   it('says nothing when every item has a price', () => {

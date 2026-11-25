@@ -108,8 +108,9 @@ export const STATUS = {
     waiting: def('Waiting for prices', 'info'),
     priced: def('Priced', 'success'),
     none: def('No price yet', 'warning'),
-    // Others were asked, nobody about this item (supplier flow D): the stage chip's words, since this item still needs suppliers.
-    unasked: def('Needs suppliers', 'warning'),
+    // Others were asked, nobody about this item (supplier flow D). Quote first (owner, 24 Nov 2026): asking is optional, so this is a
+    // plain fact in grey, the same words as a supplier only on the shortlist, not a task in amber.
+    unasked: def('Not asked yet', 'neutral'),
   },
   'inquiry-blocked': {
     none: hid('Not blocked', 'neutral'),

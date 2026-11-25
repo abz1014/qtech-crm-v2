@@ -371,6 +371,42 @@ describe('Job page: the stage list', () => {
     expect(stages.getByText('Send quotation')).toHaveAttribute('aria-hidden', 'true')
     expect(stages.queryByRole('button', { name: /Send quotation/ })).toBeNull()
   })
+
+  it('quote first: once the quotation is sent its row says the quotation, not the suppliers (owner, 24 Nov 2026)', async () => {
+    const j = job({ stage: 'quoted', stageDetail: 'waiting for the customer', orderId: null })
+    const quote = { id: 'q1', number: 2, revision: 0, issuedOn: '2026-11-24', validUntil: '2026-12-24', contactId: null, lines: [], netTotal: 0, gstTotal: 0, deliveryText: null, paymentTerms: null, notes: null, signatoryId: 'u1', pdfPath: null }
+    const { container } = mount(j, 'sales', c => {
+      c.setQueryData(qk.jobs.part(j.key, 'facts'), { ...facts(j), quotedOn: '2026-11-24' })
+      c.setQueryData([...qk.rfqs.part('r1', 'quotations'), 'prices'], [quote])
+    })
+    await screen.findByRole('heading', { level: 1 })
+    const row = container.querySelector('#stage-1') as HTMLElement
+    expect(row).toHaveTextContent(/QT-\d{2}-0002 · Sent 24 Nov/)
+    expect(row.textContent).not.toMatch(/supplier|answered/i)
+    cleanup()
+    // an engineer reads no quotation number (quotations are not read for them), only the day it was sent
+    const eng = mount(j, 'engineer', c => c.setQueryData(qk.jobs.part(j.key, 'facts'), { ...facts(j), quotedOn: '2026-11-24' }))
+    await screen.findByRole('heading', { level: 1 })
+    const engRow = eng.container.querySelector('#stage-1') as HTMLElement
+    expect(engRow).toHaveTextContent('Sent 24 Nov')
+    expect(engRow.textContent).not.toMatch(/QT-|supplier/i)
+  })
+
+  it('quote first: a job past Quotation with no quotation recorded and nobody asked says so, not "No supplier asked yet"', async () => {
+    const { container } = mount(job({ stage: 'ordered', stageDetail: 'to source' }), 'sales')
+    await screen.findByRole('heading', { level: 1 })
+    const row = container.querySelector('#stage-1') as HTMLElement
+    expect(row).toHaveTextContent('No quotation recorded')
+    expect(row.textContent).not.toMatch(/No supplier asked/)
+  })
+
+  it('quote first: the RFQ stop\'s "suppliers not asked yet" is a plain fact, drawn neutral, not in the warning colour', async () => {
+    mount(job({ stage: 'enquiry', stageDetail: 'suppliers not asked yet', orderId: null }), 'sales')
+    await screen.findByRole('heading', { level: 1 })
+    const note = within(screen.getByRole('list', { name: 'Stages of this job' })).getByText('suppliers not asked yet')
+    expect(note).not.toHaveClass('text-tone-warning-fg')
+    expect(note).toHaveClass('text-fg-2')
+  })
 })
 
 describe('Job page: owner and contact', () => {

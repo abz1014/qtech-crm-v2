@@ -244,11 +244,21 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         : delivered > 0
           ? `${delivered} of ${legs.length} delivered`
           : 'Not delivered yet'
+  // Quote first (owner, 24 Nov 2026): once the quotation is sent the row says so ("QT-26-0002 · Sent 24 Nov"), not how many
+  // suppliers answered. Before that it counts the answers, and with nobody asked it says no quotation is recorded.
+  const latest = quotes.reduce<(typeof quotes)[number] | null>((a, q) => (!a || q.revision > a.revision ? q : a), null)
+  const sentOn = facts.quotedOn ?? latest?.issuedOn ?? null
+  const latestRef = latest ? `${quotationRef(latest.number, latest.issuedOn)}${latest.revision ? ` R${latest.revision}` : ''}` : null
+  const quotationSummary = sentOn
+    ? [latestRef, `Sent ${formatShortDate(sentOn, today)}`].filter(Boolean).join(' · ')
+    : asked
+      ? `${answered} of ${asked} answered`
+      : 'No quotation recorded'
   const summaries: ReactNode[] = [
     direct
       ? 'No RFQ: this job started as an order'
       : [facts.receivedOn ? formatShortDate(facts.receivedOn, today) : null, items.length ? `${items.length} ${items.length === 1 ? 'item' : 'items'}` : null].filter(Boolean).join(' · ') || 'RFQ',
-    direct ? 'No quotation' : asked ? `${answered} of ${asked} answered` : 'No supplier asked yet',
+    direct ? 'No quotation' : quotationSummary,
     job.orderId ? (order?.orderedOn ? `Ordered ${formatShortDate(order.orderedOn, today)}` : orderRef(order?.number ?? 0)) : 'Waiting for the customer',
     legs.length ? (delivered > 0 ? `${delivered} of ${legs.length} delivered` : `${legs.length} supplier ${legs.length === 1 ? 'order' : 'orders'}`) : job.orderId ? 'To source and place' : 'Not yet',
     detailFor(4) ?? (installation && !order?.doneOn ? installation : deliveryState),

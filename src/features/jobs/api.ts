@@ -246,6 +246,8 @@ export interface JobFacts {
   customerRef: string | null
   receivedOn: string | null
   dueOn: string | null
+  /** The day our quotation was marked sent (rfqs.quoted_on): issued, attached or Mark quotation sent. Absent on older fixtures. */
+  quotedOn?: string | null
   /** The enquiry's notes (rfqs.notes), else the order's. */
   notes: string | null
   closedOn: string | null
@@ -270,6 +272,7 @@ interface HeadJoin {
   customer_ref?: string | null
   received_on?: string | null
   due_on?: string | null
+  quoted_on?: string | null
   closed_on?: string | null
   close_reason?: string | null
 }
@@ -295,7 +298,7 @@ export async function getJobFacts(key: string): Promise<JobFacts | null> {
         .maybeSingle()
     : db
         .from('rfqs')
-        .select(embeds('rfqs', 'id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason'))
+        .select(embeds('rfqs', 'id, number, notes, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason'))
         .eq('number', number)
         .maybeSingle()
   // whether it came from the old CRM: the id only, in the same round
@@ -336,7 +339,7 @@ export async function getJobFactsFromOld(kind: 'rfq' | 'order', id: string): Pro
       db.from('v_jobs').select(JOB_COLUMNS).eq('rfq_id', id).limit(1).maybeSingle(),
       db
         .from('rfqs')
-        .select(`id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')}`)
+        .select(`id, number, notes, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason, ${person('rfqs')}`)
         .eq('id', id)
         .maybeSingle(),
       flag(db.from('rfqs').select('id').eq('id', id).not('legacy_source', 'is', null).limit(1)),
@@ -348,7 +351,7 @@ export async function getJobFactsFromOld(kind: 'rfq' | 'order', id: string): Pro
     db.from('v_jobs').select(JOB_COLUMNS).eq('order_id', id).limit(1).maybeSingle(),
     db
       .from('orders')
-      .select(`rfq:rfqs!orders_rfq_id_fkey(id, number, notes, customer_ref, received_on, due_on, closed_on, close_reason, ${person('rfqs')})`)
+      .select(`rfq:rfqs!orders_rfq_id_fkey(id, number, notes, customer_ref, received_on, due_on, quoted_on, closed_on, close_reason, ${person('rfqs')})`)
       .eq('id', id)
       .maybeSingle(),
     flag(db.from('rfqs').select('id, orders!orders_rfq_id_fkey!inner(id)').eq('orders.id', id).not('legacy_source', 'is', null).limit(1)),
@@ -390,6 +393,7 @@ function factsOf(v: JobView | null, h: HeadJoin | null, direct: boolean, number:
     customerRef: h.customer_ref ?? null,
     receivedOn: h.received_on ?? null,
     dueOn: h.due_on ?? null,
+    quotedOn: h.quoted_on ?? null,
     notes: h.notes ?? null,
     closedOn: h.closed_on ?? null,
     closeReason: h.close_reason ?? null,

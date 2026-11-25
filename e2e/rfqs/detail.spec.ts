@@ -840,7 +840,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     await openStage(page, 'Quotation') // nobody is asked yet, so the job is still at the Enquiry stage
     const panel = page.locator('[data-slot="items"]')
     await expect(panel).toContainText('2 items · no supplier asked yet')
-    await expect(panel).toContainText('Ask a supplier first. Replies are entered under Suppliers asked.')
+    await expect(panel).toContainText('Asking suppliers is optional. Type the prices in Issue quotation. If you ask a supplier, the replies show here.')
     await expect(page.getByText('No supplier has been asked about this item.')).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Item 1' }).locator('[data-status]')).toHaveCount(0) // no item chip while nobody is asked: the header says it
     const card = page.locator('[data-slot="suppliers-to-ask"]')
@@ -864,7 +864,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.getByText('No price yet', { exact: true })).toBeVisible()
     await expect(one.getByText(/None of the 1 supplier who replied quoted this item/)).toBeVisible()
-    await expect(one.getByText(/Ask another supplier before the quotation is due./)).toBeVisible()
+    await expect(one.getByText(/Type its price in Issue quotation, or ask another supplier./)).toBeVisible()
     await resetClipboard(page)
     await one.getByRole('button', { name: `Copy message for ${s.carrier!.name}` }).click()
     await expect(page.getByRole('status').filter({ hasText: 'Message copied' })).toBeVisible()
