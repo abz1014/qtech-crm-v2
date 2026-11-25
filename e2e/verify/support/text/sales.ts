@@ -8,7 +8,7 @@ export const SALES = {
     quantity: (n: number) => `Quantity of item ${n}`,
     anyDescription: /^Description of item \d+$/,
     found: (items: number, lines: number) => `${items} ${items === 1 ? 'item' : 'items'} found in ${lines} ${lines === 1 ? 'line' : 'lines'}`,
-    /** The New RFQ page's green button (/rfqs/new is the same page as /enquiries/new): it saves and opens the job. */
+    /** The New RFQ page's green button (/rfqs/new; the old /enquiries/new redirects there): it saves and opens the job. */
     saveOnly: /^Create job \d+$/,
     /** Where Create job lands: the new job's page. */
     saved: /\/jobs\/\d+$/,

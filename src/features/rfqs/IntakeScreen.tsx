@@ -126,7 +126,7 @@ let keySeq = 0
 const newKey = () => `i${++keySeq}`
 
 /**
- * `mode="enquiry"` is New enquiry (P4-A, /enquiries/new): the same form and the same save, worded as a job. The one green button
+ * `mode="enquiry"` is New RFQ (P4-A, /rfqs/new): the same form and the same save, worded as a job. The one green button
  * is "Create job N" (save without asking anyone), "Find suppliers" is the step after it, fields read from the document say
  * "Check this", and a saved enquiry opens its Job page. The default is the New RFQ screen as it was.
  */

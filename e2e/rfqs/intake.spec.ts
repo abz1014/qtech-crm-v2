@@ -8,7 +8,7 @@ import { SCENES } from '../docread/scenes'
 /*
  * R05 end to end, against the local CI stack: the intake = float screen, as the fixture users, through the real
  * login form. Each test makes its own companies, brands and suppliers with unique names, so tests do not depend on
- * each other or on the seed beyond its fixture users. /rfqs/new is the New RFQ page (the same page as /enquiries/new, Forest
+ * each other or on the seed beyond its fixture users. /rfqs/new is the New RFQ page (the old /enquiries/new redirects there, Forest
  * polish-b): its green button is "Create job N", which saves and opens the job; "Ask suppliers now" (gate 2) turns the same
  * form into the suppliers and message steps, and anything saved from there opens the job too.
  *

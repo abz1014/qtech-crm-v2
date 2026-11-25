@@ -347,7 +347,7 @@ function JobsList() {
           // Deliver starts at the order (40-deliver): its button is Order without RFQ, a white one (the jobs in it carry their own
           // green steps). Sell and the bare list start an RFQ.
           money && lane !== 'deliver' ? (
-            <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/enquiries/new')}>
+            <Button variant="primary" icon={FilePlus2} onClick={() => navigate('/rfqs/new')}>
               New RFQ
             </Button>
           ) : undefined

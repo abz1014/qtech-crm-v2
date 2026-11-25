@@ -81,7 +81,7 @@ test.describe('phone platform', () => {
     )
 
     await goOffline(context, page)
-    await expect(banner(page)).toHaveText(/No connection — Saved records are shown\. Changes need a connection\./)
+    await expect(banner(page)).toHaveText(/No connection — Pages opened before still show\. Changes need a connection\./)
     await expect(page).toHaveURL(/\/todo$/)
     await expect(page.getByLabel('Email')).toHaveCount(0)
     await expect(page.getByRole('navigation', { name: 'Main' })).toBeVisible()

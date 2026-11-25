@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { CircleDot, Lock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CARD } from '@/ui/card'
@@ -52,12 +52,42 @@ export function ViewOnlyTag() {
 }
 
 /**
+ * While the bar sticks to the bottom, a field that takes focus under it (Tab, or Save focusing the first field with an error) is
+ * scrolled up above it, with its error and hint (aria-describedby) too (screen review 24 Nov 2026: "2 unsaved changes" covered a
+ * field and its error).
+ */
+function useKeepFocusAboveBar(bar: RefObject<HTMLDivElement | null>, active: boolean) {
+  useEffect(() => {
+    if (!active || typeof document === 'undefined') return
+    const onFocus = (e: FocusEvent) => {
+      const box = bar.current
+      const t = e.target as HTMLElement | null
+      if (!box || !t || box.contains(t) || typeof t.getBoundingClientRect !== 'function') return
+      const top = box.getBoundingClientRect().top
+      const parts = [t, ...(t.getAttribute('aria-describedby') ?? '').split(/\s+/).map(id => (id ? document.getElementById(id) : null))]
+      const bottom = Math.max(...parts.map(p => (p ? p.getBoundingClientRect().bottom : -Infinity)))
+      const over = bottom + 8 - top
+      if (bottom === -Infinity || over <= 0) return
+      const main = document.getElementById('main')
+      if (main && main.contains(t)) main.scrollBy({ top: over })
+      else window.scrollBy({ top: over })
+    }
+    document.addEventListener('focusin', onFocus)
+    return () => document.removeEventListener('focusin', onFocus)
+  }, [bar, active])
+}
+
+/**
  * The save bar under a form: "Nothing to save yet", or "2 unsaved changes: Phone, Email" with Discard and Save changes. While
- * something is unsaved it lifts (e2) and sticks to the bottom of the page, so Save is never a long scroll away.
+ * something is unsaved it lifts (e2) and sticks to the bottom of the page, so Save is never a long scroll away, and a field that
+ * takes focus under it is scrolled above it.
  */
 export function SaveBar({ dirty, message, children }: { dirty: boolean; message: string; children: ReactNode }) {
+  const bar = useRef<HTMLDivElement>(null)
+  useKeepFocusAboveBar(bar, dirty)
   return (
     <div
+      ref={bar}
       data-sticky-bar=""
       data-save-bar
       className={cn(

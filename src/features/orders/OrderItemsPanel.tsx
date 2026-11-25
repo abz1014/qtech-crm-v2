@@ -109,6 +109,9 @@ export function OrderItemsPanel({
   // HW-14: a fully invoiced order's lines are what its invoices (and payments) were made from. Changing a price, quantity or
   // GST there would silently turn it part-invoiced and owing again, so its lines are locked; Add line stays, for an extra.
   const invoicedLock = money && order.state?.invoicing === 'fully_invoiced'
+  // Screen review 24 Nov 2026: "Fully invoiced, so prices are locked" beside "No supplier yet" read as a contradiction. Invoicing locks
+  // the customer's prices only: a supplier can still be chosen, and the note says so when a line has none.
+  const unsourced = rows.some(r => r.kind !== 'head' && !r.isService && !legOf(r))
   // Whose entry it is (0092): somebody else's order keeps its prices and GST closed to this person, and says why instead of failing on save.
   const entry = useEntryAccess({ createdBy: order.createdBy ?? null, ownerId: order.owner?.id ?? null })
   const notYours = money && canEdit && !basisUnknown && !invoicedLock && !entry.can
@@ -419,7 +422,7 @@ export function OrderItemsPanel({
               ) : null}
               {invoicedLock && canEdit && rows.length > 0 ? (
                 <span className="text-sm text-fg-muted" role="note">
-                  Fully invoiced, so prices and GST are locked to match the invoices. Add a line for anything extra.
+                  Fully invoiced, so prices and GST are locked to match the invoices.{unsourced ? ' Suppliers can still be chosen.' : ''} Add a line for anything extra.
                 </span>
               ) : null}
               {money && canEdit ? (

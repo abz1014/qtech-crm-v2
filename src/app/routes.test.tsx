@@ -9,10 +9,16 @@ import { installFakeDb } from '@/test/fakeSupabase'
 /* /reports is no longer a destination (owner decision 2026-10-19, five tabs): old links and bookmarks land inside Money. */
 function Where() {
   const l = useLocation()
-  return <output data-testid="where">{`${l.pathname}${l.search}`}</output>
+  const capture = (l.state as { capture?: { id?: string } } | null)?.capture?.id ?? ''
+  return (
+    <>
+      <output data-testid="where">{`${l.pathname}${l.search}`}</output>
+      <output data-testid="carried">{capture}</output>
+    </>
+  )
 }
 
-function at(path: string, role: string) {
+function at(path: string | { pathname: string; search?: string; state?: unknown }, role: string) {
   installFakeDb(() => ({ data: [] }))
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -39,5 +45,14 @@ describe('/reports', () => {
     at('/reports', 'engineer')
     expect(await screen.findByRole('heading', { name: /Money is for/ })).toBeInTheDocument()
     expect(screen.getByTestId('where')).toHaveTextContent('/reports')
+  })
+})
+
+/* /enquiries/new was the New RFQ address until 25 Nov 2026: old links, bookmarks and a hand-over from Capture land on /rfqs/new. */
+describe('/enquiries/new', () => {
+  it('opens /rfqs/new, keeping the query string and what was handed over', async () => {
+    at({ pathname: '/enquiries/new', search: '?company=c1', state: { capture: { id: 'cap-1', text: 'Please quote', files: [] } } }, 'sales')
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/rfqs/new?company=c1'))
+    expect(screen.getByTestId('carried')).toHaveTextContent('cap-1')
   })
 })

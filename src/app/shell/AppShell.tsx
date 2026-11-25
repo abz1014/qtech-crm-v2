@@ -60,11 +60,10 @@ export function AppShell({ counts }: AppShellProps) {
 
 /**
  * The phone bar's title for the screens that live inside a destination but are not it (RFQs and Orders both light Jobs, the
- * New RFQ and New enquiry wizards sit outside every destination): what the screen is, not its parent's name.
+ * New RFQ page sits outside every destination): what the screen is, not its parent's name.
  */
 function phoneTitle(pathname: string): string | undefined {
   const at = (p: string) => pathname === p || pathname === `${p}/`
-  if (at('/enquiries/new')) return 'New RFQ'
   if (at('/rfqs/new')) return 'New RFQ'
   if (at('/rfqs')) return 'RFQs'
   if (pathname.startsWith('/rfqs/')) return 'RFQ'

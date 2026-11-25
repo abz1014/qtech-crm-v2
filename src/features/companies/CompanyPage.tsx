@@ -349,7 +349,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
         </Panel>
       ) : null}
       {isAdmin && money.isError ? <Banner tone="warning" title="Could not load the money figures">Reload the page to try again.</Banner> : null}
-      <CreditPanel companyId={company.id} companyName={company.name} isAdmin={isAdmin} />
+      <CreditPanel companyId={company.id} companyName={company.name} isAdmin={isAdmin} dueOnOrders={money.data?.balance ?? 0} />
       {detailsPanel}
       {notesPanel}
     </>

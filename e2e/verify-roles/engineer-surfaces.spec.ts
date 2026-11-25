@@ -138,7 +138,7 @@ test('admin sees the same file on the Job page, with the toggle', async ({ page 
 
 test('engineer: New enquiry opens with no price anywhere', async ({ page }) => {
   const w = watch(page)
-  await openAs(page, 'engineer', '/enquiries/new')
+  await openAs(page, 'engineer', '/rfqs/new')
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await page.waitForLoadState('networkidle').catch(() => undefined)
   expect(moneyIn(await page.locator('#main').innerText()), 'New RFQ').toEqual([])

@@ -1,8 +1,8 @@
 /* ==========================================================================
    Q-Tech CRM v2 — design tokens. SINGLE SOURCE OF TRUTH.
    "Forest" (owner approval 2026-11-14, docs/design/mockups/proposal-2026-11): a deep forest-green rail and hero cards, white
-   cards with real depth on a warm off-white canvas, lime only on the forest, Geist heavy titles and big numbers, Geist Mono for
-   job / invoice / PO numbers, corners on a 12 / 16 / 999 ladder. Replaces direction C "Colour blocks" (navy, Archivo).
+   cards with real depth on a warm off-white canvas, lime only on the forest, Geist heavy titles and big numbers, Geist for
+   every number too (no monospace face), corners on a 12 / 16 / 999 ladder. Replaces direction C "Colour blocks" (navy, Archivo).
    The semantic NAMES are unchanged (canvas, surface, primary, chrome, tone-*, block-*): only their values moved to Forest, so a
    component that reads a token follows without an edit. "chrome" is now the forest, not the navy.
    Light theme only (default). Components must read these; never hard-code.
@@ -115,7 +115,6 @@
   /* ---- 3. Type ----------------------------------------------------------- */
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
   /* 16 px is the floor for anything read (owner decision 2026-10-22); body is 17 (Forest). 13 px is --text-stamp, timestamps only.
      Phone values here; the desktop steps are in the (min-width: 768px) block below. [data-text] keeps its own scale. */

@@ -39,6 +39,17 @@ export type MarginMode = 'invoiced' | 'cash'
  */
 export const noCostsYet = (r: Pick<MarginRow, 'state' | 'actualCost'>): boolean => r.state === 'provisional' && !(r.actualCost > 0)
 
+/**
+ * The margin a row shows. Final: the margin. Not final (an estimate, "(est.)"): the net sale less the larger of the costs entered so far
+ * and the expected supplier cost, so an estimate never ignores a supplier cost we know is coming (screen review 24 Nov 2026: the
+ * estimate was the sale less the costs so far, with the expected cost printed under it and left out).
+ */
+export function shownMargin(r: Pick<MarginRow, 'state' | 'margin' | 'netSale' | 'actualCost' | 'expectedCost'>): number | null {
+  if (r.state !== 'provisional' || r.margin === null || r.netSale === null) return r.margin
+  const expected = r.expectedCost ?? 0
+  return expected > r.actualCost ? Math.round((r.netSale - expected) * 100) / 100 : r.margin
+}
+
 /** An order paid in full whose costs are still provisional (the Today item "Costs not marked complete" lists these). */
 export const isPaidProvisional = (r: Pick<MarginRow, 'state' | 'paymentState'>): boolean => r.state === 'provisional' && r.paymentState === 'settled'
 

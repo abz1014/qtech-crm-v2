@@ -68,7 +68,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await ready(page)
     await share(page, 'Please quote 2 nos level switch LSX-200 24V.')
     await page.getByRole('button', { name: 'New RFQ' }).click()
-    await expect(page).toHaveURL(/\/enquiries\/new$/)
+    await expect(page).toHaveURL(/\/rfqs\/new$/)
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/level switch LSX-200/i)
   })
 

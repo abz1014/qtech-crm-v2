@@ -61,10 +61,10 @@ test('Forest intake: empty, filled (long names), and /capture, at 1440, 768, 375
     'Regards, Ayesha',
   ].join('\n')
 
-  await openAs(page, 'sales', '/enquiries/new')
+  await openAs(page, 'sales', '/rfqs/new')
   for (const [w, h] of WIDTHS) {
     await page.setViewportSize({ width: w, height: h })
-    await page.goto('/enquiries/new')
+    await page.goto('/rfqs/new')
     await expect(page.getByTestId('enquiry-dropzone')).toBeVisible()
     await page.waitForTimeout(300)
     await shoot(page, 'new-rfq-empty', w, h)
@@ -73,7 +73,7 @@ test('Forest intake: empty, filled (long names), and /capture, at 1440, 768, 375
 
   // Filled: the company chosen, the email pasted. One draft for all widths (the reload offers it; Continue brings it back).
   await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/enquiries/new')
+  await page.goto('/rfqs/new')
   await page.getByRole('combobox', { name: 'Company' }).fill(customer.name.slice(0, 24))
   await page.getByRole('option', { name: new RegExp(tag) }).click()
   await paste(page, email)

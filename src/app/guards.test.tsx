@@ -47,7 +47,7 @@ describe('RequireSession offline (phone audit 2c)', () => {
 
   it('offline with a remembered person: the shell under the offline banner, not the sign-in form', () => {
     render(tree(signedIn, 'offline', () => {}))
-    expect(screen.getByRole('status')).toHaveTextContent('No connection — Saved records are shown. Changes need a connection.')
+    expect(screen.getByRole('status')).toHaveTextContent('No connection — Pages opened before still show. Changes need a connection.')
     expect(screen.getByText('today')).toBeInTheDocument()
     expect(screen.queryByText('sign-in form')).toBeNull()
   })

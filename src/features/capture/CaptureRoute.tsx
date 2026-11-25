@@ -22,7 +22,7 @@ import type { JobRow } from '@/features/jobs/api'
 /**
  * /capture is where the Android share target lands (the service worker stores the shared item for 7 days and redirects here with
  * ?share=<id>), and where a sign-in redirect returns to. Two choices, nothing else (P4-B, the six-destination sheet is gone):
- *   New enquiry   the shared message, PDF or photo is read as a customer's enquiry (/enquiries/new)
+ *   New RFQ       the shared message, PDF or photo is read as a customer's RFQ (/rfqs/new)
  *   Add to job…   pick the job with a search box; the job page reads the kept item by its id (?shared=<id>, so a reload keeps it) and adds it
  * An engineer sees only Add to job: they add a photo or a note, and start no enquiry.
  * Opened with no ?share (the engineer's "Photo or note" button) there is nothing shared: the page asks which job, and the job page opens
@@ -131,7 +131,7 @@ export default function CaptureRoute() {
             variant="primary"
             size="lg"
             icon={FilePlus2}
-            onClick={() => navigate('/enquiries/new', { replace: true, state: { capture: { id: item.id, text: item.text, files: files(item) } } })}
+            onClick={() => navigate('/rfqs/new', { replace: true, state: { capture: { id: item.id, text: item.text, files: files(item) } } })}
             className="max-md:h-touch max-md:flex-1"
           >
             New RFQ

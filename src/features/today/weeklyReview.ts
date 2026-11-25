@@ -98,7 +98,7 @@ export function buildReview(i: ReviewInputs): Record<ReviewKind, ReviewRow[]> {
         ownerId: r.ownerId,
         title: `${rfqRef(r.number)} · ${r.companyName}`,
         detailOn: r.receivedOn,
-        detail: `Received ${formatDay(r.receivedOn)}, ${daysBetween(r.receivedOn, today)} days ago, no supplier asked`,
+        detail: `Received ${formatDay(r.receivedOn)}, ${daysBetween(r.receivedOn, today)} days ago, no quotation yet`,
         href: `/rfqs/${r.id}`,
         tone: 'neutral',
       })

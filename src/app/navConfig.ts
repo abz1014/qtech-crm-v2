@@ -133,13 +133,13 @@ export function activeLink(links: readonly ShellLink[], pathname: string, search
   const on = (p: string) => pathname === p || pathname.startsWith(`${p}/`)
   const find = (id: ShellLinkId) => links.find(l => l.id === id)
   if (on('/todo')) return find('home')
-  if (on('/jobs') || on('/rfqs') || on('/enquiries') || on('/orders')) {
+  if (on('/jobs') || on('/rfqs') || on('/orders')) {
     const jobs = find('jobs')
     if (jobs) return jobs
     const list = pathname === '/jobs' || pathname === '/jobs/'
     const lane = list ? laneOf(search) : on('/jobs') ? (fromLaneOf(search) ?? pageLane) : null
     if (lane) return find(lane)
-    if (on('/rfqs') || on('/enquiries')) return find('sell')
+    if (on('/rfqs')) return find('sell')
     if (on('/orders')) return find('deliver')
     return undefined
   }

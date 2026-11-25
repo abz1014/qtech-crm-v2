@@ -213,7 +213,7 @@ test.describe('Forest review pictures (round 3, money)', () => {
   test('every report', async ({ page }) => {
     await openAs(page, 'admin', '/money/reports')
     await eachWidth(page, async () => {
-      for (const key of ['pnl', 'in-out', 'expenses', 'aging', 'owe', 'gst', 'team', 'enquiries']) await screen(page, `report-${key}`, `/money/reports/${key}`)
+      for (const key of ['pnl', 'in-out', 'expenses', 'aging', 'owe', 'gst', 'team', 'rfqs']) await screen(page, `report-${key}`, `/money/reports/${key}`)
     })
   })
 

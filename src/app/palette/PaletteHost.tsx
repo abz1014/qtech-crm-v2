@@ -56,7 +56,7 @@ const LANE_SYNONYMS: Record<string, string[]> = {
 };
 
 /** Where the shortcut actions go. Capture opens the capture sheet (its palette row comes from the capture feature). */
-const INTAKE_ROUTE = "/enquiries/new";
+const INTAKE_ROUTE = "/rfqs/new";
 const TODAY_ROUTE = "/todo";
 const NEW_ORDER_ROUTE = "/orders?new=1";
 
@@ -127,7 +127,7 @@ const MONEY_PLACES: ReadonlyArray<{
   { id: "money:gst-month", label: "GST and FBR", href: "/money/reports/gst", icon: ChartColumn, roles: ["admin"], keywords: ["fbr", "gst month", "input tax", "output tax", "gst charged", "gst paid on purchases"] },
   { id: "money:team", label: "Sales by person", href: "/money/reports/team", icon: ChartColumn, roles: ["admin"], keywords: ["team", "targets", "credited"] },
   { id: "money:categories", label: "Expenses by category", href: "/money/reports/categories", icon: ChartColumn, roles: ["admin"], keywords: ["categories", "spend"] },
-  { id: "money:enquiries", label: "RFQs and customers", href: "/money/reports/enquiries", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
+  { id: "money:rfqs", label: "RFQs and customers", href: "/money/reports/rfqs", icon: ChartColumn, roles: ["admin", "sales"], keywords: ["win rate", "repeat customers"] },
   {
     id: "money:month-end",
     label: "Lock a month",

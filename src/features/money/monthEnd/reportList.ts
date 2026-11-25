@@ -19,9 +19,10 @@ export const MONTH_REPORT_TITLE: Record<MonthReportKey, string> = {
 /**
  * Money > Reports (round 3: Reports is the fifth Money tab and shows ONE report at a time, picked from a select). Every report
  * the select offers, in its order, with who may open it. The address is /money/reports/<key>; /money/reports opens the first
- * report the person may see.
+ * report the person may see. The old
+ * /money/reports/enquiries opens /money/reports/rfqs.
  */
-export type ReportKey = MonthReportKey | 'in-out' | 'expenses' | 'enquiries'
+export type ReportKey = MonthReportKey | 'in-out' | 'expenses' | 'rfqs'
 
 export interface ReportOption {
   key: ReportKey
@@ -40,7 +41,7 @@ export const REPORT_OPTIONS: readonly ReportOption[] = [
   { key: 'owe', title: MONTH_REPORT_TITLE.owe, adminOnly: true },
   { key: 'gst', title: MONTH_REPORT_TITLE.gst, adminOnly: true },
   { key: 'team', title: MONTH_REPORT_TITLE.team, adminOnly: true },
-  { key: 'enquiries', title: 'RFQs and customers', adminOnly: false },
+  { key: 'rfqs', title: 'RFQs and customers', adminOnly: false },
 ]
 
 export const reportOptionsFor = (isAdmin: boolean): ReportOption[] => REPORT_OPTIONS.filter(o => isAdmin || !o.adminOnly)

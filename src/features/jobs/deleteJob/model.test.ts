@@ -22,6 +22,17 @@ describe('toBlockers', () => {
     const out = toBlockers([row({ step: 5, kind: 'expense' }), row({ step: 1, kind: 'credit_applied' }), row({ step: 9, kind: 'something_new' })])
     expect(out.map(b => b.kind)).toEqual(['credit_applied', 'expense'])
   })
+  it('words the labels in PKR and RFQ, from 0148 or from a database still on 0132', () => {
+    const old = toBlockers([
+      row({ ref_label: 'Rs 10.00 payment' }),
+      row({ step: 5, kind: 'expense', order_id: null, ref_label: 'Travel, Rs 40.00 (on the enquiry)' }),
+      row({ step: 7, kind: 'other_order_lines', ref_label: '1 line of ORD-0042 come from this enquiry' }),
+      row({ step: 5, kind: 'expense', ref_label: 'Enquiry visit, PKR 5.00' }),
+    ])
+    expect(old.map(b => b.label)).toEqual(['PKR 10.00 payment', 'Travel, PKR 40.00 (on the RFQ)', 'Enquiry visit, PKR 5.00', '1 line of ORD-0042 come from this RFQ'])
+    const now = toBlockers([row({ step: 5, kind: 'expense', ref_label: 'Travel, PKR 40.00 (on the RFQ)' })])
+    expect(now[0].label).toBe('Travel, PKR 40.00 (on the RFQ)')
+  })
 })
 
 describe('guideOf', () => {

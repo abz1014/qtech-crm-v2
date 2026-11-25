@@ -47,7 +47,7 @@ function shell(path = '/todo', role: 'admin' | 'sales' | 'engineer' = 'sales') {
             }
           >
             <Route path="/todo" element={<input aria-label="Notes" />} />
-            <Route path="/enquiries/new" element={<p>Intake</p>} />
+            <Route path="/rfqs/new" element={<p>Intake</p>} />
             <Route path="/rfqs" element={<p>RFQs page</p>} />
             <Route path="/orders" element={<p>Orders page</p>} />
             <Route path="/bar" element={<BarPage />} />
@@ -76,7 +76,7 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     await import('@/ui/CommandPalette')
   }, 60_000)
 
-  it('idle lists Actions: New enquiry (N), Go to Home (G T); no Paste or photo any more', async () => {
+  it('idle lists Actions: New RFQ (N), Go to Home (G T); no Paste or photo any more', async () => {
     const user = userEvent.setup()
     shell()
     await user.click(screen.getAllByRole('button', { name: /^Search or jump to/ })[0])
@@ -91,7 +91,7 @@ describe('palette Actions and global shortcuts (A-89)', () => {
     shell('/rfqs')
     press('n')
     expect(await screen.findByText('Intake')).toBeInTheDocument()
-    expect(screen.getByTestId('where').textContent).toBe('/enquiries/new')
+    expect(screen.getByTestId('where').textContent).toBe('/rfqs/new')
     press('g')
     press('t')
     expect(screen.getByTestId('where').textContent).toBe('/todo')
