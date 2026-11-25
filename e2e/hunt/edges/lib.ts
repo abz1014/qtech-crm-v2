@@ -205,6 +205,7 @@ export function shotName(...parts: string[]): string {
   return `${base}_${process.pid}-${shotCount}`
 }
 
+/** A screenshot with any running animation finished first, so a dialog that is fading in is drawn whole (review item 22). */
 export async function shot(page: Page, name: string, fullPage = false): Promise<void> {
-  await page.screenshot({ path: join(OUT, `${shotName(name)}.png`), fullPage, timeout: 10_000 }).catch(() => undefined)
+  await page.screenshot({ path: join(OUT, `${shotName(name)}.png`), fullPage, timeout: 10_000, animations: 'disabled', caret: 'hide' }).catch(() => undefined)
 }
