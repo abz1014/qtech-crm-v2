@@ -1,5 +1,5 @@
 import { mapPgError } from '@/lib/pgErrors'
-import { poRef } from '@/lib/refs'
+import { poRevRef } from '@/lib/refs'
 import { ConfirmDelete } from '@/ui/ConfirmDelete'
 import { useToast } from '@/ui/useToast'
 import { useDeletePoRevision } from '@/features/purchaseOrders/hooks'
@@ -22,7 +22,7 @@ export function DeletePoRevisionConfirm({
 }) {
   const { toast } = useToast()
   const del = useDeletePoRevision(orderId)
-  const ref = `${poRef(po.number, po.firstIssuedOn)} R${po.revision}`
+  const ref = poRevRef(po.number, po.firstIssuedOn, po.revision)
   return (
     <ConfirmDelete
       open

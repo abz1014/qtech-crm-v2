@@ -16,3 +16,7 @@ export function jobRef(key: string): string {
 
 /** "PO-26-0017": the number and the year the PO was first issued (a revision keeps its number). */
 export const poRef = (n: number, issuedOn: string): string => `PO-${issuedOn.slice(2, 4)}-${pad(n)}`
+
+/** "PO-26-0017" for the first issue and "PO-26-0017 Rev 2" for a later revision, as quotations read: "R0" is jargon (24 Nov 2026). */
+export const poRevRef = (n: number, issuedOn: string, revision?: number | null): string =>
+  revision ? `${poRef(n, issuedOn)} Rev ${revision}` : poRef(n, issuedOn)

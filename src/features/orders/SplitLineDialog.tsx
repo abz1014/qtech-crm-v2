@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Split, TriangleAlert } from 'lucide-react'
 import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
-import { orderRef, poRef } from '@/lib/refs'
+import { orderRef, poRevRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { InfoTip } from '@/ui/InfoTip'
@@ -255,9 +255,9 @@ export function SplitLineDialog({
               <p>
                 The PO to {sourceName}{' '}
                 <b className="num font-semibold">
-                  {poRef(sourcePo.number, sourcePo.firstIssuedOn)} · R{sourcePo.revision}
+                  {poRevRef(sourcePo.number, sourcePo.firstIssuedOn, sourcePo.revision)}
                 </b>{' '}
-                is already issued. After the split it shows &ldquo;lines changed since R{sourcePo.revision}, re-issue&rdquo;. Nothing is sent to the supplier automatically.
+                is already issued. After the split it shows &ldquo;lines changed&rdquo; and asks for a re-issue. Nothing is sent to the supplier automatically.
               </p>
             </div>
           ) : null}

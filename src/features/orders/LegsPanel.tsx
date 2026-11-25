@@ -3,7 +3,7 @@ import { ChevronDown, Ellipsis, FileText, MessageSquareWarning, Plus, Receipt, R
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
-import { orderRef, poRef } from '@/lib/refs'
+import { orderRef, poRevRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
 import { Icon } from '@/ui/Icon'
@@ -243,7 +243,7 @@ function Leg({
   const ccy = leg.currency
   const name = leg.supplierName
   const [deletingPo, setDeletingPo] = useState(false)
-  const poHistory = useHistoryPanel({ table: 'purchase_orders', id: po?.id ?? '', context: po ? `${poRef(po.number, po.firstIssuedOn)} · R${po.revision} · ${name}` : name })
+  const poHistory = useHistoryPanel({ table: 'purchase_orders', id: po?.id ?? '', context: po ? `${poRevRef(po.number, po.firstIssuedOn, po.revision)} · ${name}` : name })
   /** A8 (O09): the latest PO revision lists lines this supplier order no longer matches (a split moved quantity). Admin and sales only: a PO carries prices. */
   const changed = money && po ? poChange(po.lines, items.map(it => ({ id: it.id, description: it.description, qty: it.qty, isService: it.isService }))) : null
   const canChase = Boolean(leg.placedOn && !leg.deliveredOn && leg.expectedOn)
@@ -333,7 +333,7 @@ function Leg({
             {/* the PO chip: the latest issued revision, or "No PO yet" (not once the goods are delivered or the order is invoiced) */}
             {money && (po || !pastPo) ? (
               <span data-testid={`leg-${letter}-po`} className="inline-flex">
-                {po ? <Tag className="border-line-strong bg-transparent text-fg-2">{`${poRef(po.number, po.firstIssuedOn)} · R${po.revision}`}</Tag> : <Tag dashed>No PO yet</Tag>}
+                {po ? <Tag className="border-line-strong bg-transparent text-fg-2">{poRevRef(po.number, po.firstIssuedOn, po.revision)}</Tag> : <Tag dashed>No PO yet</Tag>}
               </span>
             ) : null}
             {cancelledWithSupplier ? (
@@ -373,7 +373,7 @@ function Leg({
             <Icon icon={TriangleAlert} className="text-tone-warning-fg" />
             <span className="min-w-0 flex-1 text-pretty">
               <b className="font-semibold">
-                Lines changed since {poRef(po.number, po.firstIssuedOn)} · R{po.revision}.
+                Lines changed since {poRevRef(po.number, po.firstIssuedOn, po.revision)}.
               </b>{' '}
               <span className="text-fg-2">{changed.notes.join('. ')}. The PO still lists the earlier lines.</span>
             </span>
@@ -430,7 +430,7 @@ function Leg({
                   ) : null}
                   {money && po && part !== 'delivery' ? (
                     <MenuItem icon={RefreshCw} onClick={onIssue}>
-                      {`Revise PO (R${po.revision + 1})`}
+                      {`Revise PO (Rev ${po.revision + 1})`}
                     </MenuItem>
                   ) : null}
                   {issueInMenu && part !== 'delivery' ? (
@@ -450,7 +450,7 @@ function Leg({
                   ) : null}
                   {isAdmin && po?.id && part !== 'delivery' ? (
                     <MenuItem icon={Trash2} danger onClick={() => setDeletingPo(true)}>
-                      {`Delete latest PO revision (R${po.revision})`}
+                      {po.revision ? `Delete latest PO revision (Rev ${po.revision})` : 'Delete PO'}
                     </MenuItem>
                   ) : null}
                   {isAdmin && part !== 'delivery' ? (

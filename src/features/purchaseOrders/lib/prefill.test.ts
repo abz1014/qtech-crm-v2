@@ -33,7 +33,7 @@ describe('PO line prices and their sources (O07)', () => {
   })
 
   it('names a later revision of the last PO', () => {
-    expect(sourceText({ ...lastPo, sourceRevision: 1 }, {}, TODAY).detail).toBe('PO-26-0009 R1, 14 Aug 2026')
+    expect(sourceText({ ...lastPo, sourceRevision: 1 }, {}, TODAY).detail).toBe('PO-26-0009 Rev 1, 14 Aug 2026')
   })
 
   it('a price typed over a pre-fill becomes typed; typing the same price keeps the source', () => {
