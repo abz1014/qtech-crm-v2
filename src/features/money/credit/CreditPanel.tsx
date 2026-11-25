@@ -21,7 +21,22 @@ import { creditEvents, showCredit, type CreditEvent } from '@/features/money/cre
  * Forest (55-credit-statement #cr-ok): the company page's card look (Panel card), the balance as the card's one big figure, the three
  * sums under it, and the refunds and applied credit as hairline lines inside the card's padding, newest first.
  */
-export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: string; companyName: string; isAdmin: boolean }) {
+export function CreditPanel({
+  companyId,
+  companyName,
+  isAdmin,
+  dueOnOrders = 0,
+}: {
+  companyId: string
+  companyName: string
+  isAdmin: boolean
+  /**
+   * What their orders still owe (Money with them, Balance due on orders). While it is above 0 the panel offers Apply to an order
+   * and no Refund (screen review 24 Nov 2026: a refund was offered while the customer still owed): money goes back only once
+   * nothing is due.
+   */
+  dueOnOrders?: number
+}) {
   const q = useCompanyCredit(companyId, isAdmin)
   const [refund, setRefund] = useState(false)
   const [apply, setApply] = useState(false)
@@ -44,6 +59,7 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
   if (!showCredit(summary, refunds.length, applications.length)) return null
   const events = creditEvents(refunds, applications)
   const give = summary.balance > 0
+  const owes = dueOnOrders > 0
   return (
     <>
       <Panel
@@ -58,13 +74,22 @@ export function CreditPanel({ companyId, companyName, isAdmin }: { companyId: st
       >
         {/* The two actions on their own row under the head (55 #cr-ok): in the side column a head row with both would crowd the title. */}
         {give ? (
-          <div className="flex flex-wrap justify-end gap-2 px-5 pb-2">
-            <Button size="sm" onClick={() => setRefund(true)}>
-              Refund
-            </Button>
-            <Button size="sm" icon={ArrowRightLeft} onClick={() => setApply(true)}>
-              Apply to an order
-            </Button>
+          <div className="grid gap-1 px-5 pb-2">
+            <div className="flex flex-wrap justify-end gap-2">
+              {owes ? null : (
+                <Button size="sm" onClick={() => setRefund(true)}>
+                  Refund
+                </Button>
+              )}
+              <Button size="sm" icon={ArrowRightLeft} onClick={() => setApply(true)}>
+                Apply to an order
+              </Button>
+            </div>
+            {owes ? (
+              <p className="text-right text-sm text-fg-2" data-testid="credit-owes">
+                They still owe on their orders. Apply the credit there first. Refund is offered once nothing is due.
+              </p>
+            ) : null}
           </div>
         ) : null}
         <div className="grid gap-2 px-5 pb-3" data-testid="credit-balance">

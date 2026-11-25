@@ -103,6 +103,7 @@ export interface ReceivableNextStep {
  *   waiting  "Reminded 3 days ago" · "12 days overdue"  overdue, reminded within the wait
  *   waiting  "Due 3 Nov" · "In 4 days"                  invoiced, not yet due
  *   inert    "Not invoiced yet"                         no invoice, so no due date
+ *   waiting  "Invoiced, no due date"                    an invoice with no due date: counted in Not yet due, never "Not invoiced yet"
  *   done     "Paid"
  */
 export function receivableNextStep(r: ReceivableRow, today: string): ReceivableNextStep {
@@ -112,7 +113,9 @@ export function receivableNextStep(r: ReceivableRow, today: string): ReceivableN
     if (reminderDue(r, today) || !r.lastRemindedOn) return { tone: 'late', label: 'Send a reminder', detail: late }
     return { tone: 'waiting', label: `Reminded ${agoDays(daysBetween(r.lastRemindedOn, today)).toLowerCase()}`, detail: late }
   }
-  if (!r.dueOn) return { tone: 'inert', label: r.imported && !isInvoiced(r) ? 'Imported, to review' : 'Not invoiced yet' }
+  // Screen review 24 Nov 2026: an invoiced order with no due date read "Not invoiced yet" while Not yet due counted it as invoiced.
+  if (!r.dueOn && isInvoiced(r)) return { tone: 'waiting', label: 'Invoiced, no due date' }
+  if (!r.dueOn) return { tone: 'inert', label: r.imported ? 'Imported, to review' : 'Not invoiced yet' }
   return { tone: 'waiting', label: `Due ${day(r.dueOn)}`, detail: inDays(daysBetween(today, r.dueOn)) }
 }
 

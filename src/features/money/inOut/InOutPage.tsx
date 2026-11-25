@@ -249,6 +249,8 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             items={[
               { label: 'Money in', amount: v.cash.in },
               { label: 'Money out', amount: v.cash.out },
+              // with a refund, the figures still add up on the card: in less out less refunds is the net (as on a phone)
+              ...(toPaisa(v.cash.refunds) !== 0n ? [{ label: 'Refunds to customers', amount: v.cash.refunds }] : []),
               { label: 'Cash in minus cash out', amount: v.cash.net },
               { label: 'Profit on invoices', amount: v.profit.profit, provisional: !!estimate, sub: estimate ?? undefined },
             ]}
@@ -442,10 +444,13 @@ function CategoryPanel({ v, prev }: { v: InOutView; prev: string }) {
 
 function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   const title = v.period.kind === 'month' ? 'The last 6 months' : 'The last 4 quarters'
+  // Refunds have their own column only when a period in the table has one, so in less out less refunds is the net.
+  const refunds = v.trend.some(t => toPaisa(t.refunds) !== 0n)
   const columns: Column<TrendRow>[] = [
     { id: 'period', header: v.period.kind === 'month' ? 'Month' : 'Quarter', value: t => t.label, cell: t => <span className={cn(t.period.key === v.period.key && 'font-semibold')}>{t.label}</span> },
     { id: 'in', header: 'Money in (PKR)', kind: 'money', value: t => t.in, paisa: 'never' },
     { id: 'out', header: 'Money out (PKR)', kind: 'money', value: t => t.out, paisa: 'never' },
+    ...(refunds ? [{ id: 'refunds', header: 'Refunds (PKR)', kind: 'money', value: (t: TrendRow) => t.refunds, paisa: 'never' } satisfies Column<TrendRow>] : []),
     // Below 1280 in minus out is left to the two figures beside it, so the table fits its card (audit 1, item 10).
     { id: 'net', header: 'Cash in minus out (PKR)', kind: 'money', value: t => t.net, paisa: 'never', hideClass: 'hidden xl:table-cell' },
     { id: 'profit', header: 'Profit on invoices (PKR)', kind: 'money', value: t => t.profit, paisa: 'never' },
@@ -464,7 +469,8 @@ function TrendPanel({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }
         <span className="grid gap-1">
           <span className={cn('font-medium', t.period.key === v.period.key && 'font-semibold')}>{t.label}</span>
           <span className="num text-sm text-fg-2">
-            In {rupees(t.in)} · out {rupees(t.out)} · profit {rupees(t.profit)}
+            In {rupees(t.in)} · out {rupees(t.out)}
+            {toPaisa(t.refunds) !== 0n ? ` · refunds ${rupees(t.refunds)}` : ''} · profit {rupees(t.profit)}
           </span>
         </span>
       )}

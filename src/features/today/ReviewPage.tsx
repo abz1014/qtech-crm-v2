@@ -34,14 +34,14 @@ import type { Role } from '@/features/today/types'
  */
 const SECTIONS: ReadonlyArray<{ kind: ReviewKind; title: string; why: string }> = [
   { kind: 'quotation', title: 'Quotations with no decision after 10 working days', why: 'Ask the customer, or let it go.' },
-  { kind: 'enquiry', title: 'RFQs with no supplier asked after 10 days', why: 'Ask suppliers now, or close it.' },
+  { kind: 'enquiry', title: 'RFQs with no quotation after 10 days', why: 'Send the quotation now, or close it.' },
   { kind: 'goods', title: 'Goods more than 14 days late', why: 'Follow up with the supplier, or move the date.' },
   { kind: 'payment', title: 'Payments more than 30 days late', why: 'They also stay at the top of Home.' },
 ]
 
 const CLOSE_NOTE: Record<'quotation' | 'enquiry', string> = {
   quotation: 'Weekly review: no decision from the customer',
-  enquiry: 'Weekly review: no supplier was asked',
+  enquiry: 'Weekly review: no quotation was sent',
 }
 
 export default function ReviewPage() {

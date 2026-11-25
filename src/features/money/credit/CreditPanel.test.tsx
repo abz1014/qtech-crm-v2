@@ -30,13 +30,13 @@ function db(extra: (c: FakeCall) => FakeResult | undefined = () => undefined, vi
   })
 }
 
-function mount(isAdmin = true) {
+function mount(isAdmin = true, dueOnOrders?: number) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <ToastProvider>
-          <CreditPanel companyId="c1" companyName="Indus Textile Mills" isAdmin={isAdmin} />
+          <CreditPanel companyId="c1" companyName="Indus Textile Mills" isAdmin={isAdmin} dueOnOrders={dueOnOrders} />
         </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -56,6 +56,15 @@ describe('Credit balance panel', () => {
     const items = within(panel).getAllByRole('listitem')
     expect(items[0]).toHaveTextContent('Refunded')
     expect(items[0]).toHaveTextContent(/RF-1 · goodwill/)
+  })
+
+  it('offers no Refund while their orders still owe: Apply to an order, and why (screen review 24 Nov)', async () => {
+    db()
+    mount(true, 500)
+    const panel = await screen.findByRole('region', { name: 'Credit balance' })
+    expect(within(panel).queryByRole('button', { name: 'Refund' })).toBeNull()
+    expect(within(panel).getByRole('button', { name: /Apply to an order/ })).toBeInTheDocument()
+    expect(within(panel).getByTestId('credit-owes')).toHaveTextContent('They still owe on their orders. Apply the credit there first.')
   })
 
   it('is not asked for and not drawn for anyone but the admin', async () => {
