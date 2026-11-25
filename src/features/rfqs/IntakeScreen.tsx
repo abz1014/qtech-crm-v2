@@ -1035,7 +1035,7 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
                     setCustomerRef(e.target.value)
                     setRefSource(null)
                   }}
-                  placeholder="e.g. ENQ-2211"
+                  placeholder="e.g. RFQ-2211"
                   autoComplete="off"
                   className="num"
                 />

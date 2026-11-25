@@ -463,10 +463,10 @@ test.describe('chase (FE-2: 1 tap)', () => {
     await resetClipboard(page)
     await card.getByRole('button', { name: 'Copy and record follow-up' }).click() // the one tap
     await expect(page.getByRole('status').filter({ hasText: 'Follow-up text copied' })).toBeVisible()
-    const text = await readClipboardWhen(page, 'Following up on our enquiry')
+    const text = await readClipboardWhen(page, 'Following up on our request')
     expect(text).not.toMatch(/RFQ-|assalam/i) // no RFQ number or religious greeting in the supplier text
     expect(text).toContain('these 2 requirements are very important')
-    expect(text).toContain('Following up on our enquiry')
+    expect(text).toContain('Following up on our request')
     expect(text).toContain(s.items[0].description)
     expect(text).toContain(s.items[1].description)
     expect(text).not.toContain(s.customer) // never names the customer
@@ -523,8 +523,8 @@ test.describe('chase (FE-2: 1 tap)', () => {
     taps++
     expect(taps).toBe(1)
     await expect(page.getByRole('status').filter({ hasText: 'Follow-up text copied' })).toBeVisible()
-    const text = await readClipboardWhen(page, 'Following up on our enquiry')
-    expect(text).toContain('Following up on our enquiry')
+    const text = await readClipboardWhen(page, 'Following up on our request')
+    expect(text).toContain('Following up on our request')
     expect(text).toContain(s.items[0].description)
     expect(text).not.toContain(s.customer)
     const after = await inquiryOf(s.germany.inquiryId)

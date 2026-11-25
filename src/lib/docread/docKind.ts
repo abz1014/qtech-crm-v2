@@ -273,7 +273,7 @@ function classifyMail(m: Newest): DocKindResult | null {
     if (offer >= 2) return done('supplier-quote', 0.7, ['answers a message we sent', 'prices or a reply to the request'])
     if (weOffered && !weAsked) return done('follow-up', 0.6, ['answers our quotation', 'no prices'])
     if (orderThread) return done('follow-up', 0.6, ['answers us about an order', 'no prices'])
-    if (weAsked) return done('supplier-quote', 0.6, ['answers an enquiry we sent'])
+    if (weAsked) return done('supplier-quote', 0.6, ['answers an RFQ we sent'])
     if (chase) return done('follow-up', 0.6, ['answers a message we sent', 'asks about an update, an order or delivery'])
     return done('supplier-quote', 0.5, ['answers a message we sent', 'no new request'])
   }
@@ -381,7 +381,7 @@ export const NOT_AN_ENQUIRY: readonly DocKind[] = ['own-rfq', 'own-quote', 'po',
 export const NOT_A_SUPPLIER_QUOTE: readonly DocKind[] = ['rfq', 'own-rfq', 'own-quote', 'po', 'invoice']
 
 export const KIND_LABEL: Record<DocKind, string> = {
-  rfq: 'an enquiry',
+  rfq: 'an RFQ',
   'supplier-quote': "a supplier's quotation",
   'own-rfq': 'your own request for quotation',
   'own-quote': 'your own quotation',

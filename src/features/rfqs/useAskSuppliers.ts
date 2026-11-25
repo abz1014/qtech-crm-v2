@@ -153,7 +153,7 @@ export function useAskSuppliers(rfq: RfqHeader, inquiries: readonly InquiryRow[]
       })
       return true
     } catch (err) {
-      toast({ title: titles.failTitle, body: mapPgError(err, { entity: 'enquiry' }).message, tone: 'danger' })
+      toast({ title: titles.failTitle, body: mapPgError(err, { entity: 'supplier request' }).message, tone: 'danger' })
       return false
     }
   }

@@ -77,8 +77,8 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
   const by = byDayText(confirmBy, today)
   const refText = input.customerRef?.replace(/^\s*(?:RFQ\s*)?#?\s*/i, '').trim()
   const ref = refText ? `#${refText}` : null
-  const yourRfq = ref ? `your RFQ ${bold(ref)}` : `your enquiry (our ref ${bold(rfqRef)})`
-  const yourRfqPlain = ref ? `your RFQ ${ref}` : `your enquiry (our ref ${rfqRef})`
+  const yourRfq = ref ? `your RFQ ${bold(ref)}` : `your RFQ (our ref ${bold(rfqRef)})`
+  const yourRfqPlain = ref ? `your RFQ ${ref}` : `your RFQ (our ref ${rfqRef})`
   const dueLong = input.dueOn ? longDay(input.dueOn.slice(0, 10)) : null
   const sinceFirst = input.firstAskedOn ? daysBetween(input.firstAskedOn, today) : null
   const asked = input.firstAskedOn ? longDay(input.firstAskedOn) : null
@@ -119,9 +119,9 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
     }
     lines.push(list, '')
     if (kind === 'third') {
-      lines.push(`If these items are no longer required, please let us know and we will close the enquiry. Otherwise, kindly confirm by ${bold(by)}.`)
+      lines.push(`If these items are no longer required, please let us know and we will close the RFQ. Otherwise, kindly confirm by ${bold(by)}.`)
     } else if (kind === 'firm') {
-      lines.push(`Without your reply by ${bold(by)} we will close the enquiry. If it is still live, please confirm the points above.`)
+      lines.push(`Without your reply by ${bold(by)} we will close the RFQ. If it is still live, please confirm the points above.`)
     } else if (kind === 'first' || kind === 'gentle') {
       lines.push(`Kindly confirm by ${bold(by)}${dueLong ? `. Our quotation is due on ${dueLong}` : ''}.`)
     } else {
@@ -150,9 +150,9 @@ export function generateCustomerChase(input: CustomerChaseInput): CustomerChase 
     }
     lines.push(list, '')
     if (kind === 'third') {
-      lines.push(`If these items are no longer required, please let us know and we will close the enquiry. Otherwise, kindly confirm by ${by}.`)
+      lines.push(`If these items are no longer required, please let us know and we will close the RFQ. Otherwise, kindly confirm by ${by}.`)
     } else if (kind === 'firm') {
-      lines.push(`Unless we hear from you by ${by}, we will close the enquiry. If it is still live, please confirm the points above and we will complete our quotation at once.`)
+      lines.push(`Unless we hear from you by ${by}, we will close the RFQ. If it is still live, please confirm the points above and we will complete our quotation at once.`)
     } else if (kind === 'bid_close') {
       lines.push(`Kindly confirm by ${by}.`)
     } else {

@@ -184,7 +184,7 @@ export function PasteZone({
           }
         }}
         placeholder={touch ? 'Select here to paste, or type one item per line' : 'Click here and paste, or type one item per line'}
-        className={cn(controlClass, 'h-auto resize-y py-2 font-mono leading-6')}
+        className={cn(controlClass, 'h-auto resize-y py-2 font-sans leading-6')}
       />
       {touch ? (
         <Button size="touch" icon={ClipboardPaste} onClick={() => void pasteFromClipboard()}>
@@ -229,7 +229,7 @@ export function PastedPanel({ block }: { block: PastedBlock }) {
           {found === 0 ? 'No items found' : `${found} ${found === 1 ? 'item' : 'items'} found`}
         </span>
       </div>
-      <pre tabIndex={0} role="region" aria-label="What was pasted" className="m-0 max-h-[10.5rem] overflow-auto whitespace-pre-wrap break-words rounded-control bg-sunken px-3 py-2 font-mono text-sm leading-6 text-fg-2 max-md:text-base">
+      <pre tabIndex={0} role="region" aria-label="What was pasted" className="m-0 max-h-[10.5rem] overflow-auto whitespace-pre-wrap break-words rounded-control bg-sunken px-3 py-2 font-sans text-sm leading-6 text-fg-2 max-md:text-base">
         {result.lines.map((l, i) => (
           <span key={i} className={cn('block', l.kind === 'skipped' && 'bg-tone-warning-bg text-tone-warning-fg')}>
             {l.marker ? <mark className="rounded bg-brand-100 px-1 text-fg">{l.marker}</mark> : null}

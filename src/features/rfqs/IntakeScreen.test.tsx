@@ -444,7 +444,7 @@ describe('the New RFQ draft (kept on this device)', () => {
   async function startDraft(user: ReturnType<typeof setup>) {
     await user.type(screen.getByRole('combobox', { name: 'Company' }), 'Acme')
     await user.click(await screen.findByRole('option', { name: /Acme Plastics/ }))
-    await user.type(screen.getByRole('textbox', { name: 'Customer reference' }), 'ENQ-2211')
+    await user.type(screen.getByRole('textbox', { name: 'Customer reference' }), 'RFQ-2211')
     fireEvent.paste(document.body, { clipboardData: { getData: () => EMAIL } })
     expect(await screen.findByText('2 items found')).toBeInTheDocument()
   }
@@ -463,7 +463,7 @@ describe('the New RFQ draft (kept on this device)', () => {
     expect(screen.queryByRole('region', { name: 'Customer' })).toBeNull()
     await user.click(await screen.findByRole('button', { name: 'Continue your draft' }))
     expect(screen.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue('Hach HQ1110 portable meter')
-    expect(screen.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('ENQ-2211')
+    expect(screen.getByRole('textbox', { name: 'Customer reference' })).toHaveValue('RFQ-2211')
     expect(screen.getByRole('button', { name: 'Change company, now Acme Plastics' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Continue your draft' })).toBeNull()
   })

@@ -77,7 +77,7 @@ export default function NewEnquiryPage() {
             <Icon icon={ClipboardPaste} size="sm" />
             Pasted text
           </h3>
-          <pre className="m-0 max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-control bg-sunken px-3 py-2 font-mono text-sm leading-6 text-fg-2 [overflow-wrap:anywhere] max-md:text-base" data-testid="source-text">
+          <pre className="m-0 max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-control bg-sunken px-3 py-2 font-sans text-sm leading-6 text-fg-2 [overflow-wrap:anywhere] max-md:text-base" data-testid="source-text">
             {text}
           </pre>
         </section>

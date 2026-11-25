@@ -131,7 +131,7 @@ test.describe('company page', () => {
     const company = await createCompany(uniqueName('Page Customer'), { country: 'Pakistan', city: 'Karachi' })
     const site = (await must(rest<{ id: string }[]>('admin', 'company_sites', { method: 'POST', body: { company_id: company.id, name: 'Main plant', address: 'Plot 14, Landhi' } })))[0]
     await must(rest('admin', 'contacts', { method: 'POST', body: { company_id: company.id, site_id: site.id, name: 'Naveed Akhtar', job_title: 'Finance' } }))
-    const rfq = await createRfq(company.id, { site_id: site.id, customer_ref: 'ENQ-2211' })
+    const rfq = await createRfq(company.id, { site_id: site.id, customer_ref: 'RFQ-2211' })
 
     await openAs(page, 'sales', `/companies/${company.id}`)
     await expect(page.getByRole('heading', { name: company.name, level: 1 })).toBeVisible()

@@ -28,7 +28,8 @@ const C = {
 
 const s = StyleSheet.create({
   page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 40, paddingHorizontal: 36 },
-  mono: { fontFamily: 'Geist Mono' },
+  // Figures and references: the same Geist as the text, never a monospace face (owner rule: no mono anywhere).
+  num: { fontFamily: 'Geist' },
   muted: { color: C.muted },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 14, borderBottomWidth: 1.5, borderBottomColor: C.ink },
   logo: { width: 150, height: 36.5, objectFit: 'contain' },
@@ -141,7 +142,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
           <View style={s.company}>
             <Text style={[s.companyName, s.right]}>{companyName}</Text>
             {profile.address ? <Text style={[s.right, s.muted]}>{profile.address}</Text> : null}
-            {taxLine ? <Text style={[s.right, s.muted, s.mono]}>{taxLine}</Text> : null}
+            {taxLine ? <Text style={[s.right, s.muted, s.num]}>{taxLine}</Text> : null}
             {contactLine ? <Text style={[s.right, s.muted]}>{contactLine}</Text> : null}
           </View>
         </View>
@@ -160,7 +161,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
           <View style={s.meta}>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Quotation no.</Text>
-              <Text style={[s.metaValue, s.mono]}>{ref}</Text>
+              <Text style={[s.metaValue, s.num]}>{ref}</Text>
             </View>
             {q.revision > 0 ? (
               <View style={s.metaRow}>
@@ -192,12 +193,12 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
             {data.customerRef ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Your reference</Text>
-                <Text style={[s.strongText, s.mono]}>{data.customerRef}</Text>
+                <Text style={[s.strongText, s.num]}>{data.customerRef}</Text>
               </View>
             ) : null}
             <View style={s.refRow}>
               <Text style={s.refLabel}>Our reference</Text>
-              <Text style={[s.strongText, s.mono]}>RFQ-{String(data.rfqNumber).padStart(4, '0')}</Text>
+              <Text style={[s.strongText, s.num]}>RFQ-{String(data.rfqNumber).padStart(4, '0')}</Text>
             </View>
             <View style={s.refRow}>
               <Text style={s.refLabel}>Currency</Text>
@@ -238,9 +239,9 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
                 {d.detail ? <Text style={[s.muted, { fontSize: 9.5 }]}>{d.detail}</Text> : null}
               </View>
               <Text style={s.cQty}>{qtyWithUnit(l.qty, l.unit)}</Text>
-              <Text style={[s.cPrice, s.mono]}>{money(toPaisa(l.unit_price_net))}</Text>
-              <Text style={[s.cGst, s.mono]}>{Number(l.gst_rate) === 0 ? 'Exempt' : `${qtyText(Number(l.gst_rate))}%`}</Text>
-              <Text style={[s.cNet, s.mono]}>{money(a.net)}</Text>
+              <Text style={[s.cPrice, s.num]}>{money(toPaisa(l.unit_price_net))}</Text>
+              <Text style={[s.cGst, s.num]}>{Number(l.gst_rate) === 0 ? 'Exempt' : `${qtyText(Number(l.gst_rate))}%`}</Text>
+              <Text style={[s.cNet, s.num]}>{money(a.net)}</Text>
               <Text style={s.cLead}>{l.lead_time ?? ''}</Text>
             </View>
           )
@@ -251,17 +252,17 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
         <View style={s.totals}>
           <View style={s.totRow}>
             <Text>Total net</Text>
-            <Text style={s.mono}>PKR {money(totals.net)}</Text>
+            <Text style={s.num}>PKR {money(totals.net)}</Text>
           </View>
           {rates.map(r => (
             <View key={r} style={s.totRow}>
               <Text>{Number(r) === 0 ? 'GST exempt' : `GST at ${r}%`}</Text>
-              <Text style={s.mono}>PKR {money(totals.gstByRate.get(r) ?? 0n)}</Text>
+              <Text style={s.num}>PKR {money(totals.gstByRate.get(r) ?? 0n)}</Text>
             </View>
           ))}
           <View style={s.gross}>
             <Text style={s.strongText}>Total gross</Text>
-            <Text style={[s.mono, { fontWeight: 500, fontSize: 11 }]}>PKR {money(totals.gross)}</Text>
+            <Text style={[s.num, { fontWeight: 500, fontSize: 11 }]}>PKR {money(totals.gross)}</Text>
           </View>
           <Text style={[s.right, s.muted, { fontSize: 9.5, marginTop: 5 }]}>{amountInWords(totals.gross)}</Text>
         </View>
@@ -291,7 +292,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
           <View style={{ marginTop: 8 }} wrap={false}>
             <Text style={s.secTitle}>Bank details</Text>
             <Text>{[profile.bank_account_title, profile.bank_name].filter(Boolean).join(', ')}</Text>
-            {profile.bank_iban ? <Text style={s.mono}>IBAN {profile.bank_iban}</Text> : null}
+            {profile.bank_iban ? <Text style={s.num}>IBAN {profile.bank_iban}</Text> : null}
           </View>
         ) : null}
 
@@ -300,7 +301,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
             <Text style={s.secTitle}>Standard terms</Text>
             {terms.map((t, i) => (
               <View key={i} style={s.termRow}>
-                <Text style={[s.termNo, s.mono]}>{i + 1}.</Text>
+                <Text style={[s.termNo, s.num]}>{i + 1}.</Text>
                 <Text style={{ flex: 1 }}>{t}</Text>
               </View>
             ))}
@@ -309,7 +310,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
 
         <View style={s.sign} wrap={false}>
           <Text style={s.thanks}>
-            Thank you for the enquiry. Please quote <Text style={s.mono}>{refRev}</Text> on your purchase order.
+            Thank you for your RFQ. Please quote <Text style={s.num}>{refRev}</Text> on your purchase order.
           </Text>
           <View style={s.signBox}>
             <Text style={s.muted}>For {companyName}</Text>
@@ -317,7 +318,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
               <>
                 <Text style={[s.strongText, { fontSize: 10, marginTop: 6 }]}>{data.signatory.name}</Text>
                 <Text style={s.muted}>{data.signatory.jobTitle ? `${data.signatory.jobTitle}, ` : ''}authorised signatory</Text>
-                {data.signatory.phone ? <Text style={[s.muted, s.mono]}>{data.signatory.phone}</Text> : null}
+                {data.signatory.phone ? <Text style={[s.muted, s.num]}>{data.signatory.phone}</Text> : null}
               </>
             ) : null}
           </View>
@@ -326,7 +327,7 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
         </View>
 
         <View style={s.foot} fixed>
-          <Text style={[s.mono, { flex: 1 }]}>{refRev}</Text>
+          <Text style={[s.num, { flex: 1 }]}>{refRev}</Text>
           <Text style={{ flex: 1, textAlign: 'center' }}>Valid until {longDay(q.validUntil)}</Text>
           <Text style={{ flex: 1, textAlign: 'right' }} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
