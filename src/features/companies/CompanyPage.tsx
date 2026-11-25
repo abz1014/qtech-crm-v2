@@ -27,6 +27,8 @@ import { OpenWithThem } from '@/features/companies/SupplierRecordPanels'
 import { StatementButton } from '@/features/money/statement/StatementDialog'
 import { BuyerTaxFields } from '@/features/money/invoices/pdf/BuyerTaxFields'
 import { CreditPanel } from '@/features/money/credit/CreditPanel'
+import { useCompanyCredit } from '@/features/money/credit/hooks'
+import { moneyWithThem } from '@/features/companies/moneyWithThem'
 import { cn } from '@/lib/utils'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useSeesPrices, useSession } from '@/app/session'
@@ -179,6 +181,8 @@ function Loaded({ company }: { company: CompanyDetail }) {
   const contacts = useCompanyContacts(company.id)
   const history = useCompanyHistory(company.id, session.status === 'signed-in' && session.user.role !== 'engineer')
   const money = useCompanyMoney(company.id, isAdmin)
+  // The Credit balance card's own read (one cache entry): the money card needs it to add up.
+  const credit = useCompanyCredit(company.id, isAdmin)
   const record = useSupplierRecordView(company.id, company.isSupplier)
   // The same read as "What we know" (one cache entry): its counts in one line under the name.
   const stats = useSupplierStats(company.id, company.isSupplier)
@@ -323,15 +327,20 @@ function Loaded({ company }: { company: CompanyDetail }) {
   // The money panel is rendered for an admin only (and the view refuses anyone else), so it needs no "Admin only" tag.
   const sidePanels = (
     <>
-      {isAdmin && money.data && money.data.orders > 0 ? (
-        <Panel card title="Money with them">
-          <div className="px-5 pb-3">
+      {isAdmin && money.data && money.data.orders > 0 && (credit.data || credit.isError) ? (
+        <Panel
+          card
+          title="Money with them"
+          info={
+            <InfoTip label="About money with them">
+              Orders total less what they paid, plus any refund to them, is the balance due on their orders less the credit they hold. With
+              every order invoiced, the same figure closes their statement of account. Received counts cash and tax withheld, not credit moved between their orders.
+            </InfoTip>
+          }
+        >
+          <div className="px-5 pb-3" data-testid="money-with-them">
             <KeyValue
-              rows={[
-                { key: 'Total (with GST)', value: <Money value={money.data.receivable} /> },
-                { key: 'Received', value: <Money value={money.data.settled} /> },
-                { key: 'Balance', value: <Money value={money.data.balance} strong /> },
-              ]}
+              rows={moneyWithThem(money.data, credit.data?.summary ?? null).map(l => ({ key: l.label, value: <Money value={l.amount} strong={l.strong} /> }))}
             />
             <div className="mt-3">
               <StatementButton companyId={company.id} companyName={company.name} />

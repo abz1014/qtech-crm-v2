@@ -25,12 +25,13 @@ export function useInOutReport(period: Period, enabled = true): InOutReport {
   const flows = useQuery({ queryKey: qk.money.monthEnd.cashFlow(), queryFn: api.loadCashFlow, enabled, ...live })
   const profit = useQuery({ queryKey: [...qk.money.monthEnd.cashFlow(), 'profit'], queryFn: api.loadProfit, enabled, ...live })
   const detail = useQuery({ queryKey: qk.money.monthEnd.cashOutDetail(from, to), queryFn: () => api.loadCashOutDetail(from, to), enabled, ...live })
+  const costs = useQuery({ queryKey: [...qk.money.monthEnd.cashFlow(), 'order-costs'], queryFn: api.loadInvoicedOrderCosts, enabled, ...live })
   const cats = useCategories(enabled)
   const view = useMemo(() => {
-    if (!flows.data || !profit.data || !detail.data || !cats.data) return null
+    if (!flows.data || !profit.data || !detail.data || !costs.data || !cats.data) return null
     const names = Object.fromEntries(cats.data.map(c => [c.id, c.name]))
-    return buildInOut(period, flows.data, profit.data, detail.data, names)
-  }, [period, flows.data, profit.data, detail.data, cats.data])
-  const all = [flows, profit, detail, cats]
+    return buildInOut(period, flows.data, profit.data, detail.data, names, costs.data)
+  }, [period, flows.data, profit.data, detail.data, costs.data, cats.data])
+  const all = [flows, profit, detail, costs, cats]
   return { view, isPending: all.some(q => q.isPending), isError: all.some(q => q.isError), refetch: () => all.forEach(q => void q.refetch()) }
 }

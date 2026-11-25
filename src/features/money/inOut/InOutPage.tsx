@@ -24,6 +24,7 @@ import {
   IN_OUT_TITLE,
   change,
   chosenPeriod,
+  costsOpenNote,
   inOutCsv,
   periodLabel,
   periodOf,
@@ -188,6 +189,8 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
   const narrow = useMediaQuery('(max-width: 639px)')
   const [whyOpen, setWhyOpen] = useState(false)
   const whyId = useId()
+  // Screen 06: with costs not final on an order invoiced in the period, the profit is an estimate (the whole sale when none is entered).
+  const estimate = costsOpenNote(v.costsOpen)
   const frozen =
     v.cash.frozenMonths === 0 ? null : v.cash.frozenMonths === v.cash.months ? 'Locked: figures final when the month was locked' : `${plural(v.cash.frozenMonths, 'month')} locked: figures final`
   return (
@@ -221,14 +224,14 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             label="Profit on invoices"
             caption={
               <span>
-                PKR · by invoice date
+                PKR · by invoice date{estimate ? ` · ${estimate}` : ''}
               </span>
             }
             items={[
               { label: 'Sales', amount: v.profit.sales },
               { label: 'Order costs', amount: v.profit.orderCosts },
               { label: 'Overheads', amount: v.profit.overheads },
-              { label: 'Profit on invoices', amount: v.profit.profit },
+              { label: 'Profit on invoices', amount: v.profit.profit, provisional: !!estimate },
             ]}
           />
           <ReportCsv />
@@ -247,7 +250,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               { label: 'Money in', amount: v.cash.in },
               { label: 'Money out', amount: v.cash.out },
               { label: 'Cash in minus cash out', amount: v.cash.net },
-              { label: 'Profit on invoices', amount: v.profit.profit },
+              { label: 'Profit on invoices', amount: v.profit.profit, provisional: !!estimate, sub: estimate ?? undefined },
             ]}
           />
           <section className="grid gap-2">
@@ -281,7 +284,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
               <Row label="Sales" sub={`${plural(v.profit.invoices, 'invoice')}, GST taken out`} now={v.profit.sales} before={v.prevProfit.sales} />
               <Row label="Order costs" sub="Supplier, freight and clearing, counted with the order's sales" now={v.profit.orderCosts} before={v.prevProfit.orderCosts} />
               <Row label="Overheads" sub="When paid, GST paid on purchases taken out" now={v.profit.overheads} before={v.prevProfit.overheads} />
-              <Row testId="profit" label="Profit on invoices" now={v.profit.profit} before={v.prevProfit.profit} strong />
+              <Row testId="profit" label="Profit on invoices" sub={estimate ?? undefined} now={v.profit.profit} before={v.prevProfit.profit} strong />
             </div>
           </section>
         </>
