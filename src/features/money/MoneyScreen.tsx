@@ -78,6 +78,12 @@ function OldReportAddress({ report }: { report: string }) {
   return <Navigate to={{ pathname: `/money/reports/${report}`, search }} replace />
 }
 
+/** /money/reports/margins?filter=x opens /money/margins?filter=x (the same for profit and exceptions). */
+function MoneyPageAddress({ page }: { page: string }) {
+  const { search } = useLocation()
+  return <Navigate to={{ pathname: `/money/${page}`, search }} replace />
+}
+
 /**
  * /money/reports/categories?month=2026-09 (the old "Expenses by category", replaced by the Expenses report on 2026-10-22) opens
  * /money/reports/expenses?by=month&period=2026-09; with no month, the month Lock a month shows (the one that just ended).
@@ -91,7 +97,8 @@ function OldCategoriesAddress() {
 
 function ReportRoute({ isAdmin }: { isAdmin: boolean }) {
   const { report } = useParams()
-  if (report === 'enquiries') return <EnquiriesReportPage />
+  if (report === 'rfqs') return <EnquiriesReportPage />
+  if (report === 'enquiries') return <OldReportAddress report="rfqs" />
   if (!isAdmin) return <NoAccessPage area="Money reports" />
   switch (report) {
     case 'pnl':
@@ -110,6 +117,12 @@ function ReportRoute({ isAdmin }: { isAdmin: boolean }) {
       return <ExpenseReportPage />
     case 'team':
       return <TeamPage />
+    // Margins, Profitability and Mistakes to fix are pages of their own (/money/margins and so on), not reports: a typed or old
+    // /money/reports/margins opens the page instead of Not found (screen review 24 Nov 2026, High 4).
+    case 'margins':
+    case 'profit':
+    case 'exceptions':
+      return <MoneyPageAddress page={report} />
     default:
       return <NotFoundPage />
   }

@@ -31,7 +31,7 @@ function respond(call: FakeCall): FakeResult {
 
 const SIGNED_IN: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }
 
-function renderPage(entry: string | { pathname: string; state?: unknown } = '/enquiries/new') {
+function renderPage(entry: string | { pathname: string; state?: unknown } = '/rfqs/new') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
@@ -39,7 +39,7 @@ function renderPage(entry: string | { pathname: string; state?: unknown } = '/en
         <MemoryRouter initialEntries={[entry]}>
           <ToastProvider>
             <Routes>
-              <Route path="/enquiries/new" element={<NewEnquiryPage />} />
+              <Route path="/rfqs/new" element={<NewEnquiryPage />} />
               <Route path="/jobs/:key" element={<h1>The job page</h1>} />
             </Routes>
           </ToastProvider>

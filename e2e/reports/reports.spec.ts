@@ -91,7 +91,7 @@ for (const role of ['admin', 'sales'] as const) {
       await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
       if (role === 'admin') {
         await expect(page.getByTestId('report-name')).toHaveText('Profit and loss')
-        await page.getByTestId('report-picker').selectOption('enquiries')
+        await page.getByTestId('report-picker').selectOption('rfqs')
       }
       await expect(page.getByTestId('report-name')).toHaveText('RFQs and customers')
       await expect(page.getByRole('region', { name: 'At a glance' })).toContainText('Win rate')
@@ -124,7 +124,7 @@ for (const role of ['admin', 'sales'] as const) {
     test('is usable at 375 px', async ({ page }) => {
       await seed()
       await page.setViewportSize({ width: 375, height: 812 })
-      await openAs(page, role, '/money/reports/enquiries')
+      await openAs(page, role, '/money/reports/rfqs')
       await openAll(page)
       await expect(page.getByRole('table', { name: 'Customers who came back' })).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)

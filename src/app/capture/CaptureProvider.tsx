@@ -11,7 +11,7 @@ import { CaptureContext, type CaptureApi } from '@/app/capture/useCapture'
 
 /*
  * Capture provider (R22, reshaped by P4: the six-destination Paste or photo sheet is gone). What is left is the way things arrive:
- *   - A file dropped, or text or a picture pasted, on To do or on the Jobs list starts a New enquiry with it (/enquiries/new reads it
+ *   - A file dropped, or text or a picture pasted, on To do or on the Jobs list starts a New RFQ with it (/rfqs/new reads it
  *     the way a PDF or a paste is always read there).
  *   - On a job's page the same paste or drop goes to "Add to this job" (features/jobs/AddToJob.tsx listens for it itself).
  *   - The Android share target still lands on /capture (the service worker keeps the item for 7 days); that page offers "New
@@ -21,9 +21,9 @@ import { CaptureContext, type CaptureApi } from '@/app/capture/useCapture'
  * "Drop to start a New RFQ" on the scrim. Only for the people who start RFQs (admin and sales; an engineer's Create is the camera).
  * It is a picture of what a drop does, not a control: pointer events pass through, so the drop still lands on the page.
  */
-/** The intake screens read what is pasted or dropped themselves: New RFQ and New enquiry. */
-const onIntake = (path: string) => path.startsWith('/rfqs/new') || path.startsWith('/enquiries/new')
-/** To do and the Jobs list start a New enquiry from a paste or a drop (P4-A). */
+/** The intake screen reads what is pasted or dropped itself: New RFQ. */
+const onIntake = (path: string) => path.startsWith('/rfqs/new')
+/** To do and the Jobs list start a New RFQ from a paste or a drop (P4-A). */
 const takesDrops = (path: string) => path === '/todo' || path === '/jobs' || path === '/todo/' || path === '/jobs/'
 
 const isEditable = (t: EventTarget | null) => {
@@ -54,7 +54,7 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const start = useCallback((input: { text?: string; files?: File[] }) => {
-    navigateRef.current('/enquiries/new', { state: { capture: { id: crypto.randomUUID(), text: input.text ?? '', files: input.files ?? [] } } })
+    navigateRef.current('/rfqs/new', { state: { capture: { id: crypto.randomUUID(), text: input.text ?? '', files: input.files ?? [] } } })
   }, [])
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export function CaptureProvider({ children }: { children: ReactNode }) {
     }
   }, [start])
 
-  const openCapture = useCallback(() => navigateRef.current('/enquiries/new'), [])
+  const openCapture = useCallback(() => navigateRef.current('/rfqs/new'), [])
   const api = useMemo<CaptureApi>(() => ({ openCapture }), [openCapture])
   // Leaving Home or the Jobs list (or signing in as someone who does not start RFQs) takes the overlay away.
   const shown = dragging && startsRfqs && takesDrops(pathname)

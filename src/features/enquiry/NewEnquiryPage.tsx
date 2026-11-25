@@ -11,7 +11,7 @@ import { Icon } from '@/ui/Icon'
 import IntakeScreen from '@/features/rfqs/IntakeScreen'
 
 /*
- * New RFQ (P4-A, /enquiries/new and /rfqs/new, one page): the customer's document on one side, what was read from it on the other. The right side IS
+ * New RFQ (P4-A, /rfqs/new; the old /enquiries/new redirects there): the customer's document on one side, what was read from it on the other. The right side IS
  * the existing intake (features/rfqs/IntakeScreen, read as it always was: PDF, photo, spreadsheet and paste go through PdfIntake,
  * fileIntake and the parsers), in its "enquiry" mode: unsure fields say "Check this" and the one green button is "Create job N".
  * This page adds only the left side and the way a file arrives:

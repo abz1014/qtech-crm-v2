@@ -53,13 +53,11 @@ export function chunksForPath(pathname: string): ChunkKey[] {
     case 'todo':
     case 'today': // the old address: it redirects to /todo
       return ['today']
-    // /rfqs and /orders open Jobs (src/app/oldAddresses.tsx): the first visit needs the Jobs downloads. /rfqs/new is New RFQ, the same
-    // page as /enquiries/new.
+    // /rfqs and /orders open Jobs (src/app/oldAddresses.tsx): the first visit needs the Jobs downloads. /rfqs/new is New RFQ (the old
+    // /enquiries/new redirects to it).
     case 'rfqs':
       if (n === 2 && sub === 'new') return ['enquiryNew']
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
-    case 'enquiries':
-      return n === 2 && sub === 'new' ? ['enquiryNew'] : []
     case 'orders':
     case 'jobs':
       return n === 1 ? ['jobs', 'jobsList'] : n === 2 ? ['jobs', 'job'] : ['jobs']
@@ -81,7 +79,7 @@ export function chunksForPath(pathname: string): ChunkKey[] {
         return key ? ['money', key] : ['money']
       }
       if (n === 3 && sub === 'month-end') return ['money', third === 'bank' ? 'moneyBank' : 'moneyReportPages']
-      if (n === 3 && sub === 'reports') return ['money', third === 'in-out' ? 'moneyInOut' : third === 'enquiries' ? 'moneyReports' : 'moneyReportPages']
+      if (n === 3 && sub === 'reports') return ['money', third === 'in-out' ? 'moneyInOut' : third === 'rfqs' || third === 'enquiries' ? 'moneyReports' : 'moneyReportPages']
       return ['money']
     default:
       return []

@@ -12,7 +12,8 @@ describe('chunksForPath', () => {
     expect(chunksForPath('/rfqs')).toEqual(['jobs', 'jobsList'])
     expect(chunksForPath('/rfqs/abc')).toEqual(['jobs', 'job'])
     expect(chunksForPath('/rfqs/new')).toEqual(['enquiryNew'])
-    expect(chunksForPath('/enquiries/new')).toEqual(['enquiryNew'])
+    // the old /enquiries/new address redirects to /rfqs/new (routes.tsx), so it fetches nothing ahead itself
+    expect(chunksForPath('/enquiries/new')).toEqual([])
     expect(chunksForPath('/enquiries')).toEqual([])
     expect(chunksForPath('/orders')).toEqual(['jobs', 'jobsList'])
     expect(chunksForPath('/orders/abc')).toEqual(['jobs', 'job'])
@@ -21,6 +22,8 @@ describe('chunksForPath', () => {
     expect(chunksForPath('/money/receivables')).toEqual(['money', 'moneyReceivables'])
     expect(chunksForPath('/money/month-end/bank')).toEqual(['money', 'moneyBank'])
     expect(chunksForPath('/money/reports/in-out')).toEqual(['money', 'moneyInOut'])
+    expect(chunksForPath('/money/reports/rfqs')).toEqual(['money', 'moneyReports'])
+    expect(chunksForPath('/money/reports/enquiries')).toEqual(['money', 'moneyReports'])
     expect(chunksForPath('/login')).toEqual(['signIn'])
   })
 
