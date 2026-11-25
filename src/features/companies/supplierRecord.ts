@@ -1,5 +1,5 @@
 import { agedDate, priceFactOf, type PriceFact } from '@/lib/memory'
-import { poRef, orderRef, rfqRef } from '@/lib/refs'
+import { poRef, poRevRef, orderRef, rfqRef } from '@/lib/refs'
 import { formatShortDate } from '@/lib/formatDay'
 import { daysLate, daysOverdue } from '@/lib/timeWords'
 import { reasonLabel } from '@/features/rfqs/lib/cantQuote'
@@ -302,7 +302,7 @@ export function buildSupplierRecord(full: SupplierRecordRaw, today: string): Sup
     legRows.push({
       row: {
         key: leg.id,
-        po: leg.po ? `${poRef(leg.po.number, leg.po.issuedOn)}${leg.po.revision > 0 ? ` · R${leg.po.revision}` : ''}` : null,
+        po: leg.po ? poRevRef(leg.po.number, leg.po.issuedOn, leg.po.revision) : null,
         orderRef: orderRef(leg.orderNumber),
         expectedOn: leg.expectedOn,
         receivedOn: leg.receivedOn,

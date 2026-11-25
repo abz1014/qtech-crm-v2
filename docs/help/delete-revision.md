@@ -7,7 +7,7 @@ screens: /jobs
 related: revise-quotation
 ---
 1. For a quotation: open the RFQ, select the three dots on the latest revision, then [Delete revision].
-2. For a PO: open the order, select the three dots on the supplier, then [Delete latest PO revision (RN)].
+2. For a PO: open the order, select the three dots on the supplier, then [Delete latest PO revision (Rev N)], or [Delete PO] if it was never revised.
 3. Read what changes and select [Delete]. Only the latest revision can go, one at a time.
 
 Tip: Prices a PO already wrote onto the order lines stay. Fix them on the order.

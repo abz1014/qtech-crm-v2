@@ -410,7 +410,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(d.getByTestId('po-source-1')).toContainText('order')
     await d.getByRole('button', { name: 'Issue PO' }).click()
     await expect(dialog(page)).toHaveCount(0, { timeout: 30_000 })
-    await expect(page.getByText(/^Issued PO-\d\d-\d{4} · R0/)).toBeVisible()
+    await expect(page.getByText(/^Issued PO-\d\d-\d{4}(?! Rev)/)).toBeVisible()
     fe2('Issue PO (every line priced): Issue PO on the leg, Issue PO in the dialog', (await readCount(page)).mouse, 2)
 
     const [po] = await must(

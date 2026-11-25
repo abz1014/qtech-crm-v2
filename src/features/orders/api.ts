@@ -701,7 +701,7 @@ function poLines(json: unknown): LegPo['lines'] {
   })
 }
 
-/** The latest PO revision of each leg (the "PO-26-0017 · R1" chip). A leg with none has no entry. */
+/** The latest PO revision of each leg (the "PO-26-0017 Rev 1" chip). A leg with none has no entry. */
 /** `money` is false for an engineer: the PO's lines carry unit prices, so they are not even requested for him (the leg then never shows "lines changed"). */
 export async function listLegPos(legIds: readonly string[], money = false): Promise<LegPo[]> {
   if (legIds.length === 0) return []

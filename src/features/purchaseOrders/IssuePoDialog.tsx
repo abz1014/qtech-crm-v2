@@ -4,7 +4,7 @@ import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
-import { orderRef, poRef } from '@/lib/refs'
+import { orderRef, poRevRef } from '@/lib/refs'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { InfoTip } from '@/ui/InfoTip'
@@ -113,7 +113,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
   const revision = existing.data ? existing.data.revision + 1 : 0
   const number = existing.data?.number ?? nextNumber.data
   const firstYear = existing.data?.firstIssuedOn ?? today
-  const tag = number !== undefined ? `${poRef(number, firstYear)} · R${revision}` : revision > 0 ? `R${revision}` : 'New PO · R0'
+  const tag = number !== undefined ? poRevRef(number, firstYear, revision) : revision > 0 ? `Rev ${revision}` : 'New PO'
 
   const missing = missingPrices(rows, typed)
   const total = poTotal(rows, typed)
@@ -154,7 +154,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       // The leg is placed (the RPC stamped today if it was not placed yet). Suggest the expected date from the lead time, once, when it has none.
       const expected = expectedAfterIssue(leg, today)
       if (expected) updateLeg.mutate({ id: leg.id, patch: { expected_on: expected } })
-      const ref = `${poRef(po.number, po.firstIssuedOn)} · R${po.revision}`
+      const ref = poRevRef(po.number, po.firstIssuedOn, po.revision)
       let pdf: Blob | null = null
       let pdfNote: string | null = null
       if (profile && gaps.length === 0) {

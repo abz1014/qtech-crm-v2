@@ -449,7 +449,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
       want(info, 'A PO PDF USD', pdfHas(text, w), `USD PO PDF lacks the words "${w}"`)
     }
     const chip = await (await legIn(page, 'Supplier order', supU.name)).locator('[data-testid$="-po"]').innerText()
-    want(info, 'A Issue PO USD', /^PO-\d\d-\d{4} · R0$/.test(chip.trim()), `PO chip reads "${chip}"`)
+    want(info, 'A Issue PO USD', /^PO-\d\d-\d{4}$/.test(chip.trim()), `PO chip reads "${chip}"`)
     await shot(page, 'A-both-pos-issued')
   })
 
