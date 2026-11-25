@@ -362,6 +362,26 @@ describe('Job page: the stage list', () => {
     expect(container.textContent).not.toMatch(/their ref|Goods to the customer/)
   })
 
+  it('an invoice raised before the job reaches Invoice: the row says Invoiced, not "Not yet" over the listed invoice (live review 24 Nov)', async () => {
+    const invoice = [{ id: 'v1', number: 'PC-4F589H', invoiceDate: '2026-10-06', gross: 2035500 }]
+    const { container } = mount(job({ stage: 'ordered', stageDetail: 'to source, advance received' }), 'admin', c => c.setQueryData([...qk.jobs.part('139', 'invoices'), 'o1'], invoice))
+    await screen.findByRole('heading', { level: 1 })
+    const row = stagesOf(container).getByRole('button', { name: /^Invoice / })
+    expect(row).toHaveAccessibleName(/^Invoice Invoiced 1 invoice/)
+    expect(row).not.toHaveTextContent('Not yet')
+  })
+
+  it('part invoiced early: the row says Part invoiced (the order state says part)', async () => {
+    const invoice = [{ id: 'v1', number: 'INV-1', invoiceDate: '2026-10-06', gross: 500000 }]
+    const { container } = mount(job({ stage: 'ordered', stageDetail: 'to source' }), 'admin', c => {
+      c.setQueryData([...qk.jobs.part('139', 'invoices'), 'o1'], invoice)
+      const header = c.getQueryData<Record<string, unknown>>(qk.orders.part('o1', 'header'))
+      c.setQueryData(qk.orders.part('o1', 'header'), { ...header, state: { lifecycle: 'active', goods: 'to_source', commissioning: 'n_a', invoicing: 'part', dataTrust: 'ok', net: null, gst: null, gross: null, invoiced: null } })
+    })
+    await screen.findByRole('heading', { level: 1 })
+    expect(stagesOf(container).getByRole('button', { name: /^Invoice / })).toHaveAccessibleName(/^Invoice Part invoiced 1 invoice/)
+  })
+
   it('the step that is yours names its action on its chip (owner, 16 Nov 2026: "Needs action for what?")', async () => {
     const { container } = mount(job({ stage: 'enquiry', stageDetail: null, orderId: null }), 'admin')
     await screen.findByRole('heading', { level: 1 })

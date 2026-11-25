@@ -99,7 +99,9 @@ async function seedOrder() {
   const pkr = await createCompany(uniqueName(`Indus Instruments ${tag}`))
   const rfq = await createRfq(company.id, { customer_ref: `PB-${tag}`, due_on: karachiDay(3) })
   await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: `Radar level transmitter ${tag}`, qty: 3 }, prefer: 'return=minimal' }))
-  const [order] = await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, rfq_id: rfq.id, customer_po_number: `CPO-${tag}`, payment_terms_days: 30, ordered_on: karachiDay(-6), needs_commissioning: true, commissioning_planned_on: karachiDay(3) } }))
+  // No commissioning_planned_on here: a planned date on the order files an installation visit of its own (0130 orders_mirror_visit_fields),
+  // and the visits below would list that installation twice (live review 24 Nov). The visits set the order's date.
+  const [order] = await must(rest<{ id: string }[]>('admin', 'orders', { method: 'POST', body: { company_id: company.id, rfq_id: rfq.id, customer_po_number: `CPO-${tag}`, payment_terms_days: 30, ordered_on: karachiDay(-6), needs_commissioning: true } }))
   const [legA] = await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: usd.id, currency: 'USD' } }))
   const [legB] = await must(rest<{ id: string }[]>('admin', 'supplier_orders', { method: 'POST', body: { order_id: order.id, supplier_id: pkr.id, currency: 'PKR', placed_on: karachiDay(-4), expected_on: karachiDay(5) } }))
   const lines = [
