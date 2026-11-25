@@ -26,9 +26,11 @@ export function jobKeyFacts(input: {
   cancelled: boolean
   /** The order has lines and every one is a service: no goods, so no supplier. */
   servicesOnly?: boolean
+  /** Goods lines with no supplier chosen yet: the order is not fully placed while any is left. */
+  toSource?: number
   today?: string
 }): KeyFact[] {
-  const { order, legs, money, cancelled, servicesOnly = false, today } = input
+  const { order, legs, money, cancelled, servicesOnly = false, toSource = 0, today } = input
   const facts: KeyFact[] = []
   if (money) {
     facts.push({ key: 'po', label: 'Customer PO', value: order === undefined || order === null ? null : order.customerPo?.trim() || 'Not recorded' })
@@ -50,8 +52,11 @@ export function jobKeyFacts(input: {
     const delivered = live.filter(l => l.deliveredOn)
     if (placed.length === 0) delivery = servicesOnly && live.length === 0 ? 'No goods' : 'Not ordered from the supplier yet'
     else if (delivered.length === 0) {
-      const expected = live.map(l => l.expectedOn).filter((d): d is string => Boolean(d)).sort()[0]
-      delivery = expected ? `Ordered, expected ${formatShortDate(expected, today)}` : 'Ordered'
+      // "Ordered" only when every supplier order is placed and no line waits for a supplier; otherwise how many are (live review 24 Nov).
+      const ordered = placed.length < live.length ? `${placed.length} of ${live.length} ordered` : toSource > 0 ? 'Part ordered' : 'Ordered'
+      // the date is of an order that was placed: an unplaced one's expected date is only a plan
+      const expected = placed.map(l => l.expectedOn).filter((d): d is string => Boolean(d)).sort()[0]
+      delivery = !expected ? ordered : today && expected < today ? `${ordered}, late since ${formatShortDate(expected, today)}` : `${ordered}, expected ${formatShortDate(expected, today)}`
     } else if (delivered.length < live.length) delivery = `${delivered.length} of ${live.length} delivered`
     else delivery = `Delivered ${formatShortDate(delivered.map(l => l.deliveredOn as string).sort().at(-1) as string, today)}`
   }

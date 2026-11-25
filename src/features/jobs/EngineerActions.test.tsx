@@ -8,7 +8,9 @@ import { ToastProvider } from '@/ui/Toast'
 import { qk } from '@/features/queryKeys'
 import type { JobFacts, JobRow } from '@/features/jobs/api'
 import JobsScreen from '@/features/jobs/JobsScreen'
-import { OFFLINE_TEXT } from '@/features/jobs/EngineerActions'
+import { INSTALL_WAITS, OFFLINE_TEXT } from '@/features/jobs/EngineerActions'
+import { goodsOrdered } from '@/features/jobs/lib/goods'
+import type { OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 
 /*
@@ -129,6 +131,36 @@ describe("the engineer's Job page", () => {
     expect(within(card).getByRole('button', { name: 'Installed today' })).toHaveClass('bg-primary')
     await openAdd()
     expect(screen.getByRole('button', { name: 'Add photo or note' })).not.toHaveClass('bg-primary')
+  })
+
+  it('no Installed today while the supplier order is not placed: a quiet line says why, and the visit plan still works (live review 24 Nov)', async () => {
+    mount({ legs: [leg({ placed_on: null, expected_on: null })] })
+    const card = await screen.findByRole('region', { name: 'On site' })
+    expect(within(card).queryByRole('button', { name: 'Installed today' })).toBeNull()
+    expect(within(card).queryByRole('button', { name: /Delivered today/ })).toBeNull()
+    expect(within(card).getByText(INSTALL_WAITS)).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Visit type' })).toBeInTheDocument()
+  })
+
+  it('no Installed today while a goods line has no supplier yet', async () => {
+    const items = [{ id: 'i1', number: 1, description: 'Flowmeter', brandName: null, model: null, qty: 2, unit: 'pcs', isService: false, legId: null, rfqItemId: null }]
+    mount({ items, legs: [] })
+    const card = await screen.findByRole('region', { name: 'On site' })
+    expect(within(card).queryByRole('button', { name: 'Installed today' })).toBeNull()
+    expect(within(card).getByText(INSTALL_WAITS)).toBeInTheDocument()
+  })
+
+  it('goodsOrdered: services only or every goods line on a placed supplier order', () => {
+    const it1 = (over: Partial<OrderItemRow> = {}): OrderItemRow => ({ id: 'i1', number: 1, description: 'x', brandName: null, model: null, qty: 1, unit: null, isService: false, legId: 'l1', rfqItemId: null, unitPriceNet: null, gstRate: null, supplierUnitPrice: null, ...over })
+    const lg = (over: Partial<OrderLegRow> = {}): OrderLegRow => ({ id: 'l1', supplierId: 's1', supplierName: 'A', currency: null, reference: null, placedOn: '2026-10-01', expectedOn: null, receivedOn: null, deliveredOn: null, lastChasedOn: null, chaseCount: 0, inquiryId: null, leadTimes: [], ...over })
+    expect(goodsOrdered(undefined, [])).toBeNull()
+    expect(goodsOrdered([it1({ isService: true, legId: null })], [])).toBe(true)
+    expect(goodsOrdered([], [])).toBe(true)
+    expect(goodsOrdered([it1()], [lg()])).toBe(true)
+    expect(goodsOrdered([it1()], [lg({ placedOn: null })])).toBe(false)
+    expect(goodsOrdered([it1({ legId: null })], [lg()])).toBe(false)
+    // a line left on a supplier order the supplier cancelled is not ordered
+    expect(goodsOrdered([it1()], [lg({ cancelledWithSupplierOn: '2026-10-02' })])).toBe(false)
   })
 
   it('a supply-only job with nothing to deliver has no On site card and no green button: Add photo or note is the one secondary row', async () => {
