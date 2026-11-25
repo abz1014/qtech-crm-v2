@@ -3,7 +3,6 @@ import { CARD } from '@/ui/card'
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Banknote } from 'lucide-react'
-import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { formatDay } from '@/lib/formatDay'
 import { lazyDialog } from '@/lib/lazyDialog'
@@ -14,7 +13,8 @@ import { EmptyState } from '@/ui/EmptyState'
 import { Money } from '@/ui/Money'
 import { SumBar } from '@/ui/SumBar'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
-import { isMonthKey } from '@/features/money/monthKey'
+import { useMonthParam } from '@/features/money/monthParam'
+import { PeriodNote } from '@/features/money/PeriodNote'
 import { PAID_VIA_LABEL, monthKeyLabel, shiftMonth, type PaidVia } from '@/features/money/expenses/model'
 import { useClosedMonths, usePnlMonths } from '@/features/money/monthEnd/hooks'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
@@ -36,10 +36,9 @@ const viaWord = (v: string) => PAID_VIA_LABEL[v as PaidVia] ?? v
 const plural = (n: number) => `${n} ${n === 1 ? 'payment' : 'payments'}`
 
 export function PaymentsPage() {
-  const thisMonth = businessToday().slice(0, 7)
+  // this month when none is asked; a month that cannot be shown is put right in the address, with a note (monthParam.ts)
+  const { month, thisMonth } = useMonthParam()
   const [params, setParams] = useSearchParams()
-  const asked = params.get('month')
-  const month = isMonthKey(asked) && asked <= thisMonth ? asked : thisMonth
   const go = (by: number) => {
     const next = new URLSearchParams(params)
     const to = shiftMonth(month, by)
@@ -98,6 +97,7 @@ export function PaymentsPage() {
         <MonthPager month={month} thisMonth={thisMonth} go={go} />
         {isClosed ? <MonthStateChip closed /> : null}
       </div>
+      <PeriodNote />
       {q.isSuccess && totalQ.isSuccess && sum.count > 0 ? (
         <SumBar
           label={`Received in ${name}, includes GST`}

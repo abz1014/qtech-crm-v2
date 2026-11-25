@@ -8,6 +8,8 @@ import { CsvButton } from '@/ui/ReportCsv'
 import { ReportCsvContext } from '@/ui/reportCsvContext'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { reportOptionsFor, reportTitle, type ReportKey } from '@/features/money/monthEnd/reportList'
+import { isMonthKey } from '@/features/money/monthKey'
+import { PeriodNote } from '@/features/money/PeriodNote'
 
 /*
  * Money > Reports (round 3, areas audit: "Reports shows one report at a time"). Reports is the fifth Money tab; inside it ONE
@@ -35,7 +37,9 @@ export function ReportsFrame({
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const pick = (key: string) => {
-    const month = params.get('month')
+    // the month follows to the next report, whether this one carries it as ?month= or (In and out, Expenses) as ?period=
+    const asked = params.get('month') ?? params.get('period')
+    const month = isMonthKey(asked) ? asked : null
     navigate({ pathname: `/money/reports/${key}`, search: month ? `?month=${month}` : '' })
   }
   const wide = useMediaQuery('(min-width: 768px)')
@@ -75,6 +79,8 @@ export function ReportsFrame({
       </div>
       {/* Export CSV: each report body draws <ReportCsv /> right under its summary (not green: a report has no next step). */}
       {csv !== undefined && !claimed && !wide ? <CsvButton csv={csv} /> : null}
+      {/* A link's month that could not be shown (2026-13, a month to come): which month is shown instead. */}
+      <PeriodNote />
       <ReportCsvContext.Provider value={ctx}>{children}</ReportCsvContext.Provider>
     </MoneyFrame>
   )

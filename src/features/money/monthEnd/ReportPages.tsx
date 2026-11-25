@@ -74,7 +74,7 @@ type SetCsv = (make: (() => void) | null) => void
  * page's one green button). The body hands its CSV up with `useCsv` once its figures are in.
  */
 function ReportPage({ report, children }: { report: MonthReportKey; children: (ctx: MonthEndCtx, setCsv: SetCsv) => ReactNode }) {
-  const ctx = useMonthEnd()
+  const ctx = useMonthEnd('this-month')
   const [csv, setCsvState] = useState<{ run: () => void } | null>(null)
   const setCsv = useCallback<SetCsv>(make => setCsvState(make ? { run: make } : null), [])
   return (
@@ -889,7 +889,12 @@ function GstBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             </span>
           </div>
         }
-        empty={<EmptyState title="No invoices yet">Invoices appear here by their date, with their PSID sets and deposits.</EmptyState>}
+        // Names the month (screen review 2026-11-24, item 11): "No invoices yet" read as none at all while later months had some.
+        empty={
+          <EmptyState title={`No invoices in ${monthKeyLabel(ctx.month)}`}>
+            None is dated in {monthName(ctx.month)} or the months before it. Invoices appear here by their date, with their PSID sets and deposits.
+          </EmptyState>
+        }
         mobileRow={r => (
           <span className="grid gap-1">
             <span className="flex items-baseline justify-between gap-3">

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { InfoTip } from '@/ui/InfoTip'
-import { businessToday } from '@/lib/dates'
 import { mapPgError, type MappedError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
@@ -15,7 +14,9 @@ import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { MonthPager } from '@/features/money/monthEnd/MonthEndFrame'
 import { monthKeyLabel, shiftMonth } from '@/features/money/expenses/model'
 import { useBankMonth, useTickLine } from '@/features/money/bank/hooks'
-import { bankTotals, buildBankView, defaultStatementMonth, isOpenableMonth, type BankLine } from '@/features/money/bank/model'
+import { bankTotals, buildBankView, defaultStatementMonth, type BankLine } from '@/features/money/bank/model'
+import { useMonthParam } from '@/features/money/monthParam'
+import { PeriodNote } from '@/features/money/PeriodNote'
 import { TickPanel } from '@/features/money/bank/TickPanel'
 
 /*
@@ -29,12 +30,10 @@ import { TickPanel } from '@/features/money/bank/TickPanel'
 const items = (n: number) => `${n} ${n === 1 ? 'item' : 'items'}`
 
 export function BankTickPage() {
-  const today = businessToday()
-  const [params, setParams] = useSearchParams()
+  // a link's month that cannot be shown opens the default statement month, put right in the address with a note (monthParam.ts)
+  const { month, thisMonth } = useMonthParam(defaultStatementMonth)
+  const [, setParams] = useSearchParams()
   const navigate = useNavigate()
-  const asked = params.get('month')
-  const month = isOpenableMonth(asked, today) ? asked : defaultStatementMonth(today)
-  const thisMonth = today.slice(0, 7)
 
   const data = useBankMonth(month)
   const tick = useTickLine(month)
@@ -101,9 +100,10 @@ export function BankTickPage() {
       active={null}
       title="Bank check"
       back={{ to: `/money/month-end?month=${month}`, label: 'Lock a month' }}
-      titleMeta={totals ? <StateChip open={openCount ?? 0} /> : null}
+      titleMeta={totals ? <StateChip open={openCount ?? 0} lines={allLines} /> : null}
     >
       {picker}
+      <PeriodNote />
 
       {data.isError ? (
         <div className={cn(CARD, 'mx-auto mt-8 w-full max-w-prose p-card')}>
@@ -205,11 +205,20 @@ export function BankTickPage() {
   )
 }
 
-/** The page's state as text, no chip (spec 1.5): "7 to match" (we act) or "Everything matched" (done). */
-function StateChip({ open }: { open: number }) {
+/**
+ * The page's state as text, no chip (spec 1.5): "7 to match" (we act), "Everything matched" (done) or, for a month with no bank
+ * lines at all, "Nothing to match" (nothing was matched, so "Everything matched" would claim work that did not happen).
+ */
+function StateChip({ open, lines }: { open: number; lines: number }) {
   return (
     <span data-testid="bank-state">
-      {open === 0 ? <StatusText tone="done">Everything matched</StatusText> : <StatusText tone="now">{`${open} to match`}</StatusText>}
+      {open > 0 ? (
+        <StatusText tone="now">{`${open} to match`}</StatusText>
+      ) : lines === 0 ? (
+        <StatusText tone="done">Nothing to match</StatusText>
+      ) : (
+        <StatusText tone="done">Everything matched</StatusText>
+      )}
     </span>
   )
 }

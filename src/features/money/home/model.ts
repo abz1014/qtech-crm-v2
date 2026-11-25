@@ -1,4 +1,4 @@
-import { monthLabel } from '@/features/money/expenses/model'
+import { monthKeyLabel, monthLabel, shiftMonth } from '@/features/money/expenses/model'
 import type { FlowRow, ProfitRow } from '@/features/money/inOut/model'
 import type { RawPnl } from '@/features/money/monthEnd/model'
 import type { ReceivableTotals } from '@/features/money/payments/model'
@@ -33,8 +33,11 @@ export interface MoneyHomeFigures {
   owed: { total: string; count: number } | null
   /** GST inside what came in this month (v_month_pnl.gst_in): the part that is FBR's, not ours. */
   gstShare: string | null
-  /** The last finished month that has invoices, for the Profit line. */
-  profit: { monthKey: string; monthName: string; amount: string } | null
+  /**
+   * The last finished month that has invoices, for the Profit line. `heading` names it with its year, and says when it is not
+   * last month (screen review 2026-11-24, item 17: a November page said only "Profit, September").
+   */
+  profit: { monthKey: string; monthName: string; heading: string; amount: string } | null
 }
 
 const nameOf = (key: string): string => monthLabel(`${key}-01`).split(' ')[0]
@@ -54,7 +57,17 @@ export function moneyHomeFigures(i: MoneyHomeInput): MoneyHomeFigures {
     paidOut,
     owed: i.owed,
     gstShare: i.pnl ? (i.pnl[monthKey]?.gstIn ?? '0.00') : null,
-    profit: finished ? { monthKey: finished.month, monthName: nameOf(finished.month), amount: finished.profit } : null,
+    profit: finished
+      ? {
+          monthKey: finished.month,
+          monthName: nameOf(finished.month),
+          heading:
+            finished.month === shiftMonth(monthKey, -1)
+              ? `Profit, ${monthKeyLabel(finished.month)}`
+              : `Profit in ${monthKeyLabel(finished.month)}, the last month with invoices`,
+          amount: finished.profit,
+        }
+      : null,
   }
 }
 

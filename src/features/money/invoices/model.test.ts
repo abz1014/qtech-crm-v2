@@ -75,6 +75,22 @@ describe('what a new invoice opens with', () => {
     expect(invoiceStart({ ...base, invoicedNet: 1949800, invoicedGst: 350964 })).toMatchObject({ net: 0, fullyInvoiced: true })
   })
 
+  it('a leftover of PKR 1 or less is fully invoiced (as v_order_state), the exact leftover kept (the dialog prefills nothing)', () => {
+    expect(invoiceStart({ ...base, invoicedNet: 1949800, invoicedGst: 350963 })).toMatchObject({ net: 0, gst: 1, gross: 1, fullyInvoiced: true })
+    expect(invoiceStart({ ...base, invoicedNet: 1949799.5, invoicedGst: 350964 })).toMatchObject({ net: 0.5, fullyInvoiced: true })
+    // an order with no invoice yet is never fully invoiced, however small (v_order_state: not_invoiced)
+    expect(invoiceStart({ ...base, itemsNet: 0.5, itemsGst: 0 })).toMatchObject({ net: 0.5, fullyInvoiced: false })
+    expect(invoiceStart({ ...base, invoicedNet: 1949798, invoicedGst: 350964 })).toMatchObject({ net: 2, fullyInvoiced: false })
+  })
+
+  it('works in whole paisa: what is left after float-looking invoices is exact, so invoicing it closes the order to 0', () => {
+    const a = { ...base, itemsNet: 1000.3, itemsGst: 0, exemptLineCount: 8, invoicedNet: 0.1, invoicedGst: 0 }
+    expect(invoiceStart(a).net).toBe(1000.2)
+    const s = invoiceStart({ ...base, invoicedNet: 1449800.1, invoicedGst: 260964 })
+    expect(s).toMatchObject({ net: 499999.9, gst: 90000, gross: 589999.9 })
+    expect(invoiceStart({ ...base, invoicedNet: 1449800.1 + s.net, invoicedGst: 260964 + s.gst })).toMatchObject({ fullyInvoiced: true })
+  })
+
   it('due date is the invoice date plus the order terms', () => {
     expect(dueOn('2026-11-27', 30)).toBe('2026-12-27')
     expect(dueOn('2026-12-20', 30)).toBe('2027-01-19')

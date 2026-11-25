@@ -32,7 +32,7 @@ describe('Money home figures', () => {
     expect(f.paidOut).toEqual({ total: '731850.00', count: 14 })
     expect(f.owed).toEqual({ total: '1465000.00', count: 3 })
     expect(f.gstShare).toBe('291700.00')
-    expect(f.profit).toEqual({ monthKey: '2026-09', monthName: 'September', amount: '412300.00' })
+    expect(f.profit).toEqual({ monthKey: '2026-09', monthName: 'September', heading: 'Profit, September 2026', amount: '412300.00' })
   })
   it('a month with no money yet is zero, not loading; nothing loaded is null', () => {
     const f = moneyHomeFigures({ ...base, today: '2026-11-02' })
@@ -45,6 +45,11 @@ describe('Money home figures', () => {
   it('a finished month with no invoices is not offered as the profit', () => {
     const f = moneyHomeFigures({ ...base, profits: [profit('2026-09', '0.00', 0), profit('2026-08', '100.00')] })
     expect(f.profit?.monthKey).toBe('2026-08')
+  })
+  it('on a November page, a September profit says it is the last month with invoices, with the year', () => {
+    const f = moneyHomeFigures({ ...base, today: '2026-11-20', profits: [profit('2026-09', '412300.00'), profit('2026-10', '0.00', 0)] })
+    expect(f.profit?.heading).toBe('Profit in September 2026, the last month with invoices')
+    expect(f.profit?.heading).not.toBe('Profit, September')
   })
   it('counts in words', () => {
     expect(countWord(1, 'order')).toBe('1 order')

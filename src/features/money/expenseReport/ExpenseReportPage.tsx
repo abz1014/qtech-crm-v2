@@ -22,6 +22,7 @@ import { ReportCsv } from '@/ui/ReportCsv'
 import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { IN_OUT_REPORT_TITLE } from '@/features/money/monthEnd/reportList'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
+import { fixedPeriodState } from '@/features/money/monthParam'
 import { chosenPeriod, periodLabel, periodOf, shiftPeriod, type Period, type PeriodKind } from '@/features/money/inOut/model'
 import { useExpenseReport } from '@/features/money/expenseReport/hooks'
 import { entriesCsv, expenseReportCsv, type AcrossDetail, type CategoryLine, type ExpenseReportView, type GroupLine, type ReportEntry, type TrendBar } from '@/features/money/expenseReport/model'
@@ -52,6 +53,21 @@ function usePeriod() {
   const askedKey = params.get('period') ?? (kind === 'month' ? params.get('month') : null)
   const period = useMemo(() => chosenPeriod(kind, askedKey, today), [kind, askedKey, today])
   const now = periodOf(kind, today.slice(0, 7))
+  // a period that is not real or still to come falls back to now: the address names the period shown, and a note says so
+  // (screen review 2026-11-24, item 18; as Money in and out)
+  useEffect(() => {
+    if (askedKey === null || askedKey === period.key) return
+    setParams(
+      prev => {
+        const next = new URLSearchParams(prev)
+        next.set('by', period.kind)
+        next.set('period', period.key)
+        next.delete('month')
+        return next
+      },
+      { replace: true, state: fixedPeriodState({ asked: askedKey, shown: periodLabel(period) }) },
+    )
+  }, [askedKey, period, setParams])
   const set = (p: Period) => {
     const next = new URLSearchParams(params)
     next.set('by', p.kind)
