@@ -302,18 +302,20 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(page.getByRole('article', { name: 'Item 1' })).not.toContainText(/Spread|Our price/)
 
     const [q] = await must(
-      rest<{ id: string; number: number; issued_on: string; net_total: number; gst_total: number; pdf_path: string | null }[]>('admin', `quotations?rfq_id=eq.${rfq.id}&select=id,number,issued_on,net_total,gst_total,pdf_path`),
+      rest<{ id: string; number: number; quote_code: string | null; issued_on: string; net_total: number; gst_total: number; pdf_path: string | null }[]>('admin', `quotations?rfq_id=eq.${rfq.id}&select=id,number,quote_code,issued_on,net_total,gst_total,pdf_path`),
     )
     expect(Number(q.net_total)).toBe(268000)
     expect(Number(q.gst_total)).toBe(48240)
-    const ref = `QT-${q.issued_on.slice(2, 4)}-${String(q.number).padStart(4, '0')}`
+    // 0147: the first quotation of a customer is numbered QTS-<customer code>-<running number>
+    expect(q.quote_code).toMatch(/^[A-Z]{2,6}$/)
+    const ref = `QTS-${q.quote_code}-${q.number}`
     expect(file.suggestedFilename()).toBe(`${ref}-R0.pdf`)
     const stored = await fetchStoredPdf('sales', 'generated-docs', q.pdf_path as string)
     expect(pdfIsValid(stored)).toBe(true)
     const text = stored ? pdfText(stored) : null
     if (text) {
       expect(text).toContain(ref)
-      expect(text).toContain('PKR 316,240')
+      expect(text).toContain('268,000') // the gross without GST: the owner's template prints no GST total
       expect(text).toContain(s.customer.name)
     }
   })

@@ -16,12 +16,16 @@ export const TEXT_FIELDS = [
   'phone',
   'email',
   'website',
+  'sales_email',
+  'sales_phone',
   'ntn',
   'strn',
   'bank_name',
   'bank_account_title',
   'bank_iban',
   'quotation_terms',
+  'quotation_warranty',
+  'quotation_closing',
   'po_terms',
 ] as const
 export type TextField = (typeof TEXT_FIELDS)[number]
@@ -32,6 +36,9 @@ export interface CompanyProfile {
   phone: string | null
   email: string | null
   website: string | null
+  /** The quotation's signature block: the sales email and the sales cell number (0147). */
+  sales_email: string | null
+  sales_phone: string | null
   ntn: string | null
   strn: string | null
   bank_name: string | null
@@ -40,19 +47,24 @@ export interface CompanyProfile {
   quotation_validity_days: number
   default_payment_terms_days: number
   quotation_terms: string | null
+  /** The two standard paragraphs under the quotation's terms (0147): the warranty, then the closing line. */
+  quotation_warranty: string | null
+  quotation_closing: string | null
   po_terms: string | null
+  /** The lowest running number the next new quotation may take (QTS-<code>-<number>, 0147). */
+  quote_next_number: number
   updated_at: string
 }
 
 /** Bank and tax identifiers: the database refuses these to an engineer (migration 0108), so no engineer screen may select them. */
 export const FINANCIAL_FIELDS = ['ntn', 'strn', 'bank_name', 'bank_account_title', 'bank_iban'] as const satisfies readonly TextField[]
 
-export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'default_payment_terms_days', 'updated_at'].join(', ')
+export const COLS = [...TEXT_FIELDS, 'quotation_validity_days', 'default_payment_terms_days', 'quote_next_number', 'updated_at'].join(', ')
 /**
  * Payment terms and the quotation and purchase order wording: an engineer's screens never show them (gate 2, answer 10: they carry
  * money words; no engineer issues a quotation or a purchase order, and an order's terms are drawn only where prices are seen).
  */
-const ENGINEER_LEFT_OUT = ['quotation_terms', 'po_terms'] as const satisfies readonly TextField[]
+const ENGINEER_LEFT_OUT = ['quotation_terms', 'quotation_warranty', 'quotation_closing', 'po_terms'] as const satisfies readonly TextField[]
 /** What an engineer reads: the business details only (no financial columns, no terms). */
 export const COLS_NO_FINANCIAL = [
   ...TEXT_FIELDS.filter(f => !(FINANCIAL_FIELDS as readonly string[]).includes(f) && !(ENGINEER_LEFT_OUT as readonly string[]).includes(f)),
@@ -69,11 +81,17 @@ export function withoutFinancials(row: Partial<CompanyProfile>): CompanyProfile 
     bank_account_title: null,
     bank_iban: null,
     quotation_terms: null,
+    quotation_warranty: null,
+    quotation_closing: null,
     po_terms: null,
+    quote_next_number: DEFAULT_QUOTE_NEXT_NUMBER,
     quotation_validity_days: DEFAULT_QUOTATION_VALIDITY_DAYS,
     default_payment_terms_days: FALLBACK_PAYMENT_TERMS_DAYS,
   } as CompanyProfile
 }
+
+/** The column default of quote_next_number (migration 0147): the owner's last hand-made quotation was number 4809. */
+export const DEFAULT_QUOTE_NEXT_NUMBER = 4810
 
 /** The column default of quotation_validity_days (migration 0021). */
 const DEFAULT_QUOTATION_VALIDITY_DAYS = 30
@@ -86,6 +104,7 @@ export function toFormValues(p: CompanyProfile): ProfileValues {
   const v: Record<string, unknown> = {
     quotation_validity_days: p.quotation_validity_days,
     default_payment_terms_days: p.default_payment_terms_days,
+    quote_next_number: p.quote_next_number,
   }
   for (const f of TEXT_FIELDS) v[f] = p[f] ?? ''
   return v as ProfileValues
@@ -96,6 +115,7 @@ export function toRow(v: ProfileValues): TablesUpdate<'company_profile'> {
   const row: TablesUpdate<'company_profile'> = {
     quotation_validity_days: v.quotation_validity_days,
     default_payment_terms_days: v.default_payment_terms_days,
+    quote_next_number: v.quote_next_number,
   }
   for (const f of TEXT_FIELDS) row[f] = v[f].trim() === '' ? null : v[f].trim()
   return row

@@ -335,6 +335,11 @@ const PROFILE: CompanyProfile = {
   default_payment_terms_days: 30,
   quotation_terms: null,
   po_terms: null,
+  sales_email: null,
+  sales_phone: null,
+  quotation_warranty: null,
+  quotation_closing: null,
+  quote_next_number: 4810,
   updated_at: '2026-10-20T00:00:00Z',
 }
 

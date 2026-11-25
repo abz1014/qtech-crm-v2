@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { MapPin, Pencil, UserPlus } from 'lucide-react'
 import { z } from 'zod'
+import { useSession } from '@/app/session'
+import { normalizeQuoteCode, quoteCodeProblem, suggestQuoteCode } from '@/features/companies/quoteCode'
 import { useAddContact, useAddSite, useUpdateCompany, useUpdateContact, useUpdateSite } from '@/features/companies/hooks'
 import type { CompanyDetail, ContactRow, SiteRow } from '@/features/companies/api'
 import { Button } from '@/ui/Button'
@@ -64,6 +66,10 @@ const editSchema = z.object({
   country: z.string().trim().optional(),
   city: z.string().trim().optional(),
   notes: z.string().trim().optional(),
+  quote_code: z
+    .string()
+    .optional()
+    .refine(v => !v?.trim() || quoteCodeProblem(v) === null, { message: 'Use 2 to 6 letters, for example IFL.' }),
 })
 
 export function EditCompanyDialog({ open, onOpenChange, company }: { open: boolean; onOpenChange: (o: boolean) => void; company: CompanyDetail }) {
@@ -72,10 +78,13 @@ export function EditCompanyDialog({ open, onOpenChange, company }: { open: boole
 
 function EditBody({ onOpenChange, company }: { onOpenChange: (o: boolean) => void; company: CompanyDetail }) {
   const update = useUpdateCompany(company.id)
+  const session = useSession()
+  // The quote code (0147) is set by admin and sales: the database refuses an engineer's change, so an engineer is not offered the field.
+  const codes = session.status === 'signed-in' && (session.user.role === 'admin' || session.user.role === 'sales')
   const sf = useSubmitForm({
     schema: editSchema,
     entity: 'company',
-    defaultValues: { name: company.name, country: company.country ?? '', city: company.city ?? '', notes: company.notes ?? '' },
+    defaultValues: { name: company.name, country: company.country ?? '', city: company.city ?? '', notes: company.notes ?? '', quote_code: company.quoteCode ?? '' },
     // HW-25: `base` makes the save send only what changed here and refuse when someone else changed the same field meanwhile
     onSubmit: v =>
       update.mutateAsync({
@@ -83,10 +92,15 @@ function EditBody({ onOpenChange, company }: { onOpenChange: (o: boolean) => voi
         country: v.country || null,
         city: v.city || null,
         notes: v.notes || null,
-        base: { name: company.name, country: company.country, city: company.city, notes: company.notes },
+        ...(codes ? { quote_code: v.quote_code?.trim() ? normalizeQuoteCode(v.quote_code) : null } : {}),
+        base: { name: company.name, country: company.country, city: company.city, notes: company.notes, quote_code: company.quoteCode },
       }),
     routeError: e =>
-      e.kind === 'unique' ? { field: 'name', message: 'Another company already has this name. Merge them from the other company instead.' } : undefined,
+      e.kind === 'unique' && e.constraint === 'companies_quote_code_key'
+        ? { field: 'quote_code', message: 'Another customer already has this code. Choose a different one.' }
+        : e.kind === 'unique'
+          ? { field: 'name', message: 'Another company already has this name. Merge them from the other company instead.' }
+          : undefined,
     onSuccess: () => onOpenChange(false),
   })
   return (
@@ -101,6 +115,16 @@ function EditBody({ onOpenChange, company }: { onOpenChange: (o: boolean) => voi
         <FormField name="country" label="Country" requirement="optional">
           {f => <TextField {...f} autoComplete="off" />}
         </FormField>
+        {codes ? (
+          <FormField
+            name="quote_code"
+            label="Quote code"
+            requirement="optional"
+            help={`Printed in quotation numbers, for example QTS-${company.quoteCode ?? suggestQuoteCode(company.name)}-4810. 2 to 6 letters.`}
+          >
+            {f => <TextField {...f} autoComplete="off" placeholder={suggestQuoteCode(company.name)} className="uppercase" maxLength={6} />}
+          </FormField>
+        ) : null}
         <FormField name="notes" label="Notes" requirement="optional" help="Industry, lead source, anything the next person should know.">
           {f => <TextArea {...f} />}
         </FormField>

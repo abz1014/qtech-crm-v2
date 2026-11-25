@@ -326,7 +326,8 @@ export interface RfqHeader {
   closeReason: string | null
   closeNote: string | null
   notes: string | null
-  company: { id: string; name: string; country: string | null; city?: string | null; createdAt: string | null }
+  /** quoteCode: the customer's code in quotation numbers (0147). address: its invoice address, the quotation's fallback address. */
+  company: { id: string; name: string; country: string | null; city?: string | null; quoteCode?: string | null; address?: string | null; createdAt: string | null }
   site: { name: string; address: string | null } | null
   siteId?: string | null
   contactId: string | null
@@ -346,7 +347,7 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
   const [rfqRes, stateRes] = await Promise.all([
     db
       .from('rfqs')
-      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, created_by, is_priority, quoted_on, closed_on, close_reason, close_note, notes, company:companies!rfqs_company_id_fkey(id, name, country, city, created_at), site:company_sites!rfqs_site_id_fkey(name, address), contact:contacts!rfqs_contact_id_fkey(name, phone, email, job_title), owner:users!rfqs_owner_id_fkey(id, name, role, phone)')
+      .select('id, number, company_id, site_id, contact_id, customer_ref, received_on, due_on, due_time, owner_id, created_by, is_priority, quoted_on, closed_on, close_reason, close_note, notes, company:companies!rfqs_company_id_fkey(id, name, country, city, quote_code, invoice_address, created_at), site:company_sites!rfqs_site_id_fkey(name, address), contact:contacts!rfqs_contact_id_fkey(name, phone, email, job_title), owner:users!rfqs_owner_id_fkey(id, name, role, phone)')
       .eq('id', id)
       .maybeSingle(),
     db.from('v_rfq_state').select('*').eq('rfq_id', id).maybeSingle(),
@@ -372,7 +373,15 @@ export async function getRfqHeader(id: string): Promise<RfqHeader | null> {
     closeReason: r.close_reason,
     closeNote: r.close_note,
     notes: r.notes,
-    company: { id: r.company_id, name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, createdAt: c?.created_at ?? null },
+    company: {
+      id: r.company_id,
+      name: c?.name ?? 'Unknown company',
+      country: c?.country ?? null,
+      city: c?.city ?? null,
+      quoteCode: c?.quote_code ?? null,
+      address: c?.invoice_address ?? null,
+      createdAt: c?.created_at ?? null,
+    },
     siteId: r.site_id,
     contactId: r.contact_id,
     site,
@@ -1208,7 +1217,7 @@ export async function listUserNames(): Promise<Record<string, string>> {
 
 export interface RfqDeleteCounts {
   /** Issued quotations, oldest first. */
-  quotations: { number: number; revision: number; issuedOn: string }[]
+  quotations: { number: number; code?: string | null; revision: number; issuedOn: string }[]
   items: number
   /** Supplier prices (quote lines) on the RFQ's inquiries. */
   supplierPrices: number
@@ -1220,7 +1229,7 @@ export interface RfqDeleteCounts {
 export async function getRfqDeleteCounts(rfqId: string): Promise<RfqDeleteCounts> {
   const db = requireSupabase()
   const [quotes, items, prices, attachments] = await Promise.all([
-    db.from('quotations').select('number, revision, issued_on, pdf_path').eq('rfq_id', rfqId).order('number').order('revision'),
+    db.from('quotations').select('number, quote_code, revision, issued_on, pdf_path').eq('rfq_id', rfqId).order('number').order('revision'),
     db.from('rfq_items').select('id', { count: 'exact', head: true }).eq('rfq_id', rfqId),
     db.from('supplier_quote_lines').select('id, supplier_inquiries!inner(rfq_id)', { count: 'exact', head: true }).eq('supplier_inquiries.rfq_id', rfqId),
     db.from('attachments').select('id', { count: 'exact', head: true }).eq('rfq_id', rfqId),
@@ -1228,7 +1237,7 @@ export async function getRfqDeleteCounts(rfqId: string): Promise<RfqDeleteCounts
   const q = unwrap(quotes) ?? []
   for (const r of [items, prices, attachments]) if (r.error) throw r.error
   return {
-    quotations: q.map(r => ({ number: r.number, revision: r.revision, issuedOn: r.issued_on })),
+    quotations: q.map(r => ({ number: r.number, code: r.quote_code, revision: r.revision, issuedOn: r.issued_on })),
     items: items.count ?? 0,
     supplierPrices: prices.count ?? 0,
     files: (attachments.count ?? 0) + q.filter(r => r.pdf_path).length,

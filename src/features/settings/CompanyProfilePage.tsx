@@ -25,6 +25,8 @@ const LABELS: Partial<Record<keyof ProfileValues, string>> = {
   phone: 'Phone',
   email: 'Email',
   website: 'Website',
+  sales_email: 'Sales email',
+  sales_phone: 'Sales cell number',
   ntn: 'NTN',
   strn: 'STRN',
   bank_name: 'Bank',
@@ -33,6 +35,9 @@ const LABELS: Partial<Record<keyof ProfileValues, string>> = {
   quotation_validity_days: 'Quotation validity',
   default_payment_terms_days: 'Default payment terms',
   quotation_terms: 'Quotation terms',
+  quotation_warranty: 'Warranty',
+  quotation_closing: 'Closing line',
+  quote_next_number: 'Next quotation number',
   po_terms: 'Purchase order terms',
 }
 
@@ -193,6 +198,17 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
           </div>
         </Section>
 
+        <Section title="Quotation signature" hint="Printed under the name of the person who prepared each quotation.">
+          <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
+            <FormField name="sales_phone" label="Sales cell number" requirement="optional">
+              {f => <TextField {...f} type="tel" className="num" autoComplete="off" placeholder="0300-1234567" />}
+            </FormField>
+            <FormField name="sales_email" label="Sales email" requirement="optional">
+              {f => <TextField {...f} type="email" autoComplete="off" />}
+            </FormField>
+          </div>
+        </Section>
+
         <Section title="Tax registration" hint="Printed on quotations, purchase orders and invoices. A GST invoice needs both.">
           <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
             <FormField name="ntn" label={<>NTN{NEEDED_GST}</>}>
@@ -254,8 +270,25 @@ function ProfileForm({ profile }: { profile: CompanyProfile }) {
               </div>
             )}
           </FormField>
-          <FormField name="quotation_terms" label="Quotation terms" requirement="optional">
+          <FormField
+            name="quote_next_number"
+            label="Next quotation number"
+            help="New quotations are numbered QTS, the customer code, then this number. A number already used is never taken again."
+          >
+            {f => (
+              <div className="min-w-0 sm:max-w-[12.5rem]">
+                <NumberInput {...f} decimals={0} min={1} className="w-full" />
+              </div>
+            )}
+          </FormField>
+          <FormField name="quotation_terms" label="Quotation terms" requirement="optional" help="Extra lines added under Terms and Conditions.">
             {f => <TextArea {...f} rows={5} />}
+          </FormField>
+          <FormField name="quotation_warranty" label="Warranty" requirement="optional" help="Printed under Warranty on every quotation.">
+            {f => <TextArea {...f} rows={4} />}
+          </FormField>
+          <FormField name="quotation_closing" label="Closing line" requirement="optional" help="Printed after the warranty, above the signature.">
+            {f => <TextArea {...f} rows={2} />}
           </FormField>
           <FormField name="po_terms" label="Purchase order terms" requirement="optional">
             {f => <TextArea {...f} rows={4} />}
@@ -358,6 +391,8 @@ function ProfileReadOnly({ profile: p, financial, engineer }: { profile: Company
           <Row label="Phone" value={p.phone} mono href={v => `tel:${v.split(/[,;/]/)[0].replace(/[^\d+]/g, '')}`} />
           <Row label="Email" value={p.email} href={v => `mailto:${v.trim()}`} />
           <Row label="Website" value={p.website} href={v => (/^https?:\/\//i.test(v.trim()) ? v.trim() : `https://${v.trim()}`)} />
+          <Row label="Sales cell number" value={p.sales_phone} mono href={v => `tel:${v.replace(/[^\d+]/g, '')}`} />
+          <Row label="Sales email" value={p.sales_email} href={v => `mailto:${v.trim()}`} />
         </dl>
       </Section>
       {financial ? (
@@ -387,7 +422,10 @@ function ProfileReadOnly({ profile: p, financial, engineer }: { profile: Company
           <Section title="Quotations and purchase orders">
             <dl className={KV}>
               <Row label="Quotation validity" value={`${p.quotation_validity_days} days`} />
+              <Row label="Next quotation number" value={p.quote_next_number} mono />
               <Row label="Quotation terms" value={p.quotation_terms} />
+              <Row label="Warranty" value={p.quotation_warranty} />
+              <Row label="Closing line" value={p.quotation_closing} />
               <Row label="Purchase order terms" value={p.po_terms} />
             </dl>
           </Section>

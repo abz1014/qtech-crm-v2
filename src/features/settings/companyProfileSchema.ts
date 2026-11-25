@@ -10,6 +10,8 @@ export const profileSchema = z.object({
   phone: text(50, 'the phone number'),
   email: z.union([z.literal(''), text(200, 'the email').email('Enter a valid email address, or leave it empty.')]),
   website: text(200, 'the website'),
+  sales_email: z.union([z.literal(''), text(200, 'the sales email').email('Enter a valid email address, or leave it empty.')]),
+  sales_phone: text(50, 'the sales cell number'),
   // HW-47: the NTN prints on every sales-tax invoice, so only an NTN shape is kept: 7 digits and the check digit
   // (1234567-8), or a 13-digit CNIC used as the NTN (35202-1234567-1). Empty is still allowed.
   ntn: text(50, 'the NTN').refine(v => v === '' || NTN_RE.test(v), 'Enter the NTN as 7 digits and the check digit (1234567-8), or the 13-digit CNIC.'),
@@ -28,6 +30,13 @@ export const profileSchema = z.object({
     .min(0, 'Payment terms cannot be negative.')
     .max(365, 'Keep the terms to a year or less.'),
   quotation_terms: text(4000, 'the terms'),
+  quotation_warranty: text(4000, 'the warranty'),
+  quotation_closing: text(2000, 'the closing line'),
+  quote_next_number: z
+    .number({ error: 'Enter the next quotation number.' })
+    .int('Use a whole number.')
+    .min(1, 'The next quotation number must be at least 1.')
+    .max(999_999_999, 'Keep the number under a billion.'),
   po_terms: text(4000, 'the terms'),
 })
 export type ProfileValues = z.infer<typeof profileSchema>

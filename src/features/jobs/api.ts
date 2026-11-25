@@ -170,6 +170,12 @@ export function quotationNumberOf(text: string): number | null {
   return m ? Number(m[1]) : null
 }
 
+/** "QTS-IFL-4810" or "qts ifl 4810": a quotation number with its customer code (0147). */
+export function quotationCodeRefOf(text: string): { code: string; number: number } | null {
+  const m = /^qts[-\s]*([a-z]{2,6})[-\s]*(\d{1,9})$/i.exec(text.trim())
+  return m ? { code: m[1].toUpperCase(), number: Number(m[2]) } : null
+}
+
 const FETCH_LIMIT = 25
 
 /**
@@ -177,7 +183,7 @@ const FETCH_LIMIT = 25
  *  - its number: "139", "Job 139", "O-45";
  *  - what the palette search already finds: RFQ and ORD numbers, customer reference, customer PO, supplier PO numbers, invoice
  *    numbers (admin and sales; the database returns none to an engineer), order items, and a company or contact (all its jobs);
- *  - a quotation number "QT-26-0031" (admin and sales: engineers cannot read quotations);
+ *  - a quotation number "QTS-IFL-4810", or an older "QT-26-0031" (admin and sales: engineers cannot read quotations);
  *  - an enquiry's item words, which the palette's own search does not cover.
  * `hits` lets the palette hand over the search_all answer it already has, so it asks the database once.
  */
@@ -198,9 +204,14 @@ export async function findJobs(text: string, signal?: AbortSignal, hits?: Search
   }
   const key = jobKeyOf(q)
   const qt = quotationNumberOf(q)
+  const qts = quotationCodeRefOf(q)
   const like = `%${q.replace(/[\\%_]/g, c => `\\${c}`)}%`
   // two small reads that may fail without failing the search (an engineer cannot read quotations)
   const quoteIds = async (): Promise<string[]> => {
+    if (qts) {
+      const r = await db.from('quotations').select('rfq_id').eq('number', qts.number).eq('quote_code', qts.code).limit(25)
+      return r.error ? [] : r.data.map(x => x.rfq_id)
+    }
     if (qt === null) return []
     const r = await db.from('quotations').select('rfq_id').eq('number', qt).limit(25)
     return r.error ? [] : r.data.map(x => x.rfq_id)

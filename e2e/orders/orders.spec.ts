@@ -323,7 +323,7 @@ test.describe('O01: Mark won creates the order', () => {
     const dialog = page.getByRole('dialog')
     await expect(price(dialog, 1)).toHaveValue('1,000')
     await expect(dialog.getByRole('checkbox', { name: 'Include line 3' })).not.toBeChecked()
-    await expect(dialog.getByTestId('convert-item-3-not-in')).toContainText(/Not in QT-\d\d-\d{4}/)
+    await expect(dialog.getByTestId('convert-item-3-not-in')).toContainText(/Not in (QTS-[A-Z]{2,6}-\d+|QT-\d\d-\d{4})/)
     await expect(dialog.getByText('Creates 2 order lines.')).toBeVisible()
     await dialog.getByRole('button', { name: 'Supplier for line 1' }).click()
     await page.getByRole('option', { name: new RegExp(s.supplierA.name) }).click()

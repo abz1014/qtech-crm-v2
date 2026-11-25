@@ -49,8 +49,8 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
     await expect(dialog(page).getByTestId('pdf-ready')).toBeVisible({ timeout: 30_000 })
   })
 
-  const q = await db.one<{ id: string; number: number; revision: number; issued_on: string; valid_until: string; net_total: number; gst_total: number; pdf_path: string | null; lines: { rfq_item_id: string; unit_price_net: number; gst_rate: number }[] }>(
-    `quotations?rfq_id=eq.${r.rfq.id}&select=id,number,revision,issued_on,valid_until,net_total,gst_total,pdf_path,lines`,
+  const q = await db.one<{ id: string; number: number; quote_code: string | null; revision: number; issued_on: string; valid_until: string; net_total: number; gst_total: number; pdf_path: string | null; lines: { rfq_item_id: string; unit_price_net: number; gst_rate: number }[] }>(
+    `quotations?rfq_id=eq.${r.rfq.id}&select=id,number,quote_code,revision,issued_on,valid_until,net_total,gst_total,pdf_path,lines`,
   )
   await test.step('the quotation, its lines and its PDF', async () => {
     expect([q.revision, num(q.net_total), num(q.gst_total)]).toEqual([0, 41364.55, 6096])
@@ -73,9 +73,10 @@ test('issue a quotation with an exempt line and a decimal quantity, then Mark wo
     expect(pdfIsValid(stored)).toBe(true)
     const text = stored ? pdfText(stored) : null
     if (text) {
-      expect(text).toContain(ref.quotation(q.number, q.issued_on))
-      expect(text).toContain(pkr(47460.55))
-      expect(text).toContain(pkr(6096))
+      expect(text).toContain(ref.quotation(q.number, q.issued_on, q.quote_code))
+      // the owner's template: the gross without GST, and no GST or total with GST
+      expect(text).toContain('41,364.55')
+      expect(text).not.toContain('47,460.55')
     }
     await dialog(page).getByRole('button', { name: QUOTES.issue.done }).click()
   })

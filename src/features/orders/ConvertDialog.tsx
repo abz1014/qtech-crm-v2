@@ -162,7 +162,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     if (qs.length === 0) return null
     const last = qs.reduce((x, y) => (y.revision > x.revision ? y : x))
     const first = qs.find(q => q.revision === 0) ?? last
-    return { ref: quotationRef(last.number, first.issuedOn, last.revision), lines: last.lines }
+    return { ref: quotationRef(last.number, first.issuedOn, last.revision, last.code), lines: last.lines }
   })()
   const latestQuote = latest?.ref ?? null
 
@@ -179,7 +179,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
     memory: (memoryQ.data ?? []).map(m => ({
       itemId: m.itemId,
       quotedPrice: m.quotedPrice,
-      quotedRef: m.quotedNumber !== null && m.quotedOn ? quotationRef(m.quotedNumber, m.quotedOn, m.quotedRevision ?? undefined) : null,
+      quotedRef: m.quotedNumber !== null && m.quotedOn ? quotationRef(m.quotedNumber, m.quotedOn, m.quotedRevision ?? undefined, m.quotedCode) : null,
       quotedOn: m.quotedOn,
       soldPrice: m.soldPrice,
       soldOrderNumber: m.soldOrderNumber,

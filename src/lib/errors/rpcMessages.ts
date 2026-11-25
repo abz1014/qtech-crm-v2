@@ -101,6 +101,8 @@ export const RPC_MESSAGES: readonly RpcEntry[] = [
   { match: /^set the currency of this supplier order before issuing a PO$/, message: () => "The PO was not issued. Choose the supplier's currency on this supplier order, then issue the PO.", help: 'issue-po' },
   { match: /^an issued (.+?) cannot be changed; issue a new revision$/, message: () => 'An issued quotation or PO cannot be edited. Use Revise.', help: 'revise-quotation' },
   { match: /^the PDF of this issued (.+?) is already attached; only an admin can replace it$/, message: m => `This ${m[1]} already has its PDF. Only an admin can replace it.` },
+  // 0147 (quote template): the customer's code in QTS-<code>-<number>
+  { match: /^a quote code is set by admin and sales only$/, message: () => ADMIN_SALES },
   { match: /^the RFQ has no items to (quote|convert)$/, message: () => 'The RFQ has no items. Add at least one item, then try again.' },
   // 0077: already plain; Create order opens that order instead (existingOrderOf in src/features/orders/api.ts).
   { match: /^This RFQ is already order ORD-.+\.$/ },

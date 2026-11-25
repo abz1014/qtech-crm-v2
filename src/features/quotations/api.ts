@@ -23,6 +23,8 @@ export interface QuotationLine {
 export interface QuotationRow {
   id: string
   number: number
+  /** The customer code frozen at the first issue (0147): QTS-<code>-<number>. Null on an older quotation (QT-YY-NNNN). */
+  code: string | null
   revision: number
   issuedOn: string
   validUntil: string
@@ -38,11 +40,12 @@ export interface QuotationRow {
 }
 
 const COLS =
-  'id, number, revision, issued_on, valid_until, contact_id, lines, net_total, gst_total, delivery_text, payment_terms, notes, signatory_id, pdf_path'
+  'id, number, quote_code, revision, issued_on, valid_until, contact_id, lines, net_total, gst_total, delivery_text, payment_terms, notes, signatory_id, pdf_path'
 
 type DbQuotation = {
   id: string
   number: number
+  quote_code: string | null
   revision: number
   issued_on: string
   valid_until: string
@@ -61,6 +64,7 @@ function toRow(r: DbQuotation): QuotationRow {
   return {
     id: r.id,
     number: r.number,
+    code: r.quote_code,
     revision: r.revision,
     issuedOn: r.issued_on,
     validUntil: r.valid_until,
@@ -77,7 +81,7 @@ function toRow(r: DbQuotation): QuotationRow {
 }
 
 /** The same without the lines and totals: what an engineer reads (owner decision 2026-10-22: no prices, not even fetched). */
-const COLS_NO_PRICES = 'id, number, revision, issued_on, valid_until, contact_id, delivery_text, payment_terms, notes, signatory_id, pdf_path'
+const COLS_NO_PRICES = 'id, number, quote_code, revision, issued_on, valid_until, contact_id, delivery_text, payment_terms, notes, signatory_id, pdf_path'
 
 /**
  * Every revision of the RFQ's quotation, newest first. `prices` false (an engineer) reads no lines and no totals: the rows
@@ -146,11 +150,20 @@ export interface PriceMemory {
   quotedOn: string | null
   quotedNumber: number | null
   quotedRevision: number | null
+  /** The customer code of that quotation (0147), so the chip reads QTS-IFL-4810. Null for an older quotation. */
+  quotedCode: string | null
 }
 
 export async function getPriceMemory(rfqId: string): Promise<PriceMemory[]> {
-  const rows = unwrap(await requireSupabase().rpc('customer_price_memory', { p_rfq_id: rfqId })) ?? []
+  const db = requireSupabase()
+  const rows = unwrap(await db.rpc('customer_price_memory', { p_rfq_id: rfqId })) ?? []
+  // customer_price_memory gives the number, revision and date of the last quotation; its customer code is read here. Matched on all
+  // three, because an older QT number can equal a QTS one. A failed read only drops the code from the chip.
+  const nums = [...new Set(rows.map(r => r.quoted_number).filter((n): n is number => n !== null))]
+  const coded = nums.length ? await db.from('quotations').select('number, revision, issued_on, quote_code').in('number', nums).not('quote_code', 'is', null) : null
+  const codeOf = new Map((coded && !coded.error ? coded.data : []).map(q => [`${q.number}/${q.revision}/${q.issued_on}`, q.quote_code] as const))
   return rows.map(r => ({
+    quotedCode: codeOf.get(`${r.quoted_number}/${r.quoted_revision}/${r.quoted_on}`) ?? null,
     itemId: r.rfq_item_id,
     soldPrice: r.sold_price === null ? null : Number(r.sold_price),
     soldOn: r.sold_on,
@@ -229,13 +242,20 @@ export interface PdfData {
   previous: { revision: number; issuedOn: string } | null
   /** Year the number was first issued (revision 0's issue date), which QT-YY-NNNN uses. */
   firstIssuedOn: string
-  customer: { name: string; country: string | null }
+  /** `code` is the customer's quote code now: a preview of a first issue prints it before the quotation has one of its own. */
+  customer: { name: string; country: string | null; city?: string | null; code?: string | null; address?: string | null }
   siteName: string | null
   siteAddress: string | null
   attention: string | null
   attentionTitle: string | null
   customerRef: string | null
   rfqNumber: number
+  /** The day the customer's request came in (rfqs.received_on), printed as the inquiry date. */
+  receivedOn?: string | null
+  /** The brand of each quoted item, by rfq_item_id, printed as "Make:" under the description. */
+  brands?: Record<string, string>
+  /** The currency the prices are in. Quotations are in PKR, the default. */
+  currency?: string
   signatory: { name: string; jobTitle: string | null; phone: string | null } | null
   /** A preview of a quotation that has not been issued: the PDF says so and prints no real number. */
   preview?: boolean
@@ -247,22 +267,24 @@ export async function loadPdfData(quotationId: string): Promise<PdfData> {
   const quotation = await getQuotation(quotationId)
   const link = unwrap(await db.from('quotations').select('rfq_id').eq('id', quotationId).maybeSingle()) as { rfq_id: string } | null
   if (!link) throw new Error('This quotation could not be found.')
-  const rfq = unwrap(await db.from('rfqs').select('id, number, company_id, site_id, contact_id, customer_ref').eq('id', link.rfq_id).maybeSingle()) as {
+  const rfq = unwrap(await db.from('rfqs').select('id, number, company_id, site_id, contact_id, customer_ref, received_on').eq('id', link.rfq_id).maybeSingle()) as {
     id: string
     number: number
     company_id: string
     site_id: string | null
     contact_id: string | null
     customer_ref: string | null
+    received_on: string | null
   } | null
   if (!rfq) throw new Error('The RFQ of this quotation could not be found.')
   const contactId = quotation.contactId ?? rfq.contact_id
-  const [company, site, contact, signatory, revs] = await Promise.all([
-    db.from('companies').select('name, country').eq('id', rfq.company_id).single(),
+  const [company, site, contact, signatory, revs, brands] = await Promise.all([
+    db.from('companies').select('name, country, city, quote_code, invoice_address').eq('id', rfq.company_id).single(),
     rfq.site_id ? db.from('company_sites').select('name, address').eq('id', rfq.site_id).maybeSingle() : Promise.resolve(null),
     contactId ? db.from('contacts').select('name, job_title').eq('id', contactId).maybeSingle() : Promise.resolve(null),
     loadSignatory(quotation.signatoryId),
     db.from('quotations').select('revision, issued_on').eq('rfq_id', rfq.id).order('revision'),
+    loadBrands(quotation.lines.map(l => l.rfq_item_id)),
   ])
   const c = unwrap(company)
   const s = site ? unwrap(site) : null
@@ -274,15 +296,33 @@ export async function loadPdfData(quotationId: string): Promise<PdfData> {
     quotation,
     previous: prev ? { revision: prev.revision, issuedOn: prev.issued_on } : null,
     firstIssuedOn: all[0]?.issued_on ?? quotation.issuedOn,
-    customer: { name: c?.name ?? 'Unknown company', country: c?.country ?? null },
+    customer: { name: c?.name ?? 'Unknown company', country: c?.country ?? null, city: c?.city ?? null, code: c?.quote_code ?? null, address: c?.invoice_address ?? null },
     siteName: s?.name ?? null,
     siteAddress: s?.address ?? null,
     attention: k?.name ?? null,
     attentionTitle: k?.job_title ?? null,
     customerRef: rfq.customer_ref,
     rfqNumber: rfq.number,
+    receivedOn: rfq.received_on,
+    brands,
     signatory: u,
   }
+}
+
+/** The brand name of each item, by rfq_item_id: the PDF's "Make:" line. A failed read prints no Make line, it does not stop the PDF. */
+export async function loadBrands(itemIds: string[]): Promise<Record<string, string>> {
+  if (itemIds.length === 0) return {}
+  const db = requireSupabase()
+  const items = await db.from('rfq_items').select('id, brand_id').in('id', itemIds)
+  if (items.error) return {}
+  const brandIds = [...new Set(items.data.map(i => i.brand_id).filter((b): b is string => Boolean(b)))]
+  if (brandIds.length === 0) return {}
+  const names = await db.from('brands').select('id, name').in('id', brandIds)
+  if (names.error) return {}
+  const nameOf = new Map(names.data.map(b => [b.id, b.name] as const))
+  const out: Record<string, string> = {}
+  for (const i of items.data) if (i.brand_id && nameOf.has(i.brand_id)) out[i.id] = nameOf.get(i.brand_id) as string
+  return out
 }
 
 /** The signed-in person as the PDF prints them: name, job title and phone (all optional but the name). */

@@ -19,15 +19,15 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 /** "2 issued quotations (QT-26-0012 R0, R1)": the numbers once, then the revisions. */
 export function quotationsPhrase(qs: api.RfqDeleteCounts['quotations']): string {
-  const byNumber = new Map<number, { issuedOn: string; revisions: number[] }>()
+  const byNumber = new Map<number, { issuedOn: string; code: string | null; revisions: number[] }>()
   for (const q of qs) {
-    const g = byNumber.get(q.number) ?? { issuedOn: q.issuedOn, revisions: [] }
+    const g = byNumber.get(q.number) ?? { issuedOn: q.issuedOn, code: q.code ?? null, revisions: [] }
     g.revisions.push(q.revision)
     byNumber.set(q.number, g)
   }
   const named = [...byNumber].map(
     ([n, g]) =>
-      `${quotationRef(n, g.issuedOn, g.revisions[0])}${g.revisions
+      `${quotationRef(n, g.issuedOn, g.revisions[0], g.code)}${g.revisions
         .slice(1)
         .map(r => `, R${r}`)
         .join('')}`,

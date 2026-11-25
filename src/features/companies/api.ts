@@ -3,6 +3,7 @@ import { hideArchived } from '@/lib/archive'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { toBusinessDate } from '@/lib/dates'
 import { PlainError } from '@/lib/errors/plainError'
+import { normalizeQuoteCode } from '@/features/companies/quoteCode'
 import { paisaToFixed, sumPaisa } from '@/lib/money'
 import { fetchReceivablesList } from '@/features/money/payments/api'
 import type { RawInquiry, RawItem, RawLeg, RawLine, RawOrderItem, RawRfq, SupplierRecordRaw } from '@/features/companies/supplierRecord'
@@ -40,6 +41,8 @@ export interface CompanyDetail {
   country: string | null
   city: string | null
   notes: string | null
+  /** The customer's code in quotation numbers, QTS-<code>-4810 (0147). Null until someone sets it. */
+  quoteCode: string | null
   createdAt: string
   role: CompanyRole | null
   isCustomer: boolean
@@ -250,7 +253,7 @@ export async function findCompanyByName(name: string): Promise<CompanyHit | null
 export async function getCompany(id: string): Promise<CompanyDetail | null> {
   const db = requireSupabase()
   const [company, role] = await Promise.all([
-    db.from('companies').select('id, name, country, city, notes, created_at, legacy_flags, imported:legacy_source->imported').eq('id', id).maybeSingle(),
+    db.from('companies').select('id, name, country, city, notes, quote_code, created_at, legacy_flags, imported:legacy_source->imported').eq('id', id).maybeSingle(),
     db.from('v_company_roles').select('role, is_customer, is_supplier').eq('company_id', id).maybeSingle(),
   ])
   const c = unwrap(company)
@@ -262,6 +265,7 @@ export async function getCompany(id: string): Promise<CompanyDetail | null> {
     country: c.country,
     city: c.city,
     notes: c.notes,
+    quoteCode: c.quote_code,
     createdAt: c.created_at,
     role: asRole(r?.role),
     isCustomer: r?.is_customer ?? false,
@@ -770,9 +774,9 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
   )
 }
 
-type CompanyEditable = { name?: string; country?: string | null; city?: string | null; notes?: string | null }
-const EDITABLE = ['name', 'country', 'city', 'notes'] as const
-const EDITABLE_LABEL: Record<(typeof EDITABLE)[number], string> = { name: 'Company name', country: 'Country', city: 'City', notes: 'Notes' }
+type CompanyEditable = { name?: string; country?: string | null; city?: string | null; notes?: string | null; quote_code?: string | null }
+const EDITABLE = ['name', 'country', 'city', 'notes', 'quote_code'] as const
+const EDITABLE_LABEL: Record<(typeof EDITABLE)[number], string> = { name: 'Company name', country: 'Country', city: 'City', notes: 'Notes', quote_code: 'Quote code' }
 
 /** HW-25: the code of the refusal when someone else changed a field this save would overwrite. */
 export const STALE_EDIT = 'stale-edit'
@@ -784,13 +788,18 @@ export const STALE_EDIT = 'stale-edit'
  * - when someone else changed one of those same fields since the form opened, nothing is saved and the person is told to reload;
  * - the write carries the row's updated_at as read just before, so a change landing in between is refused the same way.
  */
-export async function updateCompany(id: string, patch: CompanyEditable, base?: Required<{ [K in keyof CompanyEditable]: string | null }>) {
+export async function updateCompany(
+  id: string,
+  patch: CompanyEditable,
+  base?: Required<{ [K in Exclude<keyof CompanyEditable, 'quote_code'>]: string | null }> & { quote_code?: string | null },
+) {
   const db = requireSupabase()
-  const next: { name?: string; country?: string | null; city?: string | null; notes?: string | null } = {
+  const next: CompanyEditable = {
     ...(patch.name !== undefined ? { name: tidyCompanyName(patch.name) } : {}),
     ...(patch.country !== undefined ? { country: patch.country?.trim() || null } : {}),
     ...(patch.city !== undefined ? { city: patch.city?.trim() || null } : {}),
     ...(patch.notes !== undefined ? { notes: patch.notes?.trim() || null } : {}),
+    ...(patch.quote_code !== undefined ? { quote_code: patch.quote_code ? normalizeQuoteCode(patch.quote_code) || null : null } : {}),
   }
   if (!base) {
     unwrap(await db.from('companies').update(next).eq('id', id).select('id').single())
@@ -798,8 +807,8 @@ export async function updateCompany(id: string, patch: CompanyEditable, base?: R
   }
   const changed = EDITABLE.filter(k => k in next && (next[k] ?? null) !== (base[k] ?? null))
   if (changed.length === 0) return
-  const current: Pick<TableRow<'companies'>, 'name' | 'country' | 'city' | 'notes' | 'updated_at'> | null = unwrap(
-    await db.from('companies').select('name, country, city, notes, updated_at').eq('id', id).maybeSingle(),
+  const current: Pick<TableRow<'companies'>, 'name' | 'country' | 'city' | 'notes' | 'quote_code' | 'updated_at'> | null = unwrap(
+    await db.from('companies').select('name, country, city, notes, quote_code, updated_at').eq('id', id).maybeSingle(),
   )
   if (!current) throw new PlainError('This company is no longer there. It may have been merged or removed. Reload the page.')
   const stale = () => {
@@ -812,6 +821,17 @@ export async function updateCompany(id: string, patch: CompanyEditable, base?: R
   for (const k of changed) Object.assign(send, { [k]: next[k] })
   const saved = unwrap(await db.from('companies').update(send).eq('id', id).eq('updated_at', current.updated_at).select('id'))
   if (saved.length === 0) throw stale()
+}
+
+/** Every quote code in use, so a suggestion never names one another customer has. */
+export async function listQuoteCodes(): Promise<Set<string>> {
+  const rows = unwrap(await requireSupabase().from('companies').select('quote_code').not('quote_code', 'is', null))
+  return new Set(rows.map(r => r.quote_code).filter((c): c is string => Boolean(c)))
+}
+
+/** Sets a customer's quote code (admin and sales; 0147 refuses an engineer). Another customer's code is refused as a duplicate. */
+export async function setQuoteCode(companyId: string, code: string): Promise<void> {
+  unwrap(await requireSupabase().from('companies').update({ quote_code: normalizeQuoteCode(code) }).eq('id', companyId).select('id').single())
 }
 
 export async function addSite(input: { id: string; companyId: string; name: string; address?: string | null }) {
