@@ -193,6 +193,10 @@ select is(pg_temp.try_('admin', $q$select string_agg(kind || ':' || can_clear, '
   'ok:other_order_lines:true', '7 other_order_lines: a line of another order taken from this enquiry');
 select is(pg_temp.try_('admin', $q$select string_agg(order_number::text, ',') from public.job_delete_blockers(@60, null)$q$),
   'ok:' || (select o.number from public.orders o where o.id = pg_temp.u('62'))::text, 'and it names that other order');
+select is(pg_temp.try_('admin', $q$select ref_label ~ '^1 line of ORD-[0-9]+ come from this RFQ$' from public.job_delete_blockers(@60, null)$q$),
+  'ok:true', 'and says the lines come from this RFQ (0148: never enquiry)');
+select is(pg_temp.try_('admin', $q$select string_agg(ref_label, ',') from public.job_delete_blockers(null, @10)$q$) ~ '^ok:PKR [0-9,.]+ payment$',
+  true, 'a payment is labelled in PKR (0148: never Rs)');
 select is(pg_temp.try_('admin', $q$select string_agg(step::text, ',' order by step) from public.job_delete_blockers(null, @10)$q$), 'ok:3', 'step numbers: payment is step 3');
 
 -- ================================================================== delete_job refused while blocked
@@ -251,7 +255,7 @@ insert into public.orders (id, company_id, owner_id, created_by, rfq_id) values
 
 select is(pg_temp.try_('admin', $q$select string_agg(kind || ':' || can_clear || ':' || coalesce(order_id::text, '-'), ',' order by step) from public.job_delete_blockers(@90, null)$q$),
   'ok:expense:true:-', 'a cost on an enquiry with no order is a clearable expense step');
-select is(pg_temp.try_('admin', $q$select ref_label from public.job_delete_blockers(@90, null)$q$), 'ok:0132 travel to site, Rs 40.00 (on the enquiry)', 'and it names the cost');
+select is(pg_temp.try_('admin', $q$select ref_label from public.job_delete_blockers(@90, null)$q$), 'ok:0132 travel to site, PKR 40.00 (on the RFQ)', 'and it names the cost (0148: PKR and RFQ, never Rs or enquiry)');
 select is(pg_temp.code_('admin', 'select count(*)::text from public.delete_job(@90, null)'), 'E:P0001:has_blockers',
   'delete_job: refused with a guide step, not the bare rfq_has_costs');
 select is(pg_temp.try_('admin', $q$select string_agg(kind || ':' || can_clear, ',' order by step) from public.job_delete_blockers(@91, null)$q$),
