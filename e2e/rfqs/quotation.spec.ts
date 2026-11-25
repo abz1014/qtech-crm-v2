@@ -417,7 +417,7 @@ test.describe('company profile incomplete (the PDF is blocked, saving never is)'
 })
 
 test.describe('a long quotation', () => {
-  test('runs onto more pages with the table header repeated and the page count in the footer', async ({ page, context }) => {
+  test('runs onto more pages with the table header repeated on each page', async ({ page, context }) => {
     await setProfile(true)
     const co = await createCompany(uniqueName('Long Quote Customer'))
     const rfq = await createRfq(co.id, { customer_ref: 'LONG-1' })
@@ -437,9 +437,9 @@ test.describe('a long quotation', () => {
     expect(pdfIsValid(pdf)).toBe(true)
     const text = pdf ? pdfText(pdf) : null
     if (text) {
-      expect(text).toMatch(/Page 1 of [2-9]/)
-      expect((text.match(/Lead time/g) ?? []).length).toBeGreaterThanOrEqual(2) // the header is repeated on each page
-      expect(text).toContain('item 30')
+      // the owner's template has no page count: the table header (Sr#, Item Description) repeats on each page instead
+      expect((text.match(/Item Description/g) ?? []).length).toBeGreaterThanOrEqual(2)
+      expect(text).toMatch(/item 30/i)
     }
     if (pdf && process.env.REVIEW_DIR) renderPdfPng(pdf, process.env.REVIEW_DIR, 'rfq-quotation-pdf-long-page1')
   })
@@ -493,8 +493,9 @@ test.describe('partial quotations and Preview PDF', () => {
     expect(pdfIsValid(pdf)).toBe(true)
     const text = pdf ? pdfText(pdf) : null
     if (text) {
-      expect(text).toContain('Pressure transmitter')
-      expect(text).not.toContain('Flow meter')
+      // item descriptions print in capitals, as on the owner's template
+      expect(text).toMatch(/Pressure transmitter/i)
+      expect(text).not.toMatch(/Flow meter/i)
     }
     // Item 1 was left alone: no price was written to it.
     const rows = await must(rest<{ id: string; quoted_unit_price_net: number | null }[]>('admin', `rfq_items?id=eq.${s.items[0].id}&select=id,quoted_unit_price_net`))
