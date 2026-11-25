@@ -34,7 +34,7 @@ function setup(ui: React.ReactNode, role = 'admin') {
 }
 
 const menu = (over: Partial<React.ComponentProps<typeof RevisionMenu>> = {}) => (
-  <RevisionMenu rfqId="r-1" quotationId="q-1" revision={1} hasPdf latest only={false} label="QT-26-0012 revision 1" context="QT-26-0012 R1 · Indus" {...over} />
+  <RevisionMenu rfqId="r-1" quotationId="q-1" revision={1} hasPdf latest only={false} label="QT-26-0012 revision 1" context="QT-26-0012 Rev 1 · Indus" {...over} />
 )
 
 describe('the quotation revision menu', () => {
