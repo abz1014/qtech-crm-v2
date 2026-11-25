@@ -4,8 +4,7 @@ import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { useSession } from '@/app/session'
 import { lazyWithReload as lazy } from '@/lib/importWithReload'
 import { MONTH_REPORT_KEYS } from '@/features/money/monthEnd/reportList'
-import { defaultMonthEndMonth, isMonthKey } from '@/features/money/monthEnd/model'
-import { businessToday } from '@/lib/dates'
+import { thisMonthKey } from '@/features/money/monthParam'
 
 // One download per page (perf/lcp): opening To collect does not bring the month-end reports, the expense sheet and the rest.
 const ReviewImportedPage = lazy(() => import('@/features/money/review/ReviewImportedPage').then(m => ({ default: m.ReviewImportedPage })))
@@ -80,13 +79,14 @@ function OldReportAddress({ report }: { report: string }) {
 
 /**
  * /money/reports/categories?month=2026-09 (the old "Expenses by category", replaced by the Expenses report on 2026-10-22) opens
- * /money/reports/expenses?by=month&period=2026-09; with no month, the month Lock a month shows (the one that just ended).
+ * /money/reports/expenses?by=month&period=2026-09; with no month, this month, as every report.
  */
 function OldCategoriesAddress() {
   const { search } = useLocation()
   const asked = new URLSearchParams(search).get('month')
-  const month = isMonthKey(asked) ? asked : defaultMonthEndMonth(businessToday())
-  return <Navigate to={{ pathname: '/money/reports/expenses', search: `?by=month&period=${month}` }} replace />
+  // a month that cannot be shown goes along as it is: the Expenses report puts it right and says so
+  const month = asked ?? thisMonthKey()
+  return <Navigate to={{ pathname: '/money/reports/expenses', search: `?by=month&period=${encodeURIComponent(month)}` }} replace />
 }
 
 function ReportRoute({ isAdmin }: { isAdmin: boolean }) {

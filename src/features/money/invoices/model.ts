@@ -68,17 +68,25 @@ export interface InvoiceStart {
 
 /** The amounts a new invoice opens with: what is left of the order's lines after earlier invoices (net and GST pre-filled). */
 export function invoiceStart(a: OrderAmounts): InvoiceStart {
-  const net = Math.max(round2(a.itemsNet - a.invoicedNet), 0)
-  const gst = Math.max(round2(a.itemsGst - a.invoicedGst), 0)
+  // In whole paisa, so a full invoice of what is left closes the order to exactly 0 (no float leftover).
+  const netP = maxP(toPaisa(a.itemsNet) - toPaisa(a.invoicedNet))
+  const gstP = maxP(toPaisa(a.itemsGst) - toPaisa(a.invoicedGst))
+  // As v_order_state (0112): once there is an invoice, fully invoiced when the invoices carry the order's gross less at most PKR 1
+  // (an order with no invoice yet is never fully invoiced, however small).
+  const invoiced = toPaisa(a.invoicedNet) > 0n || toPaisa(a.invoicedGst) > 0n
+  const fullyInvoiced = a.itemsNet > 0 && (netP <= 0n || (invoiced && netP + gstP <= OVER_INVOICE_ALLOWANCE_PAISA))
+  // what is left, exact to the paisa (a leftover within the allowance stays visible here; the dialog does not prefill it)
+  const net = Number(paisaToFixed(netP))
+  const gst = Number(paisaToFixed(gstP))
   const allExempt = a.lineCount > 0 && a.exemptLineCount === a.lineCount
   const noneExempt = a.exemptLineCount === 0
   const option: GstOption | 'mixed' = allExempt ? 'exempt' : noneExempt ? '18' : 'mixed'
   return {
     net,
     gst,
-    gross: round2(net + gst),
+    gross: Number(paisaToFixed(toPaisa(net) + toPaisa(gst))),
     option,
-    fullyInvoiced: net <= 0 && a.itemsNet > 0,
+    fullyInvoiced,
     wholeOrder: a.invoicedNet <= 0 && a.invoicedGst <= 0,
     lines: a.lines,
   }
@@ -152,8 +160,10 @@ export function gstForNet(
   return Number(paisaToFixed(rupees * 100n))
 }
 
-/** Rupees allowed over what is left, as in v_order_state's "fully invoiced" (Rs 1 allowance). */
+/** Rupees allowed over what is left, as in v_order_state's "fully invoiced" (PKR 1 allowance). */
 export const OVER_INVOICE_ALLOWANCE = 1
+const OVER_INVOICE_ALLOWANCE_PAISA = BigInt(OVER_INVOICE_ALLOWANCE * 100)
+const maxP = (p: bigint): bigint => (p > 0n ? p : 0n)
 
 /**
  * HW-13: a new invoice may not carry more net than is left to invoice on the order's lines (Rs 1 allowance). Returns the net
@@ -161,7 +171,7 @@ export const OVER_INVOICE_ALLOWANCE = 1
  */
 export function overInvoiced(net: number, start: Pick<InvoiceStart, 'net'>, itemsNet: number): number | null {
   if (!(itemsNet > 0) || !(net > 0)) return null
-  return net > start.net + OVER_INVOICE_ALLOWANCE ? start.net : null
+  return toPaisa(net) > toPaisa(start.net) + OVER_INVOICE_ALLOWANCE_PAISA ? start.net : null
 }
 
 /** A mixed-rate part invoice whose net is not a set of whole lines: its GST is a share, and its PDF needs the lines ticked. */

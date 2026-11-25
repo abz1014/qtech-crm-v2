@@ -47,6 +47,8 @@ export interface StatusRow {
 interface CheckDef {
   key: CheckKey
   label: string
+  /** The check's name when it has nothing (screen review 2026-11-24, item 16): the result, not the problem ("Bank statement matched"). */
+  cleared: string
   unit: [one: string, many: string]
   /** The one line under the figure when there are items. */
   has: (month: string) => string
@@ -73,6 +75,7 @@ export const CHECKS: readonly CheckDef[] = [
   {
     key: 'bank_unticked',
     label: 'Not matched to the bank statement',
+    cleared: 'Bank statement matched',
     unit: ['item', 'items'],
     has: () => 'Bank payments, bank expenses and FBR payments dated up to month end and not ticked yet.',
     none: () => 'Every bank item is matched to a statement.',
@@ -83,6 +86,7 @@ export const CHECKS: readonly CheckDef[] = [
   {
     key: 'uncategorised',
     label: 'Expenses without a category',
+    cleared: 'Every expense has a category',
     unit: ['to do', 'to do'],
     has: m => `${monthName(m)} expenses with no clear category, or an order cost with no order.`,
     none: () => 'Every expense has a category, and an order where it needs one.',
@@ -93,6 +97,7 @@ export const CHECKS: readonly CheckDef[] = [
   {
     key: 'recurring_not_recorded',
     label: 'Recurring expenses not recorded',
+    cleared: 'Recurring expenses recorded',
     unit: ['to do', 'to do'],
     has: m => `Recurring templates with no ${monthName(m)} expense yet.`,
     none: m => `Every recurring template has a ${monthName(m)} expense.`,
@@ -103,6 +108,7 @@ export const CHECKS: readonly CheckDef[] = [
   {
     key: 'provisional_margins',
     label: 'Margin not final',
+    cleared: 'Margins final',
     unit: ['order', 'orders'],
     has: m => `Settled by the end of ${monthName(m)}, costs not marked complete.`,
     none: () => 'Every settled order has its costs marked complete.',
@@ -113,6 +119,7 @@ export const CHECKS: readonly CheckDef[] = [
   {
     key: 'fbr_pending',
     label: 'GST not deposited with FBR',
+    cleared: 'GST deposited with FBR',
     unit: ['invoice', 'invoices'],
     has: m => `Invoices dated up to the end of ${monthName(m)} with no FBR deposit date.`,
     none: () => 'Every invoice has its FBR deposit.',
@@ -123,6 +130,7 @@ export const CHECKS: readonly CheckDef[] = [
   {
     key: 'unresolved_payments',
     label: 'Payments not split',
+    cleared: 'Payments split into net and GST',
     unit: ['payment', 'payments'],
     has: () => 'Counted in gross but not yet split into net and GST, because it is not recorded whether GST is included in the order price.',
     none: () => 'Every payment is split into net and GST.',
@@ -141,6 +149,8 @@ export type CheckDetails = Partial<Record<string, Record<string, unknown>>>
 export interface CheckCard {
   key: CheckKey
   label: string
+  /** The name when clear: "Bank statement matched". */
+  cleared: string
   n: number
   unit: string
   clear: boolean
@@ -272,6 +282,7 @@ export function buildChecklist(rows: readonly StatusRow[], month: string, detail
     return {
       key: c.key,
       label: c.label,
+      cleared: c.cleared,
       n,
       unit: n === 1 ? c.unit[0] : c.unit[1],
       clear: n === 0,

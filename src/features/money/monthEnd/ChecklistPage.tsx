@@ -14,12 +14,14 @@ import { useMediaQuery } from '@/lib/useMediaQuery'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { monthKeyLabel } from '@/features/money/expenses/model'
 import { useReconciliationInput } from '@/features/money/hooks'
+import { useCashInHand } from '@/features/money/expenses/hooks'
+import { PeriodNote } from '@/features/money/PeriodNote'
 import { MoneyFrame } from '@/features/money/MoneyFrame'
 import { CashInHandLine } from '@/features/money/expenses/CashInHand'
 import { openFindings, useCheckedSet } from '@/features/money/exceptions/checked'
 import { InfoTip } from '@/ui/InfoTip'
 import { CloseMonthDialog, ReopenMonthDialog } from '@/features/money/monthEnd/MonthDialogs'
-import { lockChecks, lockChecksWithItems } from '@/features/money/monthEnd/lockChecks'
+import { clearList, lockChecks, lockChecksWithItems } from '@/features/money/monthEnd/lockChecks'
 import { MonthPager, MonthStateChip } from '@/features/money/monthEnd/MonthEndFrame'
 import { useMonthEnd, type MonthEndCtx } from '@/features/money/monthEnd/useMonthEnd'
 import { ReportError } from '@/features/money/monthEnd/ReportParts'
@@ -73,7 +75,9 @@ export function ChecklistPage() {
         </Link>
       </div>
 
-      {isClosed ? <LockBar month={ctx.month} /> : null}
+      <PeriodNote />
+      {/* Who locked it and when: the hero says it once the checks load; without them (an error) the bar says it. */}
+      {isClosed ? <LockBar month={ctx.month} entry={ctx.statusError ? ctx.closedEntry : undefined} /> : null}
       {/* 0087 (A9, owner: yes): cash in hand, with Count cash, so a missing small cash expense shows before the month is locked.
           57-lock-month .lm-cash: CashInHandLine draws the one Forest card itself; below 360 the icon tile gives its width to the words. */}
       <div className="max-[359px]:[&>section>span:first-child]:hidden">
@@ -81,7 +85,12 @@ export function ChecklistPage() {
       </div>
 
       {ctx.statusError ? (
-        <ReportError title="The checklist did not load" onRetry={ctx.refetch} />
+        <div className="grid gap-4">
+          <ReportError title="The checklist did not load" onRetry={ctx.refetch} />
+          {/* A locked month keeps its way out (screen review 2026-11-24, item 16): who locked it and when (the bar above), and
+              Reopen in the locked-months list, so Try again is never the only action. */}
+          {isClosed ? <ClosedList ctx={ctx} onReopen={setReopen} /> : null}
+        </div>
       ) : !ctx.statusReady || !ctx.state ? (
         <ChecklistLoading />
       ) : ctx.state.kind === 'not-ended' && ctx.hasMoney === false ? (
@@ -117,7 +126,7 @@ export function ChecklistPage() {
 }
 
 /** 57-lock-month: the locked month's banner (.qb-banner), above the cash card and the hero. */
-function LockBar({ month }: { month: string }) {
+function LockBar({ month, entry }: { month: string; entry?: ClosedMonth }) {
   const name = monthName(month)
   return (
     <div data-testid="lock-bar" className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-card bg-tone-info-bg px-card py-4 text-base text-tone-info-fg">
@@ -125,6 +134,12 @@ function LockBar({ month }: { month: string }) {
       <p className="min-w-0 flex-[1_1_20rem] text-fg">
         <b className="font-bold">{monthKeyLabel(month)} is locked.</b> Payments, expenses and invoices dated in {name} are frozen.{' '}
         <span className="text-fg-2">Bank matching and the sent-to-customer and FBR dates stay open.</span>
+        {entry ? (
+          <span className="block text-sm text-fg-2" data-testid="lock-bar-who">
+            Locked {formatClosedAt(entry.closedAt)}
+            {entry.closedBy ? ` by ${entry.closedBy}` : ''}. Reopen it from Locked months below.
+          </span>
+        ) : null}
       </p>
     </div>
   )
@@ -138,7 +153,11 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const [open, setOpen] = useState(false)
   const state = ctx.state
   const closed = state?.kind === 'closed'
-  const withItems = lockChecksWithItems(lockChecks(ctx.cards, extra))
+  const checks = lockChecks(ctx.cards, extra)
+  const withItems = lockChecksWithItems(checks)
+  // Cash in hand not set up is a warning too (the card above says so): the summary never says "Every check is clear" under it.
+  const cash = useCashInHand()
+  const cashMissing = cash.data ? cash.data.kind === 'none' || cash.data.expected === null : false
   const day = closeWindowDay(ctx.month, ctx.today)
   const name = monthName(ctx.month)
   const target = closeTarget(ctx.month, state)
@@ -193,11 +212,16 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
           )}
         </div>
         <p className="text-lg" data-testid="checks-summary">
-          {withItems === 0 ? (
+          {withItems === 0 && !cashMissing ? (
             'Every check is clear.'
+          ) : withItems === 0 ? (
+            <>
+              All <span className="num">{checks.length}</span> checks are clear, but cash in hand is not set up. It does not stop the lock.
+            </>
           ) : (
             <>
-              <b className="num font-heavy text-lime-300">{withItems}</b> {withItems === 1 ? 'check has' : 'checks have'} something to look at. None of them stops the lock.
+              <b className="num font-heavy text-lime-300">{withItems}</b> {withItems === 1 ? 'check has' : 'checks have'} something to look at
+              {cashMissing ? ', and cash in hand is not set up' : ''}. None of them stops the lock.
             </>
           )}
         </p>
@@ -236,7 +260,8 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
  */
 function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeof computeReconciliationExceptions> | null }) {
   const rows: Row[] = ctx.cards.filter(c => !c.clear).map(fromCard)
-  const clear: string[] = ctx.cards.filter(c => c.clear).map(c => c.label)
+  // Said as results ("Bank statement matched"), not as the problem names the rows above use.
+  const clear: string[] = ctx.cards.filter(c => c.clear).map(c => c.cleared)
   // Still reachable when nothing is left to match (comparing totals, unticking a mistake): one link, on the clear line.
   const bankClear = ctx.cards.some(c => c.key === 'bank_unticked' && c.clear)
   if (things && things.length > 0) {
@@ -249,7 +274,7 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
       linkLabel: 'Open mistakes to fix',
       to: '/money/exceptions',
     })
-  } else if (things) clear.push('Mistakes to fix')
+  } else if (things) clear.push('No mistakes to fix')
   return (
     <section aria-label="Checklist" className={cn(CARD, 'overflow-hidden')}>
       {rows.length > 0 ? (
@@ -293,7 +318,7 @@ function CheckList({ ctx, things }: { ctx: MonthEndCtx; things: ReturnType<typeo
             <b className="font-bold text-fg">
               {clear.length} {clear.length === 1 ? 'check is' : 'checks are'} clear:
             </b>{' '}
-            {clear.join(', ')}.
+            {clearList(clear)}.
             {bankClear ? (
               <>
                 {' '}

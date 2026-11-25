@@ -77,12 +77,22 @@ const cancelButton = (onCancel: () => void) => (
   </Button>
 )
 
+/** Cancel and a Create invoice that cannot be pressed yet (every step of the dialog shows where the next tap will be). */
+const waitingFooter = (onCancel: () => void) => (
+  <>
+    {cancelButton(onCancel)}
+    <Button variant="primary" icon={FilePlus2} disabled>
+      Create invoice
+    </Button>
+  </>
+)
+
 function OrderPicker({ onPick, onCancel }: { onPick: (id: string) => void; onCancel: () => void }) {
   const orders = useInvoiceableOrders()
   const orderField = useId()
   return (
-    <Frame footer={cancelButton(onCancel)}>
-      <p>Choose the order this invoice is for. Its lines give the amounts.</p>
+    <Frame footer={waitingFooter(onCancel)}>
+      <p>Choose the order this invoice is for. Its lines give the amounts. Create invoice opens once an order is chosen.</p>
       <div className="grid gap-2">
         <label htmlFor={orderField} className="text-sm font-medium text-fg">
           Order
@@ -111,10 +121,12 @@ function InvoiceLoader(props: { orderId: string; onBusy: (b: boolean) => void; o
         <Banner tone="danger" title="The order could not be loaded">Close this and try again. Nothing was created.</Banner>
       </Frame>
     )
-  if (order.isPending || next.isPending)
+  // A cached read can be out of date (an invoice made since): the form waits for a fresh one, so it never opens on the old
+  // "left to invoice" (20,000 prefilled when 5,000 is left) or an invoice number already taken.
+  if (order.isPending || next.isPending || !order.isFetchedAfterMount || !next.isFetchedAfterMount)
     return (
       // Shaped like the form: the two fields side by side, then the four figure lines.
-      <Frame footer={cancelButton(props.onCancel)}>
+      <Frame footer={waitingFooter(props.onCancel)}>
         <div className="grid gap-5" aria-busy="true">
           <div className="grid gap-4 md:grid-cols-2">
             {[0, 1].map(i => (
@@ -153,7 +165,7 @@ const baseSchema = z.object({
 })
 type Values = z.input<typeof baseSchema>
 
-/** HW-13: the net may not be more than is left to invoice on the order's lines (Rs 1 allowance, as v_order_state). */
+/** HW-13: the net may not be more than is left to invoice on the order's lines (PKR 1 allowance, as v_order_state). */
 function schemaFor(start: InvoiceStart, itemsNet: number) {
   return baseSchema.superRefine((v, ctx) => {
     const left = overInvoiced(v.net, start, itemsNet)
@@ -176,6 +188,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
   const schema = useMemo(() => schemaFor(start, order.amounts.itemsNet), [order]) // eslint-disable-line react-hooks/exhaustive-deps
   const [editing, setEditing] = useState(false)
   const numberRef = useRef<HTMLInputElement | null>(null)
+  const nothingLeftId = useId()
 
   const sf = useSubmitForm({
     schema,
@@ -183,8 +196,9 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
     defaultValues: {
       number: next.nextNumber,
       invoiceDate: businessToday(),
-      net: start.net > 0 ? start.net : (undefined as unknown as number),
-      gst: start.gst,
+      // nothing to prefill when nothing is left (a PKR 1 leftover counts as nothing, as v_order_state)
+      net: start.net > 0 && !start.fullyInvoiced ? start.net : (undefined as unknown as number),
+      gst: start.fullyInvoiced ? 0 : start.gst,
       option: start.option,
     } satisfies Partial<Values>,
     routeError: e => {
@@ -232,19 +246,30 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
       footer={
         <>
           {cancelButton(onCancel)}
-          <Button variant="primary" type="submit" form={sf.formId} icon={FilePlus2} busy={sf.pending} busyLabel="Creating">
+          <Button
+            variant="primary"
+            type="submit"
+            form={sf.formId}
+            icon={FilePlus2}
+            busy={sf.pending}
+            busyLabel="Creating"
+            disabled={start.fullyInvoiced}
+            aria-describedby={start.fullyInvoiced ? nothingLeftId : undefined}
+          >
             {sf.failed ? 'Try again' : 'Create invoice'}
           </Button>
         </>
       }
     >
       <Form sf={sf} labels={{ number: 'Invoice number', invoiceDate: 'Invoice date', net: 'Net amount', gst: 'GST', option: 'GST rate' }} className="grid gap-4">
-        <button type="submit" hidden tabIndex={-1} />
+        <button type="submit" hidden tabIndex={-1} disabled={start.fullyInvoiced} />
         {order.cancelled ? <Banner tone="warning" title="This order is cancelled">An invoice can still be created, for example to record what was already supplied.</Banner> : null}
         {start.fullyInvoiced ? (
-          <Banner tone="info" title="Every line of this order is already invoiced">
-            To invoice more, add the extra to the lines of the order first. An invoice cannot carry more than the lines.
-          </Banner>
+          <div id={nothingLeftId}>
+            <Banner tone="info" title="Every line of this order is already invoiced">
+              Nothing is left to invoice, so Create invoice is off. To invoice more, add the extra to the lines of the order first.
+            </Banner>
+          </div>
         ) : null}
         <div className="grid gap-4 md:grid-cols-2">
           <FormField<Values, 'number'>

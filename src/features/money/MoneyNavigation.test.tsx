@@ -223,8 +223,8 @@ describe('Lock a month checklist', () => {
     expect(screen.queryByTestId('check-uncategorised')).toBeNull()
     expect(screen.getByTestId('checks-summary')).toHaveTextContent('2 checks have something to look at')
     await waitFor(() => expect(screen.getByTestId('checks-clear')).toHaveTextContent('5 checks are clear'))
-    expect(screen.getByTestId('checks-clear')).toHaveTextContent('Expenses without a category')
-    expect(screen.getByTestId('checks-clear')).toHaveTextContent('Mistakes to fix')
+    expect(screen.getByTestId('checks-clear')).toHaveTextContent(/every expense has a category/i)
+    expect(screen.getByTestId('checks-clear')).toHaveTextContent('no mistakes to fix')
   })
 
   it('has one green button with its (i), one link to the month’s reports, and no repeated panels', async () => {

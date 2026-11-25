@@ -19,6 +19,7 @@ import { ReportsFrame } from '@/features/reports/ReportsFrame'
 import { ReportError, ReportLoading, TwoProfitsTip } from '@/features/money/monthEnd/ReportParts'
 import { PeriodStepper } from '@/features/money/monthEnd/MonthEndFrame'
 import { downloadReport } from '@/features/money/monthEnd/reportFiles'
+import { fixedPeriodState } from '@/features/money/monthParam'
 import { useInOutReport } from '@/features/money/inOut/hooks'
 import {
   IN_OUT_TITLE,
@@ -60,7 +61,8 @@ function usePeriod() {
   const askedKey = params.get('period') ?? (kind === 'month' ? params.get('month') : null)
   const period = useMemo(() => chosenPeriod(kind, askedKey, today), [kind, askedKey, today])
   const now = periodOf(kind, today.slice(0, 7))
-  // HW-22: a period that is not real or still to come falls back to now; the address then names the period actually shown
+  // HW-22: a period that is not real or still to come falls back to now; the address then names the period actually shown,
+  // and a note says so (screen review 2026-11-24, item 18)
   useEffect(() => {
     if (askedKey === null || askedKey === period.key) return
     setParams(
@@ -68,9 +70,10 @@ function usePeriod() {
         const next = new URLSearchParams(prev)
         next.set('by', period.kind)
         next.set('period', period.key)
+        next.delete('month')
         return next
       },
-      { replace: true },
+      { replace: true, state: fixedPeriodState({ asked: askedKey, shown: periodLabel(period) }) },
     )
   }, [askedKey, period, setParams])
   const set = (p: Period) => {
