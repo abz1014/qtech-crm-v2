@@ -86,7 +86,7 @@ for (const role of ['admin', 'sales'] as const) {
       await openAs(page, role, '/reports')
       // five main tabs: Reports is no longer one of them; the old address lands inside Money
       // round 3: Reports is the fifth Money tab and shows one report at a time (admin opens on Profit and loss)
-      await expect(page).toHaveURL(role === 'admin' ? /\/money\/reports\/pnl$/ : /\/money\/reports\/enquiries$/)
+      await expect(page).toHaveURL(role === 'admin' ? /\/money\/reports\/pnl$/ : /\/money\/reports\/rfqs$/)
       await expect(page.getByRole('navigation', { name: 'Main' }).first().getByRole('link', { name: 'Reports' })).toHaveCount(0)
       await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
       if (role === 'admin') {

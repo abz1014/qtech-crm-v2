@@ -107,7 +107,6 @@ export function forestC2Screens(): void {
         sales_tax_registered: false,
       })
       const a = await invoicedOrder(company.id, 100000) // gross 118,000
-      await invoicedOrder(company.id, 20000) // gross 23,600, still owed: a target for Apply
       await must(
         rest('admin', 'rpc/record_payment', {
           method: 'POST',
@@ -157,11 +156,19 @@ export function forestC2Screens(): void {
         await expect(dialog).toHaveCount(0)
       })
 
+      // Refund is offered only while no order owes (screen review 6): its pictures first, then a second order that owes, for Apply
+      let owed = false
       await page.setViewportSize({ width: 1440, height: 900 })
       for (const [button, name, file] of [
         ['Refund', 'Refund customer', 'refund'],
         ['Apply to an order', 'Apply credit to an order', 'apply'],
       ] as const) {
+        if (button !== 'Refund' && !owed) {
+          await invoicedOrder(company.id, 20000) // gross 23,600, still owed: a target for Apply
+          owed = true
+          await page.reload()
+          await expect(panel.getByTestId('credit-balance')).toBeVisible()
+        }
         for (const w of [1440, 375]) {
           await page.setViewportSize({ width: w, height: w < 768 ? 812 : 900 })
           await panel.getByRole('button', { name: button, exact: true }).click()

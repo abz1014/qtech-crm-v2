@@ -65,7 +65,7 @@ async function downloadExcel(page: Page, jobNumber: number): Promise<unknown[][]
   const box = page.getByTestId('statement-downloads')
   await expect(box.getByRole('button', { name: 'Download Excel' })).toBeEnabled()
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), box.getByRole('button', { name: 'Download Excel' }).click()])
-  expect(download.suggestedFilename()).toBe(`Comparative-statement-Job-${jobNumber}.xlsx`)
+  expect(download.suggestedFilename()).toBe(`Comparative-statement-RFQ-${String(jobNumber).padStart(4, '0')}.xlsx`)
   const bytes = readFileSync(await download.path())
   expect(bytes.subarray(0, 2).toString()).toBe('PK') // a real .xlsx (a zip), not a CSV
   const wb = read(bytes, { type: 'buffer' })
@@ -132,7 +132,7 @@ test('Download PDF downloads an A4 landscape PDF named for the job', async ({ pa
   const button = page.getByTestId('statement-downloads').getByRole('button', { name: 'Download PDF' })
   await expect(button).toBeEnabled()
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), button.click()])
-  expect(download.suggestedFilename()).toBe(`Comparative-statement-Job-${s.rfq.number}.pdf`)
+  expect(download.suggestedFilename()).toBe(`Comparative-statement-RFQ-${String(s.rfq.number).padStart(4, '0')}.pdf`)
   const bytes = readFileSync(await download.path())
   expect(bytes.subarray(0, 4).toString()).toBe('%PDF')
   const text = bytes.toString('latin1')

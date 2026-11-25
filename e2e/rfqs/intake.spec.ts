@@ -9,7 +9,7 @@ import { SCENES } from '../docread/scenes'
  * R05 end to end, against the local CI stack: the intake = float screen, as the fixture users, through the real
  * login form. Each test makes its own companies, brands and suppliers with unique names, so tests do not depend on
  * each other or on the seed beyond its fixture users. /rfqs/new is the New RFQ page (the old /enquiries/new redirects there, Forest
- * polish-b): its green button is "Create job N", which saves and opens the job; "Ask suppliers now" (gate 2) turns the same
+ * polish-b): its green button is "Create job RFQ-NNNN", which saves and opens the job; "Ask suppliers now" (gate 2) turns the same
  * form into the suppliers and message steps, and anything saved from there opens the job too.
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2, with gate 2's optional asking):
@@ -38,8 +38,8 @@ async function askSuppliersNow(page: Page): Promise<void> {
   await page.getByRole('checkbox', { name: /Ask suppliers now/ }).check()
 }
 
-/** The New RFQ page's green button: "Create job N" (the number is the next one, read when the page opens). */
-const createJob = (page: Page) => page.getByRole('button', { name: /^Create job \d+$/ })
+/** The New RFQ page's green button: "Create job RFQ-NNNN" (the number is the next one, read when the page opens). */
+const createJob = (page: Page) => page.getByRole('button', { name: /^Create job RFQ-\d{4}$/ })
 
 /** Saving from New RFQ opens the new job's page (Created job N). */
 async function jobOpened(page: Page, companyId: string): Promise<RfqRow> {
