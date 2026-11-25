@@ -137,9 +137,8 @@ test.describe('palette search (R12)', () => {
     await expect(page.getByRole('option', { name: new RegExp(f.company.name) }).first()).toBeVisible()
     for (const q of [invoiceNumber, `POSEC${tag}`, '123456']) {
       await input.fill(q)
-      // no hit of any kind: the only row left is the offer to add the typed text as a company
-      await expect(page.getByRole('option', { name: new RegExp(`Add “${q}”`) })).toBeVisible()
-      await expect(page.getByRole('option')).toHaveCount(1)
+      // no hit of any kind, and no offer to add it as a company (an engineer adds no company, screen review 12)
+      await expect(page.getByRole('option', { name: new RegExp(q) })).toHaveCount(0)
     }
 
     // the same through the API as the engineer: no row, and no money column in any row
@@ -246,8 +245,8 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
     await expect(page.getByRole('option', { name: new RegExp(f.item) }).and(page.locator('[data-value*="Order items"]'))).toBeVisible()
     for (const q of [f.invoice, f.invoice.slice(0, 8), f.po]) {
       await input.fill(q)
-      await expect(page.getByRole('option', { name: new RegExp(`Add “${q}”`) })).toBeVisible()
-      await expect(page.getByRole('option')).toHaveCount(1)
+      // no hit, and no offer to add it as a company (an engineer adds no company, screen review 12)
+      await expect(page.getByRole('option', { name: new RegExp(q) })).toHaveCount(0)
     }
 
     // a typed supplier PO number finds no purchase order in the palette (it is a money number)
