@@ -109,7 +109,7 @@ export function RecurringDialog({ template, categories, onClose }: { template?: 
               {f => <CategoryPicker categories={categories} value={f.value} onChange={f.onChange} onCreate={createCategory} groups={groupsQ.data} chevron />}
             </FormField>
             <FormField<Values, 'amount'> name="amount" label="Amount, PKR">
-              {f => <NumberInput {...f} />}
+              {f => <NumberInput {...f} money />}
             </FormField>
             <FormField<Values, 'paidVia'> name="paidVia" label="Paid via">
               {f => (

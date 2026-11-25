@@ -173,10 +173,10 @@ function ApplyForm({ companyId, companyName, credit, targets, onBusy, onDone, on
         </FormField>
         <div className="grid gap-4">
           <FormField<Values, 'amount'> name="amount" label="Amount to apply, PKR" source={{ label: 'The smaller of the credit and the balance due' }}>
-            {f => <NumberInput {...f} inputMode="decimal" />}
+            {f => <NumberInput {...f} inputMode="decimal" money />}
           </FormField>
           <FormField<Values, 'appliedOn'> name="appliedOn" label="Date" source={{ label: 'Today', plain: true }}>
-            {f => <DateInput {...f} />}
+            {f => <DateInput {...f} checkYear />}
           </FormField>
         </div>
         <p

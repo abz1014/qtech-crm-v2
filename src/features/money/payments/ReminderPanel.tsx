@@ -12,6 +12,7 @@ import { MessageActions } from '@/ui/MessageActions'
 import { ChannelLink } from '@/ui/ChannelLink'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
+import { WhatsAppText } from '@/ui/WhatsAppText'
 import { invalidateAfter } from '@/features/invalidation'
 import { chaseClipboardText, COMPANY_NAME } from '@/features/rfqs/lib'
 import { daysBetween as daysBetweenText } from '@/features/rfqs/lib/dateText'
@@ -305,7 +306,7 @@ function ReminderBody({ row, today }: { row: ReceivableRow; today: string }) {
           </p>
         ) : null}
         <pre data-testid="reminder-text" className="max-w-[62ch] whitespace-pre-wrap break-words font-sans text-sm leading-normal text-fg">
-          {t.body}
+          <WhatsAppText text={t.body} />
         </pre>
       </div>
       <footer className="flex flex-wrap items-center gap-3 border-t bg-sunken px-5 py-3">

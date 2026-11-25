@@ -393,13 +393,14 @@ function ExpenseFormReady({
             amountRef.current = r
           }}
           inputMode="decimal"
+          money
         />
       )}
     </FormField>
   )
   const dateField = (
     <FormField<Values, 'paidOn'> name="paidOn" label="Date paid" source={{ label: 'Today', plain: true }}>
-      {f => <DateInput {...f} />}
+      {f => <DateInput {...f} checkYear />}
     </FormField>
   )
 

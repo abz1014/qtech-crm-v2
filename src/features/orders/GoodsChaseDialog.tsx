@@ -13,6 +13,7 @@ import { Icon } from '@/ui/Icon'
 import { ChannelLink } from '@/ui/ChannelLink'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { MessageActions } from '@/ui/MessageActions'
+import { WhatsAppText } from '@/ui/WhatsAppText'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
 import { chaseClipboardText, COMPANY_NAME } from '@/features/rfqs/lib'
@@ -195,7 +196,7 @@ export function GoodsChaseDialog({ order, leg, onClose }: { order: OrderHeader; 
               </div>
               <pre data-testid="draft-text" className="max-h-[18rem] overflow-auto whitespace-pre-wrap break-words rounded-control border bg-sunken p-4 font-sans text-sm text-fg">
                 {channel === 'email' && draft.email.subject ? `Subject: ${draft.email.subject}\n\n` : ''}
-                {(channel === 'email' ? draft.email : draft.whatsapp).body}
+                <WhatsAppText text={(channel === 'email' ? draft.email : draft.whatsapp).body} />
               </pre>
               <p className="text-xs text-fg-muted">
                 Copying records a follow-up today (followed up ×{draft.countAfter}). Asks for a dispatch date by {formatDay(draft.answerBy ?? today)}.

@@ -179,7 +179,11 @@ export default defineConfig({
     toHaveScreenshot: { animations: 'disabled', caret: 'hide', scale: 'css', maxDiffPixelRatio: 0.002 },
   },
   // The worker is blocked everywhere except the 'pwa' project, so no other suite runs behind a cache.
-  use: { trace: 'retain-on-failure', serviceWorkers: 'block' },
+  // Reduced motion everywhere (screen review 2026-11-24, item 22): a screenshot taken inside a dialog's 200 ms fade-in caught the
+  // scrim and the panel half transparent, with the page text printing through. The design system turns its animations off
+  // under prefers-reduced-motion (src/index.css zeroes --dur-*), so a dialog is drawn whole the moment it opens. The real UI
+  // keeps its short fade. Contexts made with browser.newContext() inherit this too.
+  use: { trace: 'retain-on-failure', serviceWorkers: 'block', reducedMotion: 'reduce' },
   projects: [
     {
       name: 'auth',

@@ -265,7 +265,7 @@ function InvoiceForm({ order, next, onBusy, onDone, onCancel }: { order: OrderFo
             )}
           </FormField>
           <FormField<Values, 'invoiceDate'> name="invoiceDate" label="Invoice date" source={{ label: 'Today', plain: true }}>
-            {f => <DateInput {...f} />}
+            {f => <DateInput {...f} checkYear />}
           </FormField>
         </div>
 
