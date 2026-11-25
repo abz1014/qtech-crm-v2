@@ -252,8 +252,7 @@ test.describe('palette search v2 (P02): orders, items, POs, invoices', () => {
     // a typed supplier PO number finds no purchase order in the palette (it is a money number)
     await input.fill(`PO-${f.supplierPo}`)
     await expect(page.getByRole('option', { name: new RegExp('PO-[0-9]{2}-' + f.supplierPo) })).toHaveCount(0)
-    await expect(page.getByRole('option', { name: new RegExp(`Add “PO-${f.supplierPo}”`) })).toBeVisible()
-    await expect(page.getByRole('option')).toHaveCount(1)
+    await expect(page.getByRole('option', { name: new RegExp(`Add “PO-${f.supplierPo}”`) })).toHaveCount(0) // an engineer adds no company
 
     // network assertion: the response to an invoice-number search contains no invoice row for an engineer, and does for sales
     const call = async (role: 'engineer' | 'sales', q: string) => {
