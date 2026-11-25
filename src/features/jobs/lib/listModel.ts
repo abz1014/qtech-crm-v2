@@ -19,6 +19,24 @@ export interface Who {
 /** Sales and engineers start on their own jobs; the admin on every open job. */
 export const defaultChip = (role: Who['role']): Chip => (role === 'sales' || role === 'engineer' ? 'mine' : 'open')
 
+/**
+ * The chip an address asks for: ?chip= first, else the old ?owner= words (a palette "See all" link says ?owner=all, which is Open;
+ * ?owner=mine is Mine), else null for the person's default.
+ */
+export function chipFromParams(chip: string | null, owner: string | null): Chip | null {
+  if (isChip(chip)) return chip
+  if (owner === 'all') return 'open'
+  if (owner === 'mine') return 'mine'
+  return null
+}
+
+/** The list's count line: "Showing your 2 jobs", "Showing 5 open jobs", "Showing 3 jobs in history" (with a person or a stage after it). */
+export function showingSummary(n: number, chip: Chip, person: string | null = null, stage: string | null = null): string {
+  const jobs = n === 1 ? 'job' : 'jobs'
+  const what = chip === 'mine' ? `your ${n} ${jobs}` : chip === 'open' ? `${n} open ${jobs}` : `${n} ${jobs} in history`
+  return `Showing ${what}${person ? ` of ${person}` : ''}${stage ? ` · ${stage}` : ''}`
+}
+
 /** A job is mine when I own it or (an engineer) I am put on its order. */
 export function isMine(j: JobRow, who: Who): boolean {
   if (!who.userId) return false

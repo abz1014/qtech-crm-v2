@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { looksLikeCompanyName } from '@/features/companies/companyName'
 import { Briefcase, Building2, FileText, List as ListIcon, Package, Plus, Receipt, ShoppingCart, UserRound, Wrench } from 'lucide-react'
 import { usePaletteSource } from '@/app/palette/usePalette'
 import { useSession } from '@/app/session'
@@ -154,10 +155,12 @@ export function searchPaletteSource(debounceMs = DEBOUNCE_MS, office = false): P
       if (/^(job[-\s]*)?(o[-\s]*)?\d{1,9}$/i.test(q)) items.unshift(...jobItems)
       else items.push(...jobItems)
       const topCompany = hits.filter(h => h.kind === 'company').sort((a, b) => b.score - a.score)[0]
-      if (topCompany) {
+      // An engineer starts no RFQ and adds no company from Search (both pages refuse them): those two actions are the office's.
+      if (topCompany && !office) {
         items.push({ id: `rfq-new-${topCompany.id}`, group: ACTIONS, label: `New RFQ for ${topCompany.label}`, meta: 'Go to intake', icon: Plus, href: `/rfqs/new?company=${encodeURIComponent(topCompany.id)}` })
       }
-      if (q.length <= NEW_COMPANY_MAX && !hits.some(h => h.kind === 'company' && h.label.trim().toLowerCase() === q.toLowerCase())) {
+      // Only name-like text is offered as a new company: a document or phone number never is (screen review 20).
+      if (!office && q.length <= NEW_COMPANY_MAX && looksLikeCompanyName(q) && !hits.some(h => h.kind === 'company' && h.label.trim().toLowerCase() === q.toLowerCase())) {
         items.push({ id: 'company-new-typed', group: ACTIONS, label: `Add “${q}” as a new company`, meta: 'Action', icon: Plus, href: `/companies?new=1&name=${encodeURIComponent(q)}` })
       }
       return items

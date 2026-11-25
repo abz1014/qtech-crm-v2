@@ -18,7 +18,8 @@ export function useFirstUse(screen: FirstUseScreenName, userId: string, role: st
   })
   const facts = q.data
   const alone = !!facts?.ownerAlone
+  const teamHasWork = !!facts?.teamHasWork
   // A role with no first-use words for this screen (an engineer on the RFQ board) keeps the screen's own empty state.
-  const isNew = enabled && !!facts && isNewOn(screen, role, facts) && firstUseCopy(screen, role, { alone }) !== null
-  return { isNew, alone }
+  const isNew = enabled && !!facts && isNewOn(screen, role, facts) && firstUseCopy(screen, role, { alone, teamHasWork }) !== null
+  return { isNew, alone, teamHasWork }
 }

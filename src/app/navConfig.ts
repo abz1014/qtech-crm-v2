@@ -1,6 +1,6 @@
 // Ported from src/lib/navConfig.ts @ 7a29f3a (Q-Tech CRM v1). Rewritten for the v2 navigation (direction B, 5 items since the
 // 2026-10-19 owner decision, 3 roles) with Lucide icons per DESIGN_SYSTEM section 10. Forest lanes (gate 2, 13 Nov 2026) on top.
-import { Briefcase, Building2, Camera, House, Receipt, Send, Truck, Wallet, type LucideIcon } from 'lucide-react'
+import { Briefcase, Building2, Camera, House, HandCoins, Send, Truck, Wallet, type LucideIcon } from 'lucide-react'
 
 export type Role = 'admin' | 'sales' | 'engineer'
 
@@ -83,7 +83,7 @@ const MONEY: ShellLink = { id: 'money', label: 'Money', to: '/money', icon: Wall
 const COMPANIES: ShellLink = { id: 'companies', label: 'Companies', to: '/companies', icon: Building2, apart: true }
 const JOBS: ShellLink = { id: 'jobs', label: 'Jobs', to: '/jobs', icon: Truck }
 /** The engineer's own expense claims (owner decision 12 Nov 2026: on the engineer's bar; sales reach it from the account menu, admins have none). */
-const I_PAID: ShellLink = { id: 'ipaid', label: 'I paid', to: '/my-expenses', icon: Receipt }
+const I_PAID: ShellLink = { id: 'ipaid', label: 'I paid', to: '/my-expenses', icon: HandCoins }
 const CAMERA: ShellLink = { id: 'camera', label: 'Camera', to: '/capture', icon: Camera }
 
 const item = (key: NavKey) => navItems.find(i => i.key === key) as NavItem
@@ -124,10 +124,20 @@ export function fromLaneOf(search: string): Lane | null {
 }
 
 /**
+ * The lane a bare list's ?stage= belongs to (/jobs?stage=orders, where the old /orders address lands, is Deliver's work; RFQs and
+ * Quotations are Sell's), or null for no stage or an unknown one.
+ */
+export function laneOfStage(search: string): Lane | null {
+  const v = new URLSearchParams(search).get('stage')
+  if (v === 'rfq' || v === 'quotation') return 'sell'
+  return v === 'orders' || v === 'supplier' || v === 'deliver' || v === 'invoice' || v === 'payment' ? 'deliver' : null
+}
+
+/**
  * Which of `links` an address belongs to. /jobs lights the lane in its ?lane= (an engineer's Jobs, whatever it says); a job's own page
  * (/jobs/139) lights the lane it was opened from (?from=), else the lane the page says the job is in (`pageLane`: the Job page passes
  * laneOfJob through the shell, so a job opened from Home or Search lights its lane too). The old RFQ and enquiry addresses light Sell,
- * the old order addresses Deliver. The bare list names no lane, so no lane is lit.
+ * the old order addresses Deliver. The bare list lights the lane its ?stage= belongs to (laneOfStage), else none.
  */
 export function activeLink(links: readonly ShellLink[], pathname: string, search = '', pageLane: Lane | null = null): ShellLink | undefined {
   const on = (p: string) => pathname === p || pathname.startsWith(`${p}/`)
@@ -137,7 +147,7 @@ export function activeLink(links: readonly ShellLink[], pathname: string, search
     const jobs = find('jobs')
     if (jobs) return jobs
     const list = pathname === '/jobs' || pathname === '/jobs/'
-    const lane = list ? laneOf(search) : on('/jobs') ? (fromLaneOf(search) ?? pageLane) : null
+    const lane = list ? (laneOf(search) ?? laneOfStage(search)) : on('/jobs') ? (fromLaneOf(search) ?? pageLane) : null
     if (lane) return find(lane)
     if (on('/rfqs')) return find('sell')
     if (on('/orders')) return find('deliver')

@@ -265,7 +265,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
         <>
           {!firstUse.isNew && model.total > 0 ? <Hero role={user.role} name={name} count={needYou} /> : null}
           {firstUse.isNew ? (
-            <FirstUseState screen="today" role={user.role} alone={firstUse.alone} />
+            <FirstUseState screen="today" role={user.role} alone={firstUse.alone} teamHasWork={firstUse.teamHasWork} />
           ) : model.total === 0 ? (
             <EmptyState mood="goal" title="No tasks for today">
               {waiting.length > 0

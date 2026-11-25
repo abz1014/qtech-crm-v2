@@ -19,7 +19,7 @@ import type { JobRow } from '@/features/jobs/api'
 import { StageLine, StageMini } from '@/features/jobs/StageBar'
 import { StageFilter } from '@/features/jobs/StageFilter'
 import { jobNext } from '@/features/jobs/lib/nextStep'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isChip, isLane, isPersons, itemsSummary, jobLabel, laneOfJob, normalizePerson, normalizeStage, stagesFor, STAGE_LABEL, type Chip, type JobLane, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, chipFromParams, defaultChip, inChip, inStage, isLane, isPersons, itemsSummary, jobLabel, laneOfJob, normalizePerson, normalizeStage, showingSummary, stagesFor, STAGE_LABEL, type Chip, type JobLane, type StageFilter as Stage, type Who } from '@/features/jobs/lib/listModel'
 import { stageModel } from '@/features/jobs/lib/stages'
 import { lazyShown } from '@/lib/lazyDialog'
 import { Select } from '@/ui/form/Select'
@@ -179,9 +179,9 @@ function JobsList() {
   }, [openNew, role, money, setParams])
 
   const text = params.get('q') ?? ''
-  const chipParam = params.get('chip')
   const person = normalizePerson(params.get('person'), role)
-  const chipRaw: Chip = isChip(chipParam) ? chipParam : defaultChip(role)
+  // ?owner=all and ?owner=mine (the palette's See all links, old bookmarks) pick Open and Mine too
+  const chipRaw: Chip = chipFromParams(params.get('chip'), params.get('owner')) ?? defaultChip(role)
   // Mine is the admin's own list; with a person picked it is that person's Open.
   const chip: Chip = person && chipRaw === 'mine' ? 'open' : chipRaw
   // The lens (Sell or Deliver) is the office's: an engineer's Jobs is every job they are put on, whatever the address says.
@@ -315,9 +315,14 @@ function JobsList() {
     </EmptyState>
   ) : chip === 'history' ? (
     <EmptyState title="Nothing in history yet">A job moves here once it is paid and installed, lost, or cancelled with no money open.</EmptyState>
+  ) : counts.history === 0 ? (
+    // no job at all yet: none is done either, so the words say there are none (screen review 17)
+    <EmptyState mood="goal" title="No jobs yet">
+      {/* an engineer cannot start an RFQ (audit 2): the office puts them on jobs */}
+      {role === 'engineer' ? 'A job appears here once you are put on it.' : 'A new RFQ starts one.'}
+    </EmptyState>
   ) : (
     <EmptyState mood="goal" title="No open jobs">
-      {/* an engineer cannot start an RFQ (audit 2): the office puts them on jobs */}
       {role === 'engineer' ? 'Every job is done. A job appears here once you are put on it.' : 'Every job is done. A new RFQ starts one.'}
     </EmptyState>
   )
@@ -367,13 +372,13 @@ function JobsList() {
         onRowOpen={j => navigate(`/jobs/${encodeURIComponent(j.key)}${lane ? `?from=${lane}` : ''}`)}
         loading={loading}
         error={error ? { title: "Jobs could not be loaded", message: 'Nothing was changed. Check your connection and try again.', onRetry: () => void error.refetch() } : null}
-        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : `Showing ${rows.length} ${LABEL[chip].toLowerCase()} ${rows.length === 1 ? 'job' : 'jobs'}${person ? ` of ${personName}` : ''}${stage ? ` · ${STAGE_LABEL[stage]}` : ''}`) : undefined}
+        summary={jobs.isSuccess && rows.length > 0 ? (searching ? `${rows.length} ${rows.length === 1 ? 'job' : 'jobs'} found, in every list` : showingSummary(rows.length, chip, person ? personName : null, stage ? STAGE_LABEL[stage] : null)) : undefined}
         toolbar={
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
             <SegmentedControl
               aria-label="Which jobs"
               value={searching ? '' : chip}
-              onValueChange={v => change({ chip: v === defaultChip(role) ? null : v, stage: normalizeStage(params.get('stage'), role, v as Chip, lane) })}
+              onValueChange={v => change({ chip: v === defaultChip(role) ? null : v, owner: null, stage: normalizeStage(params.get('stage'), role, v as Chip, lane) })}
               options={(person ? (['open', 'history'] as const) : (['mine', 'open', 'history'] as const)).map(c => ({ value: c, label: LABEL[c] }))}
             />
             {role === 'admin' ? (

@@ -151,7 +151,8 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
         <h1 className="text-2xl font-heavy tracking-tight max-md:sr-only">Weekly review</h1>
         <p className="text-base text-fg-muted">
           {headerDate(today)}
-          {review ? <> · <b className="num font-medium text-fg" data-review-count>{total}</b> to decide · about 10 minutes</> : null}
+          {/* the time is only said when there is something to decide (screen review 17: "0 to decide · about 10 minutes") */}
+          {review ? <> · <b className="num font-medium text-fg" data-review-count>{total}</b> to decide{total > 0 ? ' · about 10 minutes' : ''}</> : null}
         </p>
       </header>
 

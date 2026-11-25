@@ -79,16 +79,19 @@ describe('old addresses open Jobs', () => {
 
   it('the lists open the Jobs list with the matching chip', async () => {
     mount('/rfqs')
-    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs'))
+    await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs?lane=sell'))
     fake?.uninstall()
     mount('/orders?show=closed')
     await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history&stage=orders'))
     expect(chipForOldList('?owner=mine')).toBe('mine')
+    // screen review 14: ?owner=all is Open, not ignored (Mine stayed selected)
+    expect(chipForOldList('?owner=all')).toBe('open')
+    expect(jobsSearchForOldList('?owner=all&q=x', 'order')).toBe('?q=x&chip=open&stage=orders')
     expect(chipForOldList('?tab=closed')).toBe('history')
     expect(chipForOldList('')).toBeNull()
   })
 
-  it('/orders opens the Jobs list on the Orders stage; /rfqs does not pick a stage; the new-order address stays a dialog address', async () => {
+  it('/orders opens the Jobs list on the Orders stage; /rfqs opens Sell with no stage; the new-order address stays a dialog address', async () => {
     mount('/orders')
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs?stage=orders'))
     fake?.uninstall()
@@ -96,7 +99,7 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=mine&stage=orders'))
     fake?.uninstall()
     mount('/rfqs?stage=invoice')
-    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs'))
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?lane=sell'))
     expect(jobsSearchForOldList('?show=closed', 'order')).toBe('?chip=history&stage=orders')
     expect(jobsSearchForOldList('?new=1', 'order')).toBe('?new=1')
   })
@@ -106,7 +109,7 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs?new=1'))
     fake?.uninstall()
     mount('/rfqs?owner=all&q=RST%201158&show=closed')
-    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?q=RST+1158&chip=history'))
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?q=RST+1158&chip=history&lane=sell'))
   })
 
   it('the retired ?old=1 and ?old=0 switches are dropped: an old link with one still lands on the Job or the Jobs list', async () => {
@@ -117,7 +120,7 @@ describe('old addresses open Jobs', () => {
     await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs/O-45'))
     fake?.uninstall()
     mount('/rfqs?old=1')
-    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs'))
+    await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?lane=sell'))
     fake?.uninstall()
     mount('/orders?old=1&show=closed')
     await waitFor(() => expect(screen.getAllByTestId('where').at(-1)?.textContent).toBe('/jobs?chip=history&stage=orders'))

@@ -3,7 +3,7 @@ import { installFakeDb, type FakeCall } from '@/test/fakeSupabase'
 import { fetchFirstUse, isNewOn, type FirstUseFacts } from '@/features/help/firstUseApi'
 import { firstWeekRows, inFirstWeeks } from '@/features/help/firstWeek'
 import { fetchFirstWeek } from '@/features/help/firstWeekApi'
-import { FIRST_USE_COPY, nothingYetCopy } from '@/features/help/firstUseCopy'
+import { FIRST_USE_COPY, firstUseCopy, nothingYetCopy } from '@/features/help/firstUseCopy'
 
 const none: FirstUseFacts = { ownsRfq: false, ownsOrder: false, onJob: false, companyHasInvoice: true, ownerAlone: false }
 
@@ -38,6 +38,17 @@ describe('fetchFirstUse', () => {
     const f = await fetchFirstUse('u1', 'engineer')
     expect(f.onJob).toBe(true)
     expect(fake.calls.map(c => c.target).sort()).toEqual(['order_engineers', 'orders', 'rfqs'])
+  })
+
+  it('sales also counts the team\'s RFQs and orders; others do not ask', async () => {
+    const fake = installFakeDb((c: FakeCall) => ({ count: c.target === 'orders' && !c.ops.some(o => o[0] === 'eq') ? 7 : 0 }))
+    uninstall = fake.uninstall
+    expect((await fetchFirstUse('u1', 'sales')).teamHasWork).toBe(true)
+    uninstall()
+    const none = installFakeDb(() => ({ count: 0 }))
+    uninstall = none.uninstall
+    expect((await fetchFirstUse('u1', 'sales')).teamHasWork).toBe(false)
+    expect((await fetchFirstUse('u1', 'admin')).teamHasWork).toBe(false)
   })
 
   it('finds the owner alone', async () => {
@@ -97,3 +108,12 @@ describe('first-use words (live bugs 34 and 35)', () => {
   })
 })
 
+describe('Home for a new salesperson (screen review 2026-11-24, item 17)', () => {
+  it('says it fills up with a first RFQ only when the team has no work at all', () => {
+    expect(firstUseCopy('today', 'sales')?.body).toContain('once you log your first RFQ')
+    const withWork = firstUseCopy('today', 'sales', { teamHasWork: true })
+    expect(withWork?.body).not.toContain('first RFQ')
+    expect(withWork?.body).toContain('Jobs list')
+    expect(withWork?.body).not.toMatch(/;/)
+  })
+})
