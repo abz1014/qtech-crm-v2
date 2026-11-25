@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 
-/** A document or record code: QT-26-0012, ORD-0002, INV-FA687z4jbo, RFQ-0001 R0. */
+/** A document or record code: QT-26-0012, ORD-0002, INV-FA687z4jbo, QTS-TQA-4810 Rev 1. */
 const CODE = /\b[A-Z]{2,5}(?:-[A-Za-z0-9]+)+(?: R\d+)?\b/g
 
 /**

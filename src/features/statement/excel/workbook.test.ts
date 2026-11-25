@@ -36,7 +36,7 @@ describe('comparative statement workbook', () => {
     expect(rows[0][0]).toBe('Q-Tech Engineering (Pvt) Ltd')
     expect(rows[1][0]).toBe('Office 5, Block 7, Clifton, Karachi   +92 21 0000000   sales@example.com   example.com')
     expect(rows[3][0]).toBe('Comparative statement')
-    expect(rows.slice(4, 8).map(r => r[0])).toEqual(['Job / RFQ: Job 139 (RFQ-0139)', 'Customer: Acme Cement Ltd', 'Date: 29 Oct 2026', 'Prepared by: Sana Sales'])
+    expect(rows.slice(4, 8).map(r => r[0])).toEqual(['Job / RFQ: RFQ-0139', 'Customer: Acme Cement Ltd', 'Date: 29 Oct 2026', 'Prepared by: Sana Sales'])
     expect(rows[9]).toEqual(HEADINGS)
     expect(COLUMNS.map(c => c.label)).toEqual(HEADINGS)
     expect(ws['!cols']?.map(c => c.wch)).toEqual(COLUMNS.map(c => c.width))
@@ -136,7 +136,7 @@ describe('comparative statement, side by side sheet', () => {
       'Customer: Acme Cement Ltd',
       'Contact: Imran Ali',
       'Customer ref: ACM-REQ-77',
-      'Job / RFQ: Job 139 (RFQ-0139)',
+      'Job / RFQ: RFQ-0139',
       'Date: 29 Oct 2026',
       'Prepared by: Sana Sales',
       null,

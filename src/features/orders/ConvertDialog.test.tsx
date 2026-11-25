@@ -243,7 +243,7 @@ describe('Mark won with an issued quotation', () => {
     const db = setup({ quotations: [quotation(0, ['i1'])] })
     const price = await screen.findByLabelText('Selling price, line 1')
     await waitFor(() => expect(price).toHaveValue('1,500'))
-    expect(screen.getAllByText(/from QT-26-0058 R0/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/from QT-26-0058(?! Rev)/).length).toBeGreaterThan(0)
     await choose(1)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))
     await waitFor(() => expect(payload(db)).toEqual([{ rfq_item_id: 'i1', quote_line_id: 'l1', unit_price_net: 1500 }]))
@@ -257,7 +257,7 @@ describe('Mark won with an issued quotation', () => {
     })
     await screen.findByLabelText('Selling price, line 2')
     await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Include line 2' })).not.toBeChecked())
-    expect(screen.getByTestId('convert-item-2-not-in')).toHaveTextContent('Not in QT-26-0058 R1')
+    expect(screen.getByTestId('convert-item-2-not-in')).toHaveTextContent('Not in QT-26-0058 Rev 1')
     // R0's 700 for item 2 is not sent
     await choose(1)
     fireEvent.click(screen.getByRole('button', { name: 'Create order' }))

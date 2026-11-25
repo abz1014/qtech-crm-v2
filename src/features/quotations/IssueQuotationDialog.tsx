@@ -422,7 +422,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
     }
   }
 
-  // On screen a re-issue is "Revise quotation QT-26-0042" (plain words, 2026-10-19); the PDF and its file name keep the R number.
+  // On screen a re-issue is "Revise quotation QT-26-0042" (plain words, 2026-10-19); the PDF and its file name add "Rev 1" from the first revision.
   const title = previous ? `Revise quotation ${quotationRef(previous.number, firstYear, undefined, previous.code)}` : 'Issue quotation'
 
   if (stage.kind === 'done') {

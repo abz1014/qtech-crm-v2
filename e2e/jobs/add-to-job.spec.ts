@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, rest, rfqRef, uniqueName } from '../support/stack'
 
 /*
  * Add to this job (P4-B, redesign phase 4): a supplier's WhatsApp price pasted on the job page is read, matched to the supplier it
@@ -74,7 +74,7 @@ test('a note and a photo are added together with Add note and files', async ({ p
   await page.getByTestId('add-photo-input').setInputFiles({ name: 'site.png', mimeType: 'image/png', buffer: Buffer.from(PNG_B64, 'base64') })
   await page.getByRole('button', { name: 'Note', exact: true }).click()
   await page.getByRole('button', { name: 'Add note and files' }).click()
-  await expect(page.getByRole('status').filter({ hasText: `Added to Job ${s.rfq.number}` })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: `Added to ${rfqRef(s.rfq.number)}` })).toBeVisible()
   const notes = await must(rest<{ notes: string | null }[]>('admin', `rfqs?id=eq.${s.rfq.id}&select=notes`))
   expect(notes[0].notes).toContain('Customer wants the PDF datasheet too.')
   const files = await must(rest<{ file_name: string }[]>('admin', `attachments?rfq_id=eq.${s.rfq.id}&select=file_name`))

@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { BUGS, SCREENS, UI, asRole, knownBug, expect, focusProblems, focusSweep, focusedThing, open, openChase, seedChase, test } from './support'
+import { rfqRef } from '../support/stack'
 
 /*
  * (c) Keyboard. A Tab sweep on every main screen, at the design width and at the owner's 200% zoom: each stop is visible, shows a
@@ -78,7 +79,7 @@ test.describe('focus after an action (2.4.3)', () => {
 
   test('opening a job from the Jobs list with Enter puts focus on the new page, not <body>', async ({ page, world }) => {
     await open(page, `/jobs?q=${world.rfq.number}`)
-    await page.getByRole('row').filter({ hasText: `Job ${world.rfq.number}` }).first().focus()
+    await page.getByRole('row').filter({ hasText: `${rfqRef(world.rfq.number)}` }).first().focus()
     await page.keyboard.press('Enter')
     await page.waitForURL(new RegExp(`/jobs/${world.rfq.number}$`))
     await page.locator('#main h1').first().waitFor({ state: 'attached' })

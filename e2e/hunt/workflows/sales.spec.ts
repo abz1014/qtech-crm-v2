@@ -55,8 +55,8 @@ const T = { timeout: 15_000 }
  * New RFQ's save-only action: "Create job N" since /rfqs/new is the New RFQ screen (polish-b; it was "Save as draft"). With "Ask suppliers
  * now" ticked (a ?supplier= link) it is "Create job N without asking suppliers" in the step bar's More options menu.
  */
-const SAVE_FOR_LATER = /^Create job( \d+)?$/
-const SAVE_FOR_LATER_MENU = /^Create job( \d+)? without asking suppliers$/
+const SAVE_FOR_LATER = /^Create job( RFQ-\d{4})?$/
+const SAVE_FOR_LATER_MENU = /^Create job( RFQ-\d{4})? without asking suppliers$/
 /** What a saved New RFQ says: the toast "Created job N" (the page then opens the job). */
 const SAVED = /Created job \d+/
 

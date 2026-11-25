@@ -2,6 +2,7 @@
 // Pure: no database, no clock (today comes in). The generators live in features/rfqs/lib (one source of truth).
 
 import { daysBetween } from '@/features/rfqs/lib/dateText'
+import { rfqRef } from '@/lib/refs'
 import {
   generateCustomerChase,
   generateGoodsChase,
@@ -51,7 +52,7 @@ export function buildCustomerDraft(input: {
   const last = questions.map(q => q.lastAskedOn).reduce((a, b) => (a > b ? a : b))
   const t = both<CustomerChase>(variant =>
     generateCustomerChase({
-      rfqRef: `RFQ-${String(rfq.number).padStart(4, '0')}`,
+      rfqRef: rfqRef(rfq.number),
       customerRef: rfq.customerRef,
       contactName: input.contact?.name ?? null,
       questions: questions.map(q => q.question),
@@ -85,7 +86,7 @@ export function buildSupplierDraft(input: {
   if (!inquiry.sentOn || inquiry.noOfferOn || outstanding.length === 0) return null
   const t = both<SupplierChase>(variant =>
     generateSupplierChase({
-      rfqRef: `RFQ-${String(input.rfq.number).padStart(4, '0')}`,
+      rfqRef: rfqRef(input.rfq.number),
       sentOn: inquiry.sentOn,
       dueOn: input.rfq.dueOn,
       today: input.today,

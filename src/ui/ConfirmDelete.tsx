@@ -11,7 +11,7 @@ import { keepCodes } from '@/ui/codes'
  * through this, so they read and behave the same:
  *   title        "Delete <thing>?"
  *   summary      one line saying exactly what is about to go
- *   also         what else goes with it ("Also deletes: 2 issued quotations (QT-26-0012 R0, R1), 5 supplier prices, 3 files")
+ *   also         what else goes with it ("Also deletes: 2 issued quotations (QT-26-0012 and Rev 1), 5 supplier prices, 3 files")
  *   warning      "This can't be undone."
  *   buttons      [Delete] (red, never green) and [Cancel]
  * Delete runs `onConfirm` at once. While it runs the dialog is busy (Esc, the scrim and Cancel are held) and a second tap does

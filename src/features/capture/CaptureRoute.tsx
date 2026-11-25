@@ -16,7 +16,7 @@ import { useToast } from '@/ui/useToast'
 import { getCapture, listCaptures, safely, takeBackFromSignIn, type CaptureItem } from '@/lib/capture/store'
 import { countsText } from '@/features/capture/model'
 import { useJobSearch, useJobsList } from '@/features/jobs/hooks'
-import { byRecent, inChip, itemsSummary, type Who } from '@/features/jobs/lib/listModel'
+import { byRecent, inChip, itemsSummary, jobLabel, type Who } from '@/features/jobs/lib/listModel'
 import type { JobRow } from '@/features/jobs/api'
 
 /**
@@ -201,8 +201,8 @@ function JobChoice({ job: j, onPick }: { job: Pick<JobRow, 'key' | 'companyName'
       >
         <span className="grid min-w-0 gap-px">
           {/* Long names and long item lists are clamped (the full text is the title), so one job never fills the phone. */}
-          <span className="line-clamp-3 text-base font-bold text-fg [overflow-wrap:anywhere]" title={`Job ${j.key} · ${j.companyName}`}>
-            <span className="num text-primary">Job {j.key}</span> · {j.companyName}
+          <span className="line-clamp-3 text-base font-bold text-fg [overflow-wrap:anywhere]" title={`${jobLabel(j.key)} · ${j.companyName}`}>
+            <span className="num text-primary">{jobLabel(j.key)}</span> · {j.companyName}
           </span>
           <span className="line-clamp-2 text-sm text-fg-2 [overflow-wrap:anywhere]" title={j.items}>{j.items}</span>
         </span>

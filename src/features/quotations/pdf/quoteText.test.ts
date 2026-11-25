@@ -66,9 +66,9 @@ describe('quotation PDF words (owner template)', () => {
 describe('quotation numbers (0147)', () => {
   it('prints QTS-<code>-<number> for a coded quotation and the old QT-YY-NNNN otherwise', () => {
     expect(quotationRef(4810, '2026-11-23', undefined, 'TQA')).toBe('QTS-TQA-4810')
-    expect(quotationRef(4810, '2026-11-23', 2, 'TQA')).toBe('QTS-TQA-4810 R2')
+    expect(quotationRef(4810, '2026-11-23', 2, 'TQA')).toBe('QTS-TQA-4810 Rev 2')
     expect(quotationRef(42, '2026-11-23')).toBe('QT-26-0042')
-    expect(quotationRef(42, '2026-11-23', 1, null)).toBe('QT-26-0042 R1')
+    expect(quotationRef(42, '2026-11-23', 1, null)).toBe('QT-26-0042 Rev 1')
   })
 
   it('suggests a customer code from the initials, moved on when it is taken', () => {

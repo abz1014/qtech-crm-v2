@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { read, utils } from 'xlsx'
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, rest, rfqRef, uniqueName } from '../support/stack'
 
 /*
  * The Comparative Statement (owner request, 2026-10-29): one section per item, one row per supplier that quoted it, with cost, lead
@@ -93,7 +93,7 @@ for (const role of ['sales', 'admin'] as const) {
 
     const rows = await downloadExcel(page, s.rfq.number)
     expect(rows[3][0]).toBe('Comparative statement')
-    expect(rows[4][0]).toBe(`Job / RFQ: Job ${s.rfq.number} (RFQ-${String(s.rfq.number).padStart(4, '0')})`)
+    expect(rows[4][0]).toBe(`Job / RFQ: ${rfqRef(s.rfq.number)}`)
     expect(rows[5][0]).toBe(`Customer: ${s.customer.name}`)
     expect(rows[9]).toEqual(['No.', 'Item', 'Specification', 'Qty', 'Unit', 'Supplier', 'Currency', 'Unit cost', 'Total cost', 'Lead time', 'Unit weight', 'Total weight', 'Country of origin', 'Note'])
     const quotes = (n: number) => rows.slice(10).filter(r => r[C.no] === n && r[C.supplier] !== null)

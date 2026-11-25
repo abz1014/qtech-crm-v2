@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, review, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { readClipboardWhen, resetClipboard } from '../support/clipboard'
 import { openStage, stagesOf } from '../support/job'
@@ -117,7 +117,7 @@ test.describe('supplier reply (FE-2: one typed price per item, currency never ty
   test('currency is pre-filled, two prices are typed, one tap saves, a missing rate does not block', async ({ page }) => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${s.rfq.number}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(s.rfq.number)}`)
     await review(page, 'rfq-detail-01-populated-1440')
 
     // China, no earlier reply: the country map fills CNY. The USD supplier's last reply fills USD. Nobody types a currency.

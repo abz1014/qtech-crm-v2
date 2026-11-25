@@ -23,7 +23,7 @@ import { longDay, splitDescription, type QuotedRow, type Statement } from '@/fea
  */
 export interface StatementPdfData {
   statement: Statement
-  /** "Job 139 (RFQ-0139)". */
+  /** "RFQ-0139". */
   reference: string
   customer: string
   /** ISO day. */

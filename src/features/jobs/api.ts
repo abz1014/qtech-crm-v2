@@ -156,7 +156,7 @@ export async function getJob(key: string): Promise<JobRow | null> {
 
 // ---------------------------------------------------------------- the one search
 
-/** A typed job number: "139", "job 139", "O-45", "job o45". */
+/** A typed job number: "139", "job 139", "O-45", "job o45". "RFQ-0139" and "ORD-0045", as screens write it, are found by search_all. */
 export function jobKeyOf(text: string): string | null {
   const m = /^(?:job[-\s]*)?(?:(o)[-\s]*)?(\d{1,9})$/i.exec(text.trim())
   if (!m) return null
@@ -265,7 +265,7 @@ export interface JobFacts {
   closeReason: string | null
   contact: JobContact | null
   site: { name: string; address: string | null } | null
-  /** The direct order's own number, shown beside "Job O-45" as ORD-0045. */
+  /** The direct order's own number (ORD-0045, which is also how the job O-45 is labelled). */
   orderNumber: number | null
 }
 

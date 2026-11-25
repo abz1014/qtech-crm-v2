@@ -112,7 +112,7 @@ describe('alsoDeletes', () => {
         supplierPrices: 0,
         files: 3,
       }),
-    ).toEqual(['2 issued quotations (QT-26-0012 R0, R1)', '1 item', '3 files'])
+    ).toEqual(['2 issued quotations (QT-26-0012 and Rev 1)', '1 item', '3 files'])
     expect(alsoDeletes({ quotations: [], items: 0, supplierPrices: 0, files: 0 })).toEqual([])
   })
 })
@@ -131,7 +131,7 @@ describe('the delete RFQ flow', () => {
     await openConfirm()
     expect(screen.getByRole('dialog', { name: 'Delete RFQ-0177?' })).toBeInTheDocument()
     expect(screen.getByText(/Also deletes:/).parentElement).toHaveTextContent(
-      'Also deletes: 2 issued quotations (QT-26-0012 R0, R1), 3 items, 5 supplier prices, 3 files',
+      'Also deletes: 2 issued quotations (QT-26-0012 and Rev 1), 3 items, 5 supplier prices, 3 files',
     )
     expect(screen.getByText('RFQ-0177 · Indus Textile Mills')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Delete' })).toBeEnabled()

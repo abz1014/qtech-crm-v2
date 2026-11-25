@@ -19,7 +19,7 @@ import type { JobFacts } from '@/features/jobs/api'
 import type { JobData } from '@/features/jobs/useJobData'
 import { JobSlot, type JobContext } from '@/features/jobs/slots'
 import { stageSlot } from '@/features/jobs/slotRegistry'
-import { quotationRef } from '@/features/jobs/lib/refs'
+import { quotationRef } from '@/features/quotations/lib/refs'
 import { invoiceStanding, STOPS, type StageModel, type StopName, type StopState } from '@/features/jobs/lib/stages'
 
 // The enquiry side's real components (P5-D1): downloaded when the Quotation stage is first opened, not with the job page.
@@ -138,7 +138,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         <Table
           head={['Quotation', 'Issued', 'Valid until']}
           label="Quotations"
-          rows={quotes.map(q => [<span key="n" className="num font-medium">{`${quotationRef(q.number, q.issuedOn, q.code)}${q.revision ? ` R${q.revision}` : ''}`}</span>, day(q.issuedOn), day(q.validUntil)])}
+          rows={quotes.map(q => [<span key="n" className="num font-medium">{quotationRef(q.number, q.issuedOn, q.revision, q.code)}</span>, day(q.issuedOn), day(q.validUntil)])}
         />
       ) : null}
     </div>
@@ -248,7 +248,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
   // suppliers answered. Before that it counts the answers, and with nobody asked it says no quotation is recorded.
   const latest = quotes.reduce<(typeof quotes)[number] | null>((a, q) => (!a || q.revision > a.revision ? q : a), null)
   const sentOn = facts.quotedOn ?? latest?.issuedOn ?? null
-  const latestRef = latest ? `${quotationRef(latest.number, latest.issuedOn, latest.code)}${latest.revision ? ` R${latest.revision}` : ''}` : null
+  const latestRef = latest ? quotationRef(latest.number, latest.issuedOn, latest.revision, latest.code) : null
   const quotationSummary = sentOn
     ? [latestRef, `Sent ${formatShortDate(sentOn, today)}`].filter(Boolean).join(' · ')
     : asked

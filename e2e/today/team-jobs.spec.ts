@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, openAs, uniqueName } from '../support/stack'
+import { createCompany, createRfq, openAs, rfqRef, uniqueName } from '../support/stack'
 
 /*
  * Home, Team: open jobs per person (owner 2026-11-17), against the real stack. The admin sees under the salesperson's name how many
@@ -26,8 +26,8 @@ test("the admin sees a team member's open jobs and where each stands, from Home'
   await panel.getByRole('link', { name: /^(See all \d+ open jobs|Show in Jobs)$/ }).click()
   await expect(page).toHaveURL(new RegExp(`/jobs\\?person=${SALES}`))
   await expect(page.getByTestId('person-filter')).toHaveValue(SALES)
-  await expect(page.getByRole('row', { name: new RegExp(`Job ${theirs.number}\\b`) }).first()).toBeVisible()
-  await expect(page.getByRole('row', { name: new RegExp(`Job ${mine.number}\\b`) })).toHaveCount(0)
+  await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(theirs.number)}\\b`) }).first()).toBeVisible()
+  await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(mine.number)}\\b`) })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: 'Mine' })).toHaveCount(0)
 
   // back on Home, a job opens its job page

@@ -144,6 +144,9 @@ export async function createRfq(companyId: string, extra: Record<string, unknown
 }
 
 export const rfqRef = (n: number) => `RFQ-${String(n).padStart(4, '0')}`
+export const orderRef = (n: number) => `ORD-${String(n).padStart(4, '0')}`
+/** A job's number as screens write it (src/lib/refs.ts jobRef): job key "139" is RFQ-0139, "O-45" is ORD-0045. */
+export const jobRef = (key: string) => (/^O-\d+$/.test(key) ? orderRef(Number(key.slice(2))) : rfqRef(Number(key)))
 
 /** Today in the business timezone (Asia/Karachi), YYYY-MM-DD, shifted by `days`. */
 export function karachiDay(days = 0): string {

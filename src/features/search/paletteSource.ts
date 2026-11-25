@@ -4,6 +4,7 @@ import { usePaletteSource } from '@/app/palette/usePalette'
 import { useSession } from '@/app/session'
 import type { JobRow } from '@/features/jobs/api'
 import type { stageModel as StageModel } from '@/features/jobs/lib/stages'
+import { jobLabel } from '@/features/jobs/lib/listModel'
 import { searchAll, type SearchHit, type SearchKind, type SearchRole } from '@/features/search/api'
 import type { PaletteItem, PaletteSource } from '@/ui/paletteSources'
 
@@ -40,7 +41,7 @@ const JOBS = 'Jobs'
 function jobItem(j: JobRow, office: boolean, stageModel: typeof StageModel): PaletteItem {
   // an engineer's words leave out the money states ("advance received") and call the Invoice stop Billing
   const stands = stageModel({ stage: j.stage, stageDetail: j.stageDetail, kind: j.kind, office }).label
-  return { id: `job-${j.key}`, group: JOBS, label: `Job ${j.key} · ${j.companyName}`, meta: [j.items, stands].filter(Boolean).join(' · ') || undefined, icon: Briefcase, href: `/jobs/${encodeURIComponent(j.key)}` }
+  return { id: `job-${j.key}`, group: JOBS, label: `${jobLabel(j.key)} · ${j.companyName}`, meta: [j.items, stands].filter(Boolean).join(' · ') || undefined, icon: Briefcase, href: `/jobs/${encodeURIComponent(j.key)}` }
 }
 
 /** Rows shown per kind; the search asks for up to FETCH_LIMIT (the database's cap, migration 0054) so it can say how many more there are. */
