@@ -99,6 +99,9 @@ const qtyText = (n: number) => (Number.isInteger(n) ? n.toLocaleString('en-US') 
 const COUNT_UNITS = /^(pcs?|nos?|no\.|each|ea|units?|qty)$/i
 const qtyWithUnit = (n: number, unit: string | null) => (unit?.trim() && !COUNT_UNITS.test(unit.trim()) ? `${qtyText(n)} ${unit.trim()}` : qtyText(n))
 
+/** Note lines that repeat what the template prints itself: the old default terms said both. */
+const TEMPLATE_SAYS = /^(prices are in [a-z]{3} .*(gst|sales tax)|warranty is \d+ months?)/i
+
 export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; profile: CompanyProfile; logoSrc: string }) {
   const q = data.quotation
   const currency = data.currency ?? 'PKR'
@@ -115,7 +118,10 @@ export function QuotationDocument({ data, profile, logoSrc }: { data: PdfData; p
     { label: null, text: `Prices are in ${currency}, exclusive of GST, and will be charged as per the Govt. Law.` },
     city ? { label: null, text: `Prices are on F-O-R ${city}.` } : null,
     paymentLine(q.paymentTerms, profile.default_payment_terms_days),
-    ...termLines(q.notes).map(t => ({ label: null, text: t })),
+    // the notes keep any extra terms typed, minus lines the template already prints (the PKR and GST line, the warranty paragraph)
+    ...termLines(q.notes)
+      .filter(t => !TEMPLATE_SAYS.test(t))
+      .map(t => ({ label: null, text: t })),
   ].filter((t): t is { label: string | null; text: string } => t !== null && Boolean(t.text))
   const address = (data.siteAddress ?? data.customer.address ?? '').replace(/\s*\r?\n\s*/g, ', ').trim()
   const greeting = toLine(data.attention, data.attentionTitle)

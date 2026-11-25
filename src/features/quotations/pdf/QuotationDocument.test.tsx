@@ -208,6 +208,15 @@ describe('quotation PDF (owner template)', () => {
     expect(t).not.toMatch(/Delivery Time|F-O-R|Payment Terms|Make:/)
   })
 
+  it('keeps extra terms typed in the notes but not the old default lines the template already prints', async () => {
+    const data = sampleData([line(1)])
+    data.quotation = { ...data.quotation, notes: 'Prices are in PKR and exclude sales tax.\nWarranty is 12 months.\nInstallation is not included.' }
+    const t = (await textOf(await render(data))).text[0]
+    expect(t).toContain('Installation is not included.')
+    expect(t).not.toContain('exclude sales tax')
+    expect(t).not.toContain('Warranty is 12 months')
+  })
+
   it('previews a first issue with the customer code and no number', async () => {
     const data = sampleData([line(1)], { preview: true })
     data.quotation = { ...data.quotation, number: 0, code: null }

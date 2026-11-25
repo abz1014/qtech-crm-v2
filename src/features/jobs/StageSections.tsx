@@ -253,7 +253,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
     ? [latestRef, `Sent ${formatShortDate(sentOn, today)}`].filter(Boolean).join(' · ')
     : asked
       ? `${answered} of ${asked} answered`
-      : 'No quotation recorded'
+      : 'No quotation in the CRM'
   const summaries: ReactNode[] = [
     direct
       ? 'No RFQ: this job started as an order'

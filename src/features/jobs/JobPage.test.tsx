@@ -416,7 +416,7 @@ describe('Job page: the stage list', () => {
     const { container } = mount(job({ stage: 'ordered', stageDetail: 'to source' }), 'sales')
     await screen.findByRole('heading', { level: 1 })
     const row = container.querySelector('#stage-1') as HTMLElement
-    expect(row).toHaveTextContent('No quotation recorded')
+    expect(row).toHaveTextContent('No quotation in the CRM')
     expect(row.textContent).not.toMatch(/No supplier asked/)
   })
 
