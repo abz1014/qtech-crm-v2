@@ -112,9 +112,9 @@ async function storageState(page: Page): Promise<{ local: string[]; session: str
 
 // ------------------------------------------------------------------------------------------------ double submit
 test.describe('a double tap makes one record', () => {
-  test('New company (any role): one company', async ({ page }) => {
+  test('New company (admin and sales): one company', async ({ page }) => {
     const name = `${world.tag} Double Tap Co`
-    await openAs(page, 'engineer', '/companies')
+    await openAs(page, 'sales', '/companies')
     await page.getByRole('button', { name: 'New company' }).first().click()
     const d = page.getByRole('dialog', { name: 'New company' })
     await d.getByLabel('Company name').fill(name)

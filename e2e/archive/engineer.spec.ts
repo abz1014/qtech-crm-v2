@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { openAs } from '../support/stack'
+import { openAs, rfqRef } from '../support/stack'
 import { archiveOff, archiveOn, jobRowName, seedArchive } from '../support/archive'
 import { openJobsFor } from './shared'
 
@@ -70,9 +70,9 @@ test('the Jobs list hides old jobs, search does not find them, and no page is re
   await openPalette(page)
   const input = page.getByRole('combobox')
   await input.fill(`ENQ-NEW-${f.tag}`)
-  await expect(page.getByRole('option', { name: new RegExp(`Job ${f.newRfq.number} · `) })).toBeVisible()
+  await expect(page.getByRole('option', { name: new RegExp(`${rfqRef(f.newRfq.number)} · `) })).toBeVisible()
   await input.fill(`ENQ-OLD-${f.tag}`)
-  await expect(page.getByRole('option', { name: new RegExp(`Job ${f.oldRfq.number} · `) })).toHaveCount(0)
+  await expect(page.getByRole('option', { name: new RegExp(`${rfqRef(f.oldRfq.number)} · `) })).toHaveCount(0)
   await page.keyboard.press('Escape')
 
   // an archived job still opens by its address, with the banner and no Unarchive button

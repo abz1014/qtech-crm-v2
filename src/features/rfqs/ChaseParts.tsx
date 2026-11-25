@@ -8,6 +8,7 @@ import { Checkbox } from '@/ui/form/Checkbox'
 import { DateInput } from '@/ui/form/DateInput'
 import { Icon } from '@/ui/Icon'
 import { useToast } from '@/ui/useToast'
+import { WhatsAppText } from '@/ui/WhatsAppText'
 import { useUserNames } from '@/features/rfqs/hooks'
 import { chasedByText } from '@/features/rfqs/lib/collision'
 
@@ -19,16 +20,9 @@ import { chasedByText } from '@/features/rfqs/lib/collision'
 
 /** Text between asterisks is bold when pasted into WhatsApp: here the words are bold and the asterisks are not drawn (the message sent keeps them). */
 export function FormattedMessage({ text, className, testId, chaseText = false }: { text: string; className?: string; testId?: string; chaseText?: boolean }) {
-  const parts = text.split(/(\*[^*\n]+\*)/g)
   return (
     <pre data-testid={testId} data-chase-text={chaseText ? '' : undefined} className={cn('whitespace-pre-wrap break-words font-sans text-base text-fg', className)}>
-      {parts.map((p, i) =>
-        /^\*[^*\n]+\*$/.test(p) ? (
-          <b key={i} className="font-semibold">{p.slice(1, -1)}</b>
-        ) : (
-          <span key={i}>{p}</span>
-        ),
-      )}
+      <WhatsAppText text={text} />
     </pre>
   )
 }

@@ -17,7 +17,7 @@ const DeleteRfqConfirm = lazyWithReload(() => import('@/features/rfqs/DeleteRfqC
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
-/** "2 issued quotations (QT-26-0012 R0, R1)": the numbers once, then the revisions. */
+/** "2 issued quotations (QT-26-0012 and Rev 1)": the number once, then the later revisions. */
 export function quotationsPhrase(qs: api.RfqDeleteCounts['quotations']): string {
   const byNumber = new Map<number, { issuedOn: string; code: string | null; revisions: number[] }>()
   for (const q of qs) {
@@ -29,10 +29,10 @@ export function quotationsPhrase(qs: api.RfqDeleteCounts['quotations']): string 
     ([n, g]) =>
       `${quotationRef(n, g.issuedOn, g.revisions[0], g.code)}${g.revisions
         .slice(1)
-        .map(r => `, R${r}`)
+        .map((r, i) => `${i ? ',' : ' and'} Rev ${r}`)
         .join('')}`,
   )
-  return `${plural(qs.length, 'issued quotation')} (${named.join('; ')})`
+  return `${plural(qs.length, 'issued quotation')} (${named.join(', ')})`
 }
 
 /** What else goes with the RFQ, as the phrases for "Also deletes:". Empty counts are left out. */

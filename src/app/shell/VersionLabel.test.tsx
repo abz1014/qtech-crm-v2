@@ -2,14 +2,16 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { VersionLabel } from '@/app/shell/VersionLabel'
-import { versionLabel } from '@/lib/pwa/buildInfo'
+import { versionCode, versionLabel } from '@/lib/pwa/buildInfo'
 import { axeViolations } from '@/test/axe'
 
 describe('version label (Settings)', () => {
-  it('shows "Version <sha> · <date>" and a "Check for update now" button, accessibly', async () => {
+  it('shows "Build <date>" with the code in the tooltip, and a "Check for update now" button, accessibly', async () => {
     const { container } = render(<VersionLabel check={async () => 'latest'} />)
     expect(screen.getByText(versionLabel())).toBeInTheDocument()
-    expect(screen.getByText(/^Version /)).toBeInTheDocument()
+    expect(screen.getByText(/^Build /)).toBeInTheDocument()
+    expect(screen.queryByText(/^Version /)).toBeNull()
+    expect(screen.getByRole('button', { name: /Check for update now/ })).toHaveAttribute('title', versionCode())
     expect(screen.getByRole('button', { name: /Check for update now/ })).toBeInTheDocument()
     expect(await axeViolations(container)).toEqual([])
   })

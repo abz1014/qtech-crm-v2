@@ -3,7 +3,7 @@ import { amountInWords, computeTotals, lineGstPaisa, lineNetPaisa } from '@/feat
 import { addDays, isExpired, quotationRef } from '@/features/quotations/lib/refs'
 
 describe('quotation totals', () => {
-  it('matches the approved PDF (QT-26-0042 R2): net 1,383,000, GST 248,940, gross 1,631,940', () => {
+  it('matches the approved PDF (QT-26-0042 Rev 2): net 1,383,000, GST 248,940, gross 1,631,940', () => {
     const t = computeTotals([
       { qty: 2, unitPrice: 148500, gstRate: 18 },
       { qty: 1, unitPrice: 468000, gstRate: 18 },
@@ -98,7 +98,8 @@ describe('amount in words', () => {
 describe('references and validity', () => {
   it('dresses the number as QT-YY-NNNN with an optional revision', () => {
     expect(quotationRef(42, '2026-11-26')).toBe('QT-26-0042')
-    expect(quotationRef(42, '2026-11-26', 2)).toBe('QT-26-0042 R2')
+    expect(quotationRef(42, '2026-11-26', 2)).toBe('QT-26-0042 Rev 2')
+    expect(quotationRef(42, '2026-11-26', 0)).toBe('QT-26-0042')
   })
   it('adds days on the calendar and counts a quotation expired only after its last day', () => {
     expect(addDays('2026-11-27', 30)).toBe('2026-12-27')

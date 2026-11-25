@@ -1,22 +1,22 @@
 """
-Core subsets of Geist and Geist Mono, the app's faces since the Forest redesign (owner approval 2026-11-14). Run from the
-repository root after changing CORE or bumping @fontsource-variable/geist or geist-mono, then copy the printed unicode-range lines
+Core subset of Geist, the app's face since the Forest redesign (owner approval 2026-11-14). Run from the
+repository root after changing CORE or bumping @fontsource-variable/geist, then copy the printed unicode-range lines
 into src/index.css:
 
     pip install fonttools brotli
     python scripts/fonts/subset-geist.py
 
-Two faces, each split in two by unicode-range (src/index.css), the same way Archivo was (perf/lcp):
+One face, split in two by unicode-range (src/index.css), the same way Archivo was (perf/lcp):
 
   "Geist"       every word in the app: body, rows, buttons and the heavy titles. The variable weight axis cut to 400-800 (the app
                 uses 400, 500, 600, 650, 700 and 800).
-  "Geist Mono"  job, invoice and PO numbers. Weight 400-800 (hero numbers are 800).
+  There is no monospace face (owner rule, screen review 24 Nov 2026; Geist Mono was removed): numbers are Geist with tnum.
 
-Each face has a small core file (the characters the app's own words use) that every page needs, and the @fontsource latin
+The face has a small core file (the characters the app's own words use) that every page needs, and the @fontsource latin
 file for anything else (accented names, rare symbols), which the browser downloads only when such a character is on screen.
 All layout features are kept (tabular figures among them: `.num` turns on tnum).
 
-Geist and Geist Mono are (c) 2023 Vercel, in collaboration with basement.studio, SIL Open Font License 1.1
+Geist is (c) 2023 Vercel, in collaboration with basement.studio, SIL Open Font License 1.1
 (src/assets/fonts/OFL-LICENSE.txt, also node_modules/@fontsource-variable/geist/LICENSE), which permits subsetting and
 redistribution with the software. The licence file ships beside the subset files.
 """
@@ -35,7 +35,6 @@ OUT = 'src/assets/fonts'
 FACES = [
     # (output name, source file, axis limits)
     ('geist-core', 'node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2', {'wght': (400, 800)}),
-    ('geist-mono-core', 'node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2', {'wght': (400, 800)}),
 ]
 
 

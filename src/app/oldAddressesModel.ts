@@ -3,19 +3,21 @@ import { requireSupabase } from '@/lib/supabase'
 /* The pure parts of the old-address redirects (oldAddresses.tsx): which chip a list asks for, the Job lookup. */
 export type OldKind = 'rfq' | 'order'
 
-/** The Jobs list chip an old list address asks for: its closed or history views are History, "mine" is Mine, the rest the default. */
-export function chipForOldList(search: string): 'mine' | 'history' | null {
+/** The Jobs list chip an old list address asks for: its closed or history views are History, "mine" is Mine, "all" is Open, the rest the default. */
+export function chipForOldList(search: string): 'mine' | 'open' | 'history' | null {
   const p = new URLSearchParams(search)
   const show = p.get('show') ?? (p.get('tab') === 'closed' ? 'closed' : null)
   if (show && ['closed', 'history', 'cancelled', 'settled', 'paid'].includes(show)) return 'history'
   if (p.get('owner') === 'mine') return 'mine'
+  if (p.get('owner') === 'all') return 'open'
   return null
 }
 
 /**
  * The Jobs list query string for an old list address: the chip it asks for, and every other parameter kept (new=1 opens the new-order
  * dialog, q is the search text). The old list's own filters (show, tab, owner) and the ?old switch are consumed here. The old Orders list
- * also asks for the Orders stage (/orders opens /jobs?stage=orders; /orders?show=closed opens /jobs?chip=history&stage=orders).
+ * also asks for the Orders stage (/orders opens /jobs?stage=orders; /orders?show=closed opens /jobs?chip=history&stage=orders), and the
+ * old RFQ list opens Sell (/rfqs opens /jobs?lane=sell).
  */
 export function jobsSearchForOldList(search: string, kind?: OldKind): string {
   const chip = chipForOldList(search)
@@ -24,6 +26,8 @@ export function jobsSearchForOldList(search: string, kind?: OldKind): string {
   if (chip) next.set('chip', chip)
   // The old Orders list was the jobs with an order: the Orders stage filter. Not for the new-order dialog's address (/orders?new=1), which is not a list view.
   if (kind === 'order' && next.get('new') !== '1') next.set('stage', 'orders')
+  // The old RFQ list was Sell's work: it opens Sell, so the menu lights Sell (an engineer's list ignores the lane and lights Jobs).
+  if (kind === 'rfq') next.set('lane', 'sell')
   const out = next.toString()
   return out ? `?${out}` : ''
 }

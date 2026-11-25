@@ -449,7 +449,7 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
       want(info, 'A PO PDF USD', pdfHas(text, w), `USD PO PDF lacks the words "${w}"`)
     }
     const chip = await (await legIn(page, 'Supplier order', supU.name)).locator('[data-testid$="-po"]').innerText()
-    want(info, 'A Issue PO USD', /^PO-\d\d-\d{4} · R0$/.test(chip.trim()), `PO chip reads "${chip}"`)
+    want(info, 'A Issue PO USD', /^PO-\d\d-\d{4}$/.test(chip.trim()), `PO chip reads "${chip}"`)
     await shot(page, 'A-both-pos-issued')
   })
 
@@ -472,7 +472,8 @@ test('hunt orderflow A: Issue PO in EUR and USD with the PDFs, goods chase, deli
     await shot(page, 'A-goods-chase-dialog')
     await resetClipboard(page)
     await d.getByRole('button', { name: 'Copy and record follow-up' }).click()
-    const clip = flat(await readClipboardWhen(page, s => s.length > 20))
+    // the preview draws WhatsApp *bold* as bold words; the clipboard keeps the asterisks (review 19)
+    const clip = flat(await readClipboardWhen(page, s => s.length > 20)).replace(/\*([^*\n]+)\*/g, '$1')
     want(info, 'A chase', clip.includes(draft.slice(0, 60)) || draft.includes(clip.slice(0, 60)), 'the clipboard text is not the draft shown', { draft: draft.slice(0, 200), clip: clip.slice(0, 200) })
     const stamped = await until(() => legDates(legE), r => r.chase_count === 1)
     want(info, 'A chase', stamped.chase_count === 1 && stamped.last_chased_on === today(), `chase stamp ${JSON.stringify(stamped)}`)

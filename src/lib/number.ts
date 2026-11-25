@@ -8,7 +8,10 @@ const groupFmt = (fraction: { min: number; max: number }) =>
 /** More integer digits than this cannot be held exactly (and no amount in the books is that large). */
 export const MAX_INTEGER_DIGITS = 15
 
-type Read = { ok: true; value: number } | { ok: false; reason: 'empty' | 'unreadable' | 'too-large' }
+type Read = { ok: true; value: number } | { ok: false; reason: 'empty' | 'unreadable' | 'too-large' | 'scientific' }
+
+/** "1e5", "2.5E3": a calculator's way of writing a number. Refused with its own sentence, never read as 100000. */
+const SCIENTIFIC = /^[-+]?(\d+\.?\d*|\.\d+)e[-+]?\d+$/i
 
 /*
  * HW-1: what a person types is read one way only, or refused. Accepted:
@@ -21,6 +24,7 @@ type Read = { ok: true; value: number } | { ok: false; reason: 'empty' | 'unread
 function read(text: string): Read {
   let s = text.trim().replace(/[\s'’]/g, '') // \s also covers no-break and narrow no-break spaces
   if (s === '') return { ok: false, reason: 'empty' }
+  if (SCIENTIFIC.test(s)) return { ok: false, reason: 'scientific' }
   let sign = ''
   if (s.startsWith('-')) {
     sign = '-'
@@ -59,7 +63,33 @@ export function amountProblem(text: string): string | null {
   const r = read(text)
   if (r.ok || r.reason === 'empty') return null
   if (r.reason === 'too-large') return 'That number is too large.'
+  if (r.reason === 'scientific') return 'Type the amount in digits, like 100000.'
   return 'Not a number this can read. Type it like 1,234.50 or 1234.5.'
+}
+
+/** Money is kept to the paisa: 2 decimals. */
+export const MONEY_DECIMALS = 2
+
+/**
+ * An amount with more decimals than money keeps. `rounded` is what the books will hold (half away from zero, as
+ * numeric(14,2) does), or null when it rounds to nothing (0.001 is 0.00, not a payment). Null when 2 decimals or fewer.
+ */
+export function beyondPaisa(value: number): { rounded: number | null } | null {
+  const scaled = value * 100
+  if (Math.abs(scaled - Math.round(scaled)) < 1e-6) return null
+  // two spare digits: 100.555 is 100.55499999... in binary; toFixed(4) gives back the typed "100.5550"
+  const [w, f = ''] = Math.abs(value).toFixed(4).split('.')
+  let p = Number(w + f.slice(0, 2))
+  if (f.charCodeAt(2) >= 53) p += 1
+  const rounded = (value < 0 ? -p : p) / 100
+  return { rounded: rounded === 0 ? null : rounded }
+}
+
+/** The plain sentence for an amount of money below one paisa (0.001), else null. */
+export function paisaProblem(value: number | null): string | null {
+  if (value === null) return null
+  const b = beyondPaisa(value)
+  return b && b.rounded === null ? 'Amounts go to 2 decimals, so the smallest is 0.01.' : null
 }
 
 /**

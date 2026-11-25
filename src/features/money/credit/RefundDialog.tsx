@@ -145,11 +145,12 @@ function RefundForm({ companyId, companyName, credit, onBusy, onDone, onCancel }
                   amountRef.current = r
                 }}
                 inputMode="decimal"
+                money
               />
             )}
           </FormField>
           <FormField<Values, 'refundedOn'> name="refundedOn" label="Date refunded" source={{ label: 'Today', plain: true }}>
-            {f => <DateInput {...f} />}
+            {f => <DateInput {...f} checkYear />}
           </FormField>
         </div>
 

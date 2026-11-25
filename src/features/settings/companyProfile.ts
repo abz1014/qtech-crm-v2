@@ -135,16 +135,17 @@ const DOC_LABELS: Record<DocumentField, string> = { legal_name: 'Legal name', ad
 /**
  * What the documents still need (audit 2026-10-22): the legal name and address for every PDF, and the NTN and STRN for a GST
  * (sales-tax) invoice, the same four the invoice readiness check asks for (money/invoices/pdf/model.ts). Bank details are not
- * here: they print only when filled in. `title` is the banner's one line, `detail` says what each gap blocks.
+ * here: they print only when filled in. `title` is the banner's one line, `detail` says what each gap blocks, naming only the
+ * fields that are empty (screen review 2026-11-24, item 21: "also need the NTN and STRN" read as if a saved NTN were missing).
  */
 export function missingForDocuments(p: Pick<CompanyProfile, DocumentField>): { fields: DocumentField[]; title: string; detail: string } | null {
   const fields = (['legal_name', 'address', 'ntn', 'strn'] as const).filter(f => !p[f]?.trim())
   if (fields.length === 0) return null
   const pdf = fields.some(f => f === 'legal_name' || f === 'address')
-  const gst = fields.some(f => f === 'ntn' || f === 'strn')
+  const gst = fields.filter(f => f === 'ntn' || f === 'strn').map(f => DOC_LABELS[f])
   const detail = [
     pdf ? 'Quotations, purchase orders and invoices print the legal name and address at the top.' : null,
-    gst ? 'GST invoices also need the NTN and STRN.' : null,
+    gst.length ? `GST invoices also need the ${gst.join(' and ')}.` : null,
   ]
     .filter(Boolean)
     .join(' ')

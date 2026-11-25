@@ -391,7 +391,7 @@ test.describe('payments in and receivables (M02)', () => {
     const order = await seedOrder(100000)
     await seedInvoice(order, { net_amount: 100000, gst_amount: 18000 })
     await openAs(page, 'admin', '/money/gst-register')
-    await expect(page.getByText(/All \d+ invoices? shown/)).toBeVisible()
+    await expect(page.getByText(/^Showing \d+ of \d+ invoices?/)).toBeVisible()
     expect(await axeViolations(page)).toEqual([])
     await page.getByRole('checkbox', { name: /Select all in/ }).first().click()
     expect(await axeViolations(page)).toEqual([])

@@ -20,7 +20,7 @@ export function ReportsPage() {
 /** The enquiry and customer reports (counts only, never money): admin and sales. */
 export function EnquiriesReportPage() {
   return (
-    <ReportsFrame report="enquiries">
+    <ReportsFrame report="rfqs">
       <SalesReports />
     </ReportsFrame>
   )

@@ -20,7 +20,7 @@ import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { useSetCostsCompleteMany } from '@/features/money/costs/hooks'
 import { useOrderMargins } from '@/features/money/hooks'
-import { cashTotals, isPaidProvisional, marginPct, marginTotals, noCostsYet, sortCash, sortMargins, type CashTotals, type MarginMode, type MarginRow } from '@/features/money/margins/model'
+import { cashTotals, isPaidProvisional, marginPct, marginTotals, noCostsYet, shownMargin, sortCash, sortMargins, type CashTotals, type MarginMode, type MarginRow } from '@/features/money/margins/model'
 
 /*
  * Money > Lock a month > Margins (g2-money board "Admin: order margins"; M04). Whole-life margin per order, from v_order_money. Admin
@@ -66,11 +66,12 @@ function StateMark({ r }: { r: MarginRow }) {
 function MarginFigure({ r, size }: { r: MarginRow; size?: 'lg' }) {
   if (r.state === 'basis_unknown' || r.margin === null) return <Money value={null} prefix={false} size={size} />
   // Plan D6: with no cost yet the margin would be the whole sale. Say so in words (a settled imported order has its costs marked complete, so it is final and never says this).
-  if (noCostsYet(r)) return <span className="text-right text-sm text-fg-2" data-testid="costs-not-entered">Costs not entered yet</span>
+  // With an expected supplier cost the estimate is made from it instead (shownMargin), so it is shown.
+  if (noCostsYet(r) && !((r.expectedCost ?? 0) > 0)) return <span className="text-right text-sm text-fg-2" data-testid="costs-not-entered">Costs not entered yet</span>
   const est = r.state === 'provisional'
   return (
     <span className={cn('inline-flex items-baseline gap-1', est && 'text-fg-muted')}>
-      <Money value={r.margin} prefix={false} size={size} strong={!est} className={est ? 'text-fg-muted' : undefined} />
+      <Money value={shownMargin(r)} prefix={false} size={size} strong={!est} className={est ? 'text-fg-muted' : undefined} />
       {est ? <span className="text-xs">(est.)</span> : null}
     </span>
   )
@@ -80,7 +81,8 @@ function MarginRowView({ r }: { r: MarginRow }) {
   const unknown = r.state === 'basis_unknown'
   // a percentage of an estimate (often "100%" with no cost yet) misleads: only a final margin gets one
   const pct = r.state === 'final' ? marginPct(r) : null
-  const loss = r.margin !== null && r.margin < 0 && !unknown
+  const shown = shownMargin(r)
+  const loss = shown !== null && shown < 0 && !unknown
   return (
     <li className="border-t first:border-t-0" data-margin-state={r.state}>
       {/* Phone: two lines (round 3: each card was about 230 px). */}

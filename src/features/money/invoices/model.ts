@@ -1,6 +1,7 @@
 import { monthKey, monthLabel } from '@/features/money/expenses/model'
 import { DEFAULT_GST_DEADLINES, gstDatesFor, type GstDeadlines } from '@/features/settings/gstDeadlines'
 import { divRoundHalfUp, gstWholeRupeesPaisa, paisaToFixed, productPaisa, toPaisa, type Amount } from '@/lib/money'
+import { orderRef } from '@/lib/refs'
 
 /*
  * Invoices and the GST register (M01): the pure rules. No React and no database in here, so each rule can be unit-tested.
@@ -68,17 +69,25 @@ export interface InvoiceStart {
 
 /** The amounts a new invoice opens with: what is left of the order's lines after earlier invoices (net and GST pre-filled). */
 export function invoiceStart(a: OrderAmounts): InvoiceStart {
-  const net = Math.max(round2(a.itemsNet - a.invoicedNet), 0)
-  const gst = Math.max(round2(a.itemsGst - a.invoicedGst), 0)
+  // In whole paisa, so a full invoice of what is left closes the order to exactly 0 (no float leftover).
+  const netP = maxP(toPaisa(a.itemsNet) - toPaisa(a.invoicedNet))
+  const gstP = maxP(toPaisa(a.itemsGst) - toPaisa(a.invoicedGst))
+  // As v_order_state (0112): once there is an invoice, fully invoiced when the invoices carry the order's gross less at most PKR 1
+  // (an order with no invoice yet is never fully invoiced, however small).
+  const invoiced = toPaisa(a.invoicedNet) > 0n || toPaisa(a.invoicedGst) > 0n
+  const fullyInvoiced = a.itemsNet > 0 && (netP <= 0n || (invoiced && netP + gstP <= OVER_INVOICE_ALLOWANCE_PAISA))
+  // what is left, exact to the paisa (a leftover within the allowance stays visible here; the dialog does not prefill it)
+  const net = Number(paisaToFixed(netP))
+  const gst = Number(paisaToFixed(gstP))
   const allExempt = a.lineCount > 0 && a.exemptLineCount === a.lineCount
   const noneExempt = a.exemptLineCount === 0
   const option: GstOption | 'mixed' = allExempt ? 'exempt' : noneExempt ? '18' : 'mixed'
   return {
     net,
     gst,
-    gross: round2(net + gst),
+    gross: Number(paisaToFixed(toPaisa(net) + toPaisa(gst))),
     option,
-    fullyInvoiced: net <= 0 && a.itemsNet > 0,
+    fullyInvoiced,
     wholeOrder: a.invoicedNet <= 0 && a.invoicedGst <= 0,
     lines: a.lines,
   }
@@ -152,8 +161,10 @@ export function gstForNet(
   return Number(paisaToFixed(rupees * 100n))
 }
 
-/** Rupees allowed over what is left, as in v_order_state's "fully invoiced" (Rs 1 allowance). */
+/** Rupees allowed over what is left, as in v_order_state's "fully invoiced" (PKR 1 allowance). */
 export const OVER_INVOICE_ALLOWANCE = 1
+const OVER_INVOICE_ALLOWANCE_PAISA = BigInt(OVER_INVOICE_ALLOWANCE * 100)
+const maxP = (p: bigint): bigint => (p > 0n ? p : 0n)
 
 /**
  * HW-13: a new invoice may not carry more net than is left to invoice on the order's lines (Rs 1 allowance). Returns the net
@@ -161,7 +172,7 @@ export const OVER_INVOICE_ALLOWANCE = 1
  */
 export function overInvoiced(net: number, start: Pick<InvoiceStart, 'net'>, itemsNet: number): number | null {
   if (!(itemsNet > 0) || !(net > 0)) return null
-  return net > start.net + OVER_INVOICE_ALLOWANCE ? start.net : null
+  return toPaisa(net) > toPaisa(start.net) + OVER_INVOICE_ALLOWANCE_PAISA ? start.net : null
 }
 
 /** A mixed-rate part invoice whose net is not a set of whole lines: its GST is a share, and its PDF needs the lines ticked. */
@@ -275,7 +286,7 @@ export const tcsNotSent = (r: Pick<GstRow, 'courierState' | 'rowKind' | 'voided'
 export function matchesSearch(r: GstRow, text: string): boolean {
   const words = text.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return true
-  const hay = `${r.number ?? ''} ${r.againstNumber ?? ''} ${r.companyName ?? ''} ORD-${String(r.orderNumber ?? '').padStart(4, '0')}`.toLowerCase()
+  const hay = `${r.number ?? ''} ${r.againstNumber ?? ''} ${r.companyName ?? ''} ${orderRef(r.orderNumber ?? 0)}`.toLowerCase()
   return words.every(w => hay.includes(w))
 }
 
@@ -291,6 +302,24 @@ export function registerTotals(rows: readonly GstRow[]): { count: number; net: n
     gst: paisaFigure(rows, r => r.gst),
     gross: paisaFigure(rows, r => r.gross),
   }
+}
+
+/**
+ * The register's one count line (screen review 14: "All 3 invoices shown" sat next to "Showing 5 of 5 invoices"). Invoices are
+ * counted as the totals count them; a credit note or a void invoice is a line of the register, said apart:
+ * "Showing 3 of 3 invoices and 2 credit notes".
+ */
+export function registerCountLine(shown: readonly GstRow[], all: readonly GstRow[]): string {
+  const invoices = (rows: readonly GstRow[]) => rows.filter(r => !isInert(r)).length
+  const n = invoices(shown)
+  const total = invoices(all)
+  const notes = shown.filter(isCreditNote).length
+  const voids = shown.filter(r => !isCreditNote(r) && r.voided === true).length
+  const extra = [
+    notes > 0 ? `${notes} ${notes === 1 ? 'credit note' : 'credit notes'}` : '',
+    voids > 0 ? `${voids} void ${voids === 1 ? 'invoice' : 'invoices'}` : '',
+  ].filter(Boolean)
+  return `Showing ${n} of ${total} ${total === 1 ? 'invoice' : 'invoices'}${extra.length ? ` and ${extra.join(' and ')}` : ''}`
 }
 
 /** "Sep to Nov 2026" over the months present. */

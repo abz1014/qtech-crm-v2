@@ -12,6 +12,7 @@ import { installFakeDb, opArgs, type FakeCall, type FakeResult } from '@/test/fa
 import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 import { businessToday } from '@/lib/dates'
+import { qk } from '@/features/queryKeys'
 
 const TODAY = businessToday()
 
@@ -25,7 +26,7 @@ const receivables = [
   { order_id: 'o27', order_number: 27, company_id: 'c', owner_id: 'u', gross_target: 1911600, settled: 800000, balance: 1111600, due_on: '2020-10-20', is_overdue: true, overpaid_by: 0, payment_state: 'overdue', last_reminded_on: null, reminder_count: 0, data_trust: 'ok' },
 ]
 
-function db(extra: (c: FakeCall) => FakeResult | undefined = () => undefined) {
+function db(extra: (c: FakeCall) => FakeResult | Promise<FakeResult> | undefined = () => undefined) {
   return installFakeDb((c: FakeCall) => {
     const x = extra(c)
     if (x) return x
@@ -155,6 +156,65 @@ describe('Create invoice (M01)', () => {
     expect(await screen.findByText('This invoice number is already in the register. Use the next one.')).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'Invoice number' })).toHaveValue('INV-2312')
   })
+
+  // the order's earlier invoices, as orderForInvoice reads them (net_amount, gst_amount, invoice_date)
+  const earlier = (rows: { net_amount: number; gst_amount: number }[]) => (c: FakeCall): FakeResult | undefined =>
+    c.target === 'invoices' && c.verb === 'select' && c.ops.some(([k, a]) => k === 'select' && String(a[0]).includes('net_amount'))
+      ? { data: rows.map(r => ({ ...r, invoice_date: '2026-11-01' })) }
+      : undefined
+
+  it('with nothing left to invoice, Create invoice is off and the banner says why', async () => {
+    db(earlier([{ net_amount: 1949800, gst_amount: 350964 }]))
+    mount(<CreateInvoiceDialog open onOpenChange={() => {}} orderId="o38" />)
+    expect(await screen.findByText('Every line of this order is already invoiced')).toBeInTheDocument()
+    const create = screen.getByRole('button', { name: 'Create invoice' })
+    expect(create).toBeDisabled()
+    expect(create).toHaveAccessibleDescription(/Nothing is left to invoice, so Create invoice is off/)
+  })
+
+  it('a PKR 1 rounding leftover counts as fully invoiced, as v_order_state does', async () => {
+    db(earlier([{ net_amount: 1949800, gst_amount: 350963.5 }]))
+    mount(<CreateInvoiceDialog open onOpenChange={() => {}} orderId="o38" />)
+    expect(await screen.findByText('Every line of this order is already invoiced')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create invoice' })).toBeDisabled()
+  })
+
+  it('prefills what is left now, not an out-of-date read from the cache', async () => {
+    // the order's fresh read is slower than the next number (it is two round trips), as on a real network
+    const fresh = earlier([{ net_amount: 1449800, gst_amount: 260964 }])
+    db(c => {
+      const x = fresh(c)
+      return x ? new Promise<FakeResult>(r => setTimeout(() => r(x), 150)) : undefined
+    })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    // the read from before the last invoice: the whole order still to invoice
+    client.setQueryData(qk.money.invoices.forOrder('o38'), {
+      id: 'o38', number: 38, companyId: 'c', companyName: 'Punjab Cement Ltd', cancelled: false,
+      amounts: { itemsNet: 1949800, itemsGst: 350964, lineCount: 8, exemptLineCount: 0, invoicedNet: 0, invoicedGst: 0, paymentTermsDays: 30 },
+    })
+    render(
+      <QueryClientProvider client={client}>
+        <SessionProvider value={{ status: 'signed-in', user: { id: 'u', name: 'Someone', role: 'admin' } }}>
+          <MemoryRouter>
+            <ToastProvider>
+              <CreateInvoiceDialog open onOpenChange={() => {}} orderId="o38" />
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionProvider>
+      </QueryClientProvider>,
+    )
+    await screen.findByRole('textbox', { name: 'Invoice number' })
+    expect(screen.getByText('500,000')).toBeInTheDocument()
+    expect(screen.getByText('90,000')).toBeInTheDocument()
+    expect(screen.queryByText('1,949,800')).toBeNull()
+  })
+
+  it('without an order, the picker still shows Create invoice, off until an order is chosen', async () => {
+    db()
+    mount(<CreateInvoiceDialog open onOpenChange={() => {}} />)
+    expect(await screen.findByText(/Create invoice opens once an order is chosen/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create invoice' })).toBeDisabled()
+  })
 })
 
 describe('GST register (M01)', () => {
@@ -227,7 +287,10 @@ describe('GST register (M01)', () => {
     await user.click(screen.getByRole('radio', { name: /Needs attention/ }))
     expect(screen.queryByText('INV-2299')).not.toBeInTheDocument()
     expect(screen.getByText('INV-2291')).toBeInTheDocument()
-    expect(screen.getByText('All 1 invoice shown')).toBeInTheDocument()
+    // one count on the screen (screen review 14): the count line, and the foot row is the Total
+    // the line on screen and the screen-reader announcement say the same count
+    expect(screen.getAllByText(/^Showing \d+ of \d+ invoices?$/).map(e => e.textContent)).toEqual(['Showing 1 of 3 invoices', 'Showing 1 of 3 invoices'])
+    expect(screen.queryByText(/invoices? shown$/)).toBeNull()
   })
 
   it('Search invoices narrows the register and says so when nothing matches', async () => {

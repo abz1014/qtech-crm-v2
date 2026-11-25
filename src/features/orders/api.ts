@@ -1,5 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
-import { poRef } from '@/lib/refs'
+import { orderRef, poRef } from '@/lib/refs'
 import { PlainError } from '@/lib/errors/plainError'
 import { hideArchived } from '@/lib/archive'
 import type { TableRow, TableUpdate, ViewRow } from '@/features/dbTypes'
@@ -396,7 +396,7 @@ export async function friendlyDuplicatePo(err: unknown): Promise<unknown> {
     const rows = unwrap(await (id ? q.eq('id', id) : q.eq('number', Number(m[2]))).limit(1)) as unknown as Array<{ number: number; archived: boolean | null }>
     const hit = rows[0]
     if (!hit || hit.archived !== true) return err
-    const ref = `ORD-${String(hit.number).padStart(4, '0')}`
+    const ref = orderRef(hit.number)
     return new PlainError(`PO ${m[1]} already exists on ${ref} (in Archive). Unarchive it or use another PO number.`, '23505')
   } catch {
     return err
@@ -701,7 +701,7 @@ function poLines(json: unknown): LegPo['lines'] {
   })
 }
 
-/** The latest PO revision of each leg (the "PO-26-0017 · R1" chip). A leg with none has no entry. */
+/** The latest PO revision of each leg (the "PO-26-0017 Rev 1" chip). A leg with none has no entry. */
 /** `money` is false for an engineer: the PO's lines carry unit prices, so they are not even requested for him (the leg then never shows "lines changed"). */
 export async function listLegPos(legIds: readonly string[], money = false): Promise<LegPo[]> {
   if (legIds.length === 0) return []

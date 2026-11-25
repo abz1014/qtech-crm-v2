@@ -667,7 +667,7 @@ function howTo(item: TodayItem): string {
     case 'claims_to_approve':
       return 'An engineer paid for work and asked to be repaid. Open Expenses: pick the category, say how you paid them back, then approve or decline.'
     case 'weekly_review':
-      return 'Quotations with no decision, RFQs with no supplier asked, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
+      return 'Quotations with no decision, RFQs with no quotation, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
     case 'recurring_due':
       return 'These recurring expenses have no entry for this month yet. Record them all at once, changing an amount first if the bill for this month is different.'
     default:

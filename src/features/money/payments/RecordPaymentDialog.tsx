@@ -170,11 +170,12 @@ function PaymentForm({ data, onBusy, onDone, onCancel }: { data: PaymentOrder; o
                   amountRef.current = r
                 }}
                 inputMode="decimal"
+                money
               />
             )}
           </FormField>
           <FormField<Values, 'receivedOn'> name="receivedOn" label="Date received" source={{ label: 'Today', plain: true }}>
-            {f => <DateInput {...f} />}
+            {f => <DateInput {...f} checkYear />}
           </FormField>
         </div>
 

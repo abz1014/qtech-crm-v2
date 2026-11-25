@@ -192,7 +192,7 @@ test('admin: burst expenses, the bank statement, the margins, and a month closed
     await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: /^Lock a month/ })).toHaveAttribute('aria-current', 'page')
     // nothing left to tick: a clear check is not listed, it is named on the "clear" line
     await expect(page.getByTestId('check-bank_unticked')).toHaveCount(0)
-    await expect(page.getByTestId('checks-clear')).toContainText('Not matched to the bank statement')
+    await expect(page.getByTestId('checks-clear')).toContainText(/bank statement matched/i)
     const closeBtn = page.getByRole('button', { name: closeName, exact: true })
     await expect(closeBtn).toBeEnabled()
     await resetCount(page)

@@ -5,7 +5,7 @@ import { currencyInWords, poLineAmounts, STANDARD_TERMS, unitPriceText } from '@
 import { termLines } from '@/features/quotations/lib/termLines'
 import { wholeInWords } from '@/features/quotations/lib/totals'
 import { formatPaisa, toPaisa } from '@/lib/money'
-import { poRef } from '@/lib/refs'
+import { poRef, poRevRef } from '@/lib/refs'
 
 /*
  * The supplier PO PDF (g2-po-pdf.html, decision D11). A4, Geist, the same letterhead and wordmark as the quotation. The amounts are in
@@ -93,7 +93,7 @@ function splitDescription(text: string): { title: string; detail: string | null 
 export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfData; profile: CompanyProfile; logoSrc: string }) {
   const po = data.po
   const ref = poRef(po.number, data.firstIssuedOn)
-  const refRev = `${ref} R${po.revision}`
+  const refRev = poRevRef(po.number, data.firstIssuedOn, po.revision)
   const ccy = po.currency
   // exact decimals, the same rounding as the stored purchase_orders.total (0022)
   const amounts = poLineAmounts(po.lines.map(l => ({ qty: l.qty, unit_price: l.unit_price })))
@@ -126,7 +126,7 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
             <Text style={s.h1}>Purchase order</Text>
             {data.previous ? (
               <Text style={[s.muted, { marginTop: 3 }]}>
-                Supersedes <Text style={s.num}>{`${ref} R${data.previous.revision}`}</Text> of {plainDay(data.previous.issuedOn)}
+                Supersedes <Text style={s.num}>{poRevRef(po.number, data.firstIssuedOn, data.previous.revision)}</Text> of {plainDay(data.previous.issuedOn)}
               </Text>
             ) : (
               <Text style={[s.muted, { marginTop: 3 }]}>First issue</Text>
@@ -137,10 +137,12 @@ export function PurchaseOrderDocument({ data, profile, logoSrc }: { data: PoPdfD
               <Text style={s.metaLabel}>PO number</Text>
               <Text style={[s.metaValue, s.num]}>{ref}</Text>
             </View>
-            <View style={s.metaRow}>
-              <Text style={s.metaLabel}>Revision</Text>
-              <Text style={[s.metaValue, s.num]}>R{po.revision}</Text>
-            </View>
+            {po.revision > 0 ? (
+              <View style={s.metaRow}>
+                <Text style={s.metaLabel}>Revision</Text>
+                <Text style={[s.metaValue, s.num]}>{`Rev ${po.revision}`}</Text>
+              </View>
+            ) : null}
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Date</Text>
               <Text style={s.metaValue}>{longDay(po.issuedOn)}</Text>

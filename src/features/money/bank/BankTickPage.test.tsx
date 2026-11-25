@@ -199,11 +199,15 @@ describe('Bank check (M12, the old Bank tick)', () => {
 
   it('says Everything matched when nothing is left, and the empty month says so', async () => {
     h.load.mockResolvedValue({ payments: [{ ...DATA.payments[1] }], expenses: [], deposits: [] })
-    mount()
+    const first = mount()
     await waitFor(() => expect(screen.getByTestId('bank-state')).toHaveTextContent('Everything matched'))
+    first.unmount()
     h.load.mockResolvedValue({ payments: [], expenses: [], deposits: [] })
     mount('/money/month-end/bank?month=2026-08')
     expect(await screen.findByText('Nothing to tick for August 2026')).toBeInTheDocument()
+    // no lines at all: nothing was matched, so it does not say Everything matched
+    expect(screen.getByTestId('bank-state')).toHaveTextContent('Nothing to match')
+    expect(screen.getByTestId('bank-state')).not.toHaveTextContent('Everything matched')
   })
 
   it('opens on last month when none is asked for, and does not go past this month', async () => {
@@ -211,6 +215,13 @@ describe('Bank check (M12, the old Bank tick)', () => {
     await screen.findByTestId('bank-in')
     expect(h.load).toHaveBeenCalledWith('2026-10')
     expect(screen.getByRole('button', { name: 'Next month' })).toBeEnabled()
+  })
+
+  it('an impossible month in the link opens last month and says so, instead of a silent other month', async () => {
+    mount('/money/month-end/bank?month=2026-13')
+    await screen.findByTestId('bank-in')
+    expect(h.load).toHaveBeenCalledWith('2026-10')
+    expect(await screen.findByTestId('period-note')).toHaveTextContent('2026-13 in the link is not a month, so this shows October 2026.')
   })
 
   it('a failed load offers Try again and has no axe violations', async () => {

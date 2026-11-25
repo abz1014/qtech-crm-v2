@@ -1,4 +1,5 @@
 import { Suspense, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { looksLikeCompanyName } from '@/features/companies/companyName'
 import { Building2, Plus, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CompanyHit, CompanyRole } from '@/features/companies/api'
@@ -40,7 +41,8 @@ export function CompanyPicker({ onPick, loadingName }: { onPick: (c: IntakeCompa
   const matches = useCompanyMatches(text)
   const hits = matches.data ?? []
   const typed = text.trim()
-  const canCreate = typed !== '' && !hits.some(h => h.name.trim().toLowerCase() === typed.toLowerCase())
+  // only name-like text is offered as a new company: a PO, RFQ or invoice number, or a phone number, never is (screen review 20)
+  const canCreate = looksLikeCompanyName(typed) && !hits.some(h => h.name.trim().toLowerCase() === typed.toLowerCase())
   const rows = hits.length + (canCreate ? 1 : 0)
   const activeIndex = Math.min(active, Math.max(rows - 1, 0))
   const showList = open && typed !== ''

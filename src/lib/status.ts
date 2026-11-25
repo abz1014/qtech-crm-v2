@@ -76,7 +76,8 @@ export const STATUS = {
     awaiting: def('Waiting for prices', 'info'),
     'partly-covered': def('Waiting for prices', 'info'),
     covered: def('Ready to quote', 'warning'),
-    'no-offer': def('Needs suppliers', 'warning'),
+    // Quote first (owner, 24 Nov 2026): nobody could offer is a missing price, not an order to ask suppliers.
+    'no-offer': def('No price yet', 'warning'),
   },
   // Headings in the questions panel, never chips.
   clarification: {

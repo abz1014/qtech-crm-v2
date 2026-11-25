@@ -130,6 +130,12 @@ describe('old addresses keep working', () => {
     expect(screen.getByTestId('report-picker')).toHaveValue('pnl')
   })
 
+  it('the old RFQs and customers address opens /money/reports/rfqs', async () => {
+    at('/money/reports/enquiries', 'sales')
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/reports/rfqs'))
+    expect(await screen.findByTestId('report-name')).toHaveTextContent('RFQs and customers')
+  })
+
   it('Margins and Exceptions still open with their plain names, and light no tab (they are not Lock a month)', async () => {
     at('/money/exceptions')
     expect(await screen.findByRole('heading', { name: 'Mistakes to fix', level: 1 })).toBeInTheDocument()
@@ -155,6 +161,18 @@ describe('old addresses keep working', () => {
     expect(within(nav).queryByRole('link', { current: 'page' })).toBeNull()
     const more = screen.getByRole('group', { name: 'More money pages' })
     expect(within(more).getAllByRole('link', { current: 'page' })).toHaveLength(1)
+  })
+
+  it('/money/reports/margins opens the Margins page for the admin, not Page not found (screen review High 4)', async () => {
+    at('/money/reports/margins?from=reports')
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/margins?from=reports'))
+    expect(await screen.findByRole('heading', { name: 'Order margins', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByText(/not found/i)).toBeNull()
+  })
+
+  it('/money/reports/margins gives sales the same no-access page as any money report', async () => {
+    at('/money/reports/margins', 'sales')
+    expect(await screen.findByRole('heading', { name: /is for/ })).toBeInTheDocument()
   })
 
   it('Margins opened from Reports keeps Reports lit', async () => {
@@ -223,8 +241,8 @@ describe('Lock a month checklist', () => {
     expect(screen.queryByTestId('check-uncategorised')).toBeNull()
     expect(screen.getByTestId('checks-summary')).toHaveTextContent('2 checks have something to look at')
     await waitFor(() => expect(screen.getByTestId('checks-clear')).toHaveTextContent('5 checks are clear'))
-    expect(screen.getByTestId('checks-clear')).toHaveTextContent('Expenses without a category')
-    expect(screen.getByTestId('checks-clear')).toHaveTextContent('Mistakes to fix')
+    expect(screen.getByTestId('checks-clear')).toHaveTextContent(/every expense has a category/i)
+    expect(screen.getByTestId('checks-clear')).toHaveTextContent('no mistakes to fix')
   })
 
   it('has one green button with its (i), one link to the month’s reports, and no repeated panels', async () => {
@@ -270,9 +288,9 @@ describe('Reports view (one report at a time)', () => {
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('sales: only the enquiry reports, and no money report is requested', async () => {
+  it('sales: only the RFQ reports, and no money report is requested', async () => {
     const db = at('/money/reports', 'sales')
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/reports/enquiries'))
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/money/reports/rfqs'))
     expect(await screen.findByTestId('report-name')).toHaveTextContent('RFQs and customers')
     expect(screen.queryByTestId('report-picker')).toBeNull()
     const targets = db.calls.map(c => c.target)

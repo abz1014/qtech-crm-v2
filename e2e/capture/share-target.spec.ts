@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, rest, rfqRef, uniqueName } from '../support/stack'
 
 /*
  * The Android share target after P4: WhatsApp's Share, Q-Tech CRM posts to /capture (the service worker keeps the item for 7 days),
@@ -47,7 +47,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await expect(page.getByRole('button', { name: 'New RFQ' })).toBeVisible()
     await page.getByRole('button', { name: 'Add to job…' }).click()
     await page.getByRole('textbox', { name: 'Find the job' }).fill(s.customer)
-    await page.getByRole('button', { name: new RegExp(`Job ${s.rfq.number} · ${s.customer}`) }).click()
+    await page.getByRole('button', { name: new RegExp(`${rfqRef(s.rfq.number)} · ${s.customer}`) }).click()
 
     await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}\\?shared=`))
     await expect(page.getByTestId('guess-line')).toBeVisible()
@@ -57,7 +57,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await expect(page.getByRole('textbox', { name: 'Paste here' })).toHaveValue(/gate pass is needed/)
     await page.getByRole('button', { name: 'Note', exact: true }).click()
     await page.getByRole('button', { name: 'Add note' }).click()
-    await expect(page.getByRole('status').filter({ hasText: `Added to Job ${s.rfq.number}` })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: `Added to ${rfqRef(s.rfq.number)}` })).toBeVisible()
     await expect(page).toHaveURL(new RegExp(`/jobs/${s.rfq.number}$`))
     const notes = await must(rest<{ notes: string | null }[]>('admin', `rfqs?id=eq.${s.rfq.id}&select=notes`))
     expect(notes[0].notes).toContain('the gate pass is needed 2 days ahead')
@@ -68,7 +68,7 @@ test.describe('Android share target: the service worker takes the POST', () => {
     await ready(page)
     await share(page, 'Please quote 2 nos level switch LSX-200 24V.')
     await page.getByRole('button', { name: 'New RFQ' }).click()
-    await expect(page).toHaveURL(/\/enquiries\/new$/)
+    await expect(page).toHaveURL(/\/rfqs\/new$/)
     await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/level switch LSX-200/i)
   })
 

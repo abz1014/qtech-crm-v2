@@ -3,15 +3,15 @@
 @tailwind utilities;
 
 /*
- * Webfonts: Geist and Geist Mono (Forest, owner approval 2026-11-14), self-hosted from @fontsource-variable/geist and
- * @fontsource-variable/geist-mono (latin, woff2, variable, font-display: swap). No third-party font host is used (CSP keeps
- * font-src 'self'). SIL Open Font License 1.1: src/assets/fonts/OFL-LICENSE.txt.
- *   "Geist"       every word in the app, and the heavy titles (--font-sans and --font-display): the weight axis, 400 to 800.
- *   "Geist Mono"  job, invoice and PO numbers (--font-mono): the weight axis, 400 to 800.
+ * Webfonts: Geist (Forest, owner approval 2026-11-14), self-hosted from @fontsource-variable/geist (latin, woff2, variable,
+ * font-display: swap). No third-party font host is used (CSP keeps font-src 'self'). SIL Open Font License 1.1:
+ * src/assets/fonts/OFL-LICENSE.txt.
+ *   "Geist"       every word and number in the app, and the heavy titles (--font-sans and --font-display): the weight axis, 400
+ *                 to 800. There is no second face for numbers (owner rule, screen review 24 Nov 2026): numbers use .num, Geist
+ *                 with tabular figures.
  *
- * Each face is two files split by unicode-range (perf/lcp): a core file with the characters the app's own words use
- * (src/assets/fonts, made by scripts/fonts/subset-geist.py: printable ASCII and the app's punctuation and symbols; 15 KB and
- * 11 KB), and the full @fontsource latin file for every other character, which the browser downloads only when one is on screen
+ * The face is two files split by unicode-range (perf/lcp): a core file with the characters the app's own words use
+ * (src/assets/fonts, made by scripts/fonts/subset-geist.py: printable ASCII and the app's punctuation and symbols; 15 KB), and the full @fontsource latin file for every other character, which the browser downloads only when one is on screen
  * (an accented name, say). Same glyphs, kerning and features either way.
  */
 @font-face {
@@ -30,22 +30,6 @@
   src: url("./assets/fonts/geist-core.woff2") format("woff2-variations");
   unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2191, U+2193, U+2212;
 }
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 400 800;
-  src: url("@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2-variations");
-  unicode-range: U+00A1-00A2, U+00A4-00AC, U+00AE-00AF, U+00B1-00B6, U+00B8-00D6, U+00D8-00FF, U+0102, U+0131, U+0152-0153, U+02BC, U+02C6, U+02DA, U+02DC, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+201A, U+201E, U+2032-2033, U+2039-203A, U+2044, U+2122;
-}
-@font-face {
-  font-family: "Geist Mono";
-  font-style: normal;
-  font-display: swap;
-  font-weight: 400 800;
-  src: url("./assets/fonts/geist-mono-core.woff2") format("woff2-variations");
-  unicode-range: U+0020-007E, U+00A0, U+00A3, U+00B0, U+00B7, U+00D7, U+2013-2014, U+2018-2019, U+201C-201D, U+2022, U+2026, U+20AC, U+2191, U+2193, U+2212;
-}
 
 /*
  * Until <html> has .fonts-on, text uses the token's own fallback stack (the system font), so the web fonts are not
@@ -56,7 +40,6 @@
 :root:not(.fonts-on) {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 }
 
 /* ==========================================================================
@@ -68,8 +51,8 @@
 /* ==========================================================================
    Q-Tech CRM v2 — design tokens. SINGLE SOURCE OF TRUTH.
    "Forest" (owner approval 2026-11-14, docs/design/mockups/proposal-2026-11): a deep forest-green rail and hero cards, white
-   cards with real depth on a warm off-white canvas, lime only on the forest, Geist heavy titles and big numbers, Geist Mono for
-   job / invoice / PO numbers, corners on a 12 / 16 / 999 ladder. Replaces direction C "Colour blocks" (navy, Archivo).
+   cards with real depth on a warm off-white canvas, lime only on the forest, Geist heavy titles and big numbers, Geist for
+   every number too (no monospace face), corners on a 12 / 16 / 999 ladder. Replaces direction C "Colour blocks" (navy, Archivo).
    The semantic NAMES are unchanged (canvas, surface, primary, chrome, tone-*, block-*): only their values moved to Forest, so a
    component that reads a token follows without an edit. "chrome" is now the forest, not the navy.
    Light theme only (default). Components must read these; never hard-code.
@@ -182,7 +165,6 @@
   /* ---- 3. Type ----------------------------------------------------------- */
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-display: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 
   /* 16 px is the floor for anything read (owner decision 2026-10-22); body is 17 (Forest). 13 px is --text-stamp, timestamps only.
      Phone values here; the desktop steps are in the (min-width: 768px) block below. [data-text] keeps its own scale. */
@@ -724,5 +706,25 @@
 @media (max-width: 767.98px) {
   :is(input:not([type="hidden"], [type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]), textarea, select, [contenteditable="true"], [contenteditable=""]):not(.sr-only) {
     font-size: max(16px, 1em);
+  }
+}
+
+/* Toasts never cover a dialog (src/ui/Toast.tsx, useClearOfDialog): when there is no room for them above or beside it, <html> gets
+   data-toast-room and --toast-room (the height the toasts take at the top of the window). The dialog (src/ui/dialogImpl.tsx) then
+   starts below that strip, and the hook shortens it by as much (an inline max-height in px), so its title, its chips and its
+   buttons all stay in view and its body scrolls. A side panel (1360 px and wider) always has room beside it, so it is left alone there. */
+html[data-toast-room] [data-toast-room-overlay] {
+  place-items: start center;
+  padding-top: var(--toast-room);
+}
+@media (max-width: 767.98px) {
+  html[data-toast-room] [data-toast-room-overlay] {
+    place-items: end;
+  }
+}
+@media (min-width: 1360px) {
+  html[data-toast-room] [data-toast-room-overlay="side"] {
+    place-items: stretch end;
+    padding-top: 0;
   }
 }

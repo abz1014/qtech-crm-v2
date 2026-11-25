@@ -311,6 +311,28 @@ describe('customer page', () => {
       }
     })
 
+    it('sees no invoice tax details (engineers never see money or tax); sales do (screen review 12)', async () => {
+      installFakeDb(bothDb)
+      const { unmount } = mount('/companies/c1', <CompanyPage />, 'engineer')
+      await screen.findByText('Naveed Akhtar')
+      expect(screen.queryByText('Tax details for invoices')).toBeNull()
+      unmount()
+      installFakeDb(bothDb)
+      mount('/companies/c1', <CompanyPage />, 'sales')
+      expect(await screen.findByText('Tax details for invoices')).toBeInTheDocument()
+    })
+
+    it('/companies?new=1 is the lock screen for an engineer, and their list offers no New company (screen review 12)', async () => {
+      installFakeDb(() => ({ data: [] }))
+      const { unmount } = mount('/companies?new=1', <CompaniesPage />, 'engineer')
+      expect(screen.getByRole('heading', { name: 'New company is for admins and sales', level: 1 })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).toBeNull()
+      unmount()
+      mount('/companies', <CompaniesPage />, 'engineer')
+      expect(await screen.findByText('No companies yet')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'New company' })).toBeNull()
+    })
+
     it('a supplier-only page offers an engineer no New RFQ either', async () => {
       installFakeDb(supplierDb)
       mount('/companies/s1', <CompanyPage />, 'engineer')

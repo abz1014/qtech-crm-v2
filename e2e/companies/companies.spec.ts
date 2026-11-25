@@ -54,7 +54,7 @@ test.describe('inline create (FE-2: name only, three actions)', () => {
 
   test('a name that exists in any case says so plainly and offers Open it', async ({ page }) => {
     const existing = await createCompany(uniqueName('Karachi Glassworks'))
-    await openAs(page, 'engineer', '/companies')
+    await openAs(page, 'sales', '/companies')
     await page.getByRole('button', { name: 'New company' }).first().click()
     const dialog = page.getByRole('dialog', { name: 'New company' })
     await dialog.getByRole('textbox', { name: /Company name/ }).fill(`  ${existing.name.toUpperCase()} `)

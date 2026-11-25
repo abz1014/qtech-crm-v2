@@ -72,15 +72,15 @@ beforeAll(async () => {
 const stagesOf = (c: HTMLElement) => within(c.querySelector('[data-stages]') as HTMLElement)
 
 describe('Job page', () => {
-  it('Job 139: the header, the stage and the next step in one block, one green button, and every step closed', async () => {
+  it('RFQ-0139: the header, the stage and the next step in one block, one green button, and every step closed', async () => {
     const { container } = mount(job({}), 'admin')
-    expect(await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })).toHaveTextContent('Job 139')
-    // Forest: one hero (the Next step region: "Next step · Job 139", who acts next, the step in one sentence) and one track card
+    expect(await screen.findByRole('heading', { level: 1, name: /Harbour Textiles Limited/ })).toHaveTextContent('RFQ-0139')
+    // Forest: one hero (the Next step region: "Next step · RFQ-0139", who acts next, the step in one sentence) and one track card
     // ("Stage 4 of 7 · Supplier order" over the seven stops, the current one marked as the step)
     expect(container.querySelectorAll('[data-stage-block]')).toHaveLength(1)
     const hero = screen.getByRole('region', { name: 'Next step' })
     expect(screen.getAllByRole('region', { name: 'Next step' })).toHaveLength(1)
-    expect(hero).toHaveTextContent('Next step · Job 139')
+    expect(hero).toHaveTextContent('Next step · RFQ-0139')
     expect(hero).toHaveTextContent('Late')
     expect(within(hero).getByRole('heading', { level: 2 })).toHaveTextContent('The goods are late: follow up with the supplier')
     expect(within(hero).getByRole('button', { name: 'Follow up with the supplier' })).toHaveClass('bg-lime-300')
@@ -220,10 +220,10 @@ describe('Job page', () => {
     expect(screen.getByRole('region', { name: 'RFQ stage' })).toHaveTextContent('Flowmeter')
   })
 
-  it('Job O-45 (an order with no enquiry) starts at Order and links to the job it repeats', async () => {
+  it('ORD-0045 (an order with no enquiry) starts at Order and links to the job it repeats', async () => {
     const { container } = mount(job({ key: 'O-45', kind: 'direct', rfqId: null, orderId: 'o45', stage: 'ordered', stageDetail: 'to source', repeatOf: '139' }), 'sales')
     await screen.findByRole('heading', { level: 1 })
-    expect(screen.getByRole('link', { name: 'Repeat of Job 139' })).toHaveAttribute('href', '/jobs/139')
+    expect(screen.getByRole('link', { name: 'Repeat of RFQ-0139' })).toHaveAttribute('href', '/jobs/139')
     expect(container.querySelector('[data-stage-phone]')).toHaveTextContent(/^Stage 4 of 7 · Supplier order$/)
     expect(within(screen.getByRole('region', { name: 'Next step' })).getByRole('heading', { level: 2 })).toHaveTextContent('Choose a supplier for the items')
   })
@@ -266,17 +266,17 @@ describe('Job page', () => {
       </QueryClientProvider>,
     )
     const loading = await screen.findByRole('status', { name: 'Loading job' })
-    expect(screen.getByRole('heading', { level: 1, name: 'Job 139' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'RFQ-0139' })).toBeInTheDocument()
     // a bare grid sizes its track to the widest bar (24rem): every grid in the skeleton has a minmax(0,1fr) track
     for (const g of [loading, ...loading.querySelectorAll('div.grid')]) expect(g.className).toContain('grid-cols-[minmax(0,1fr)]')
     expect(await screen.findByText('Could not open this job')).toBeInTheDocument()
-    expect(screen.getAllByRole('heading', { level: 1 }).map(h => h.textContent)).toEqual(['Job 139'])
+    expect(screen.getAllByRole('heading', { level: 1 }).map(h => h.textContent)).toEqual(['RFQ-0139'])
   })
 
   it('an imported job that still has a step says who acts next in its chips (the usual Needs action chip, never "Nothing to do" over a button)', async () => {
     const { container } = mount(job({ key: 'O-2', kind: 'direct', rfqId: null, stage: 'ordered', stageDetail: 'supplier order to place', imported: true }), 'admin')
     const hero = await waitFor(() => container.querySelector('[data-stage-block]') as HTMLElement)
-    expect(hero).toHaveTextContent('Next step · Job O-2 · Imported')
+    expect(hero).toHaveTextContent('Next step · ORD-0002 · Imported')
     expect(hero.querySelector('[data-next-text]')).toHaveTextContent(/^Place the supplier order$/)
     const chip = hero.querySelector('[data-tone]') as HTMLElement
     expect(chip).toHaveTextContent('Needs action')

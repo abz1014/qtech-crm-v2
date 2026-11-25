@@ -86,8 +86,20 @@ export const ADMIN_ALONE: FirstUseCopy = {
   recipe: 'add-person',
 }
 
-export function firstUseCopy(screen: FirstUseScreen, role: string, opts: { alone?: boolean } = {}): FirstUseCopy | null {
+/**
+ * Sales on Home, owning nothing yet, while the team already has RFQs or orders (screen review 17): "it fills up once you log your
+ * first RFQ" read wrong next to open jobs, so the words point at the work that is there.
+ */
+export const SALES_TEAM_HAS_WORK: FirstUseCopy = {
+  title: 'Your tasks appear here',
+  body: 'Home lists customers to follow up, suppliers to ask and quotations due, for the RFQs and orders you own. The team\'s open jobs are on the Jobs list.',
+  action: { kind: 'link', label: 'New RFQ', to: '/rfqs/new' },
+  recipe: 'new-rfq',
+}
+
+export function firstUseCopy(screen: FirstUseScreen, role: string, opts: { alone?: boolean; teamHasWork?: boolean } = {}): FirstUseCopy | null {
   if (screen === 'today' && role === 'admin' && opts.alone) return ADMIN_ALONE
+  if (screen === 'today' && role === 'sales' && opts.teamHasWork) return SALES_TEAM_HAS_WORK
   return (FIRST_USE_COPY[screen] as Record<string, FirstUseCopy | undefined>)[role] ?? null
 }
 

@@ -67,7 +67,7 @@ test.describe('delete an RFQ', () => {
     expect((await del.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(40)
     await del.click()
 
-    await expect(page).toHaveURL(/\/jobs$/)
+    await expect(page).toHaveURL(/\/jobs(\?lane=sell)?$/)
     await expect(page.getByRole('status').filter({ hasText: `${rfqRef(rfq.number)} deleted` })).toBeVisible()
 
     // Gone from the database and from the list after a reload. The stored file is kept for 30 days (0120): still readable, and listed in the trash.

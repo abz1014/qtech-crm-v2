@@ -209,6 +209,22 @@ describe('Form (U07): errors keep the entries and speak plainly', () => {
   })
 })
 
+describe('Form: a refused amount says the same in the field and the summary (review 18)', () => {
+  it('"1e5": "Type the amount in digits", never "Enter an amount"', async () => {
+    const user = userEvent.setup()
+    const save = vi.fn<Save>()
+    render(<Harness save={save} defaults={{ name: 'Mehran Paper Board' }} />)
+    const amount = screen.getByLabelText(/Amount received/)
+    await user.clear(amount)
+    await user.type(amount, '1e5')
+    await user.click(screen.getByRole('button', { name: 'Add company' }))
+    expect(await screen.findByText('Fix 1 field to continue')).toBeInTheDocument()
+    expect(document.body.textContent).toMatch(/Amount: Type the amount in digits, like 100000\./)
+    expect(screen.queryByText(/Enter an amount/)).toBeNull()
+    expect(save).not.toHaveBeenCalled()
+  })
+})
+
 describe('Form (U07): pre-filled values say where they came from (FE-2)', () => {
   it('shows the source, and "Entered manually" once the value is changed', async () => {
     const user = userEvent.setup()

@@ -16,6 +16,8 @@ export interface FirstUseFacts {
   companyHasInvoice: boolean
   /** Admin only: the owner is still the only active person on the team. */
   ownerAlone: boolean
+  /** Sales only: the team already has RFQs or orders (owned by others), so Home must not say it fills up with a first RFQ. */
+  teamHasWork?: boolean
 }
 
 type Head = PromiseLike<{ count: number | null; error: { code?: string; message: string } | null }>
@@ -31,14 +33,24 @@ export async function fetchFirstUse(userId: string, role: string): Promise<First
   const head = { count: 'exact', head: true } as const
   const admin = role === 'admin'
   const engineer = role === 'engineer'
-  const [rfqs, orders, jobs, invoices, people] = await Promise.all([
+  const sales = role === 'sales'
+  const [rfqs, orders, jobs, invoices, people, teamRfqs, teamOrders] = await Promise.all([
     count(db.from('rfqs').select('id', head).eq('owner_id', userId)),
     count(db.from('orders').select('id', head).eq('owner_id', userId)),
     engineer ? count(db.from('order_engineers').select('order_id', head).eq('user_id', userId)) : Promise.resolve(0),
     engineer ? Promise.resolve(0) : count(db.from('invoices').select('id', head)),
     admin ? count(db.from('users').select('id', head).is('deactivated_at', null)) : Promise.resolve(2),
+    sales ? count(db.from('rfqs').select('id', head)) : Promise.resolve(0),
+    sales ? count(db.from('orders').select('id', head)) : Promise.resolve(0),
   ])
-  return { ownsRfq: rfqs > 0, ownsOrder: orders > 0, onJob: jobs > 0, companyHasInvoice: invoices > 0, ownerAlone: admin && people <= 1 }
+  return {
+    ownsRfq: rfqs > 0,
+    ownsOrder: orders > 0,
+    onJob: jobs > 0,
+    companyHasInvoice: invoices > 0,
+    ownerAlone: admin && people <= 1,
+    teamHasWork: teamRfqs + teamOrders > 0,
+  }
 }
 
 export type FirstUseScreenName = 'today' | 'rfqs' | 'orders'

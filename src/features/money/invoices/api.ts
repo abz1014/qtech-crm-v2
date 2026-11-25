@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
 import { PlainError } from '@/lib/errors/plainError'
 import { orderRef } from '@/lib/refs'
+import { paisaToFixed, sumPaisa } from '@/lib/money'
 import { lookupLabels } from '@/features/money/lookupLabels'
 import type { TableRow, ViewRow } from '@/features/dbTypes'
 import { lineMoneyOf, type GstRow, type OrderAmounts } from '@/features/money/invoices/model'
@@ -145,8 +146,9 @@ export async function orderForInvoice(orderId: string): Promise<OrderForInvoice 
       lineCount: lines.length,
       exemptLineCount: lines.filter(l => Number(l.gst_rate) === 0).length,
       // a void invoice is already 0 / 0; a credit note takes its net and GST off what the order is invoiced for (0112)
-      invoicedNet: inv.reduce((s, i) => s + num(i.net_amount), 0) - credits.reduce((s, c) => s + num(c.net_amount), 0),
-      invoicedGst: inv.reduce((s, i) => s + num(i.gst_amount), 0) - credits.reduce((s, c) => s + num(c.gst_amount), 0),
+      // added in paisa, so many part invoices cannot drift into a float leftover
+      invoicedNet: Number(paisaToFixed(sumPaisa(inv.map(i => num(i.net_amount))) - sumPaisa(credits.map(c => num(c.net_amount))))),
+      invoicedGst: Number(paisaToFixed(sumPaisa(inv.map(i => num(i.gst_amount))) - sumPaisa(credits.map(c => num(c.gst_amount))))),
       earliestInvoiceDate: inv.reduce<string | null>((m, i) => (i.invoice_date && (m === null || i.invoice_date < m) ? i.invoice_date : m), null),
       paymentTermsDays: order.payment_terms_days === null ? null : Number(order.payment_terms_days),
       lines: lines.map(l => lineMoneyOf(l.qty, l.unit_price_net, l.gst_rate)),

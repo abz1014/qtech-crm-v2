@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react'
 import { CircleAlert, CircleCheck, Undo2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Icon } from '@/ui/Icon'
@@ -8,8 +8,9 @@ import { ToastContext, type ToastApi, type ToastInput } from '@/ui/useToast'
  * Toast (INVENTORY: U03; D08 section 08, g2-today-b2 "Copied"). Forest .qb-toast: the brand-950 surface,
  * e3 shadow, a lime glyph, 12 px corners, 420px (never under 300) on desktop and full width minus the 16px gutters on a phone
  * (above the tab bar and the home-bar inset); on a phone the card wraps so the words keep at least 10rem. At most three show, newest at the bottom; the oldest
- * is settled and removed first. While a dialog or sheet is open they move to the top (useDialogOpen), so they never sit on its
- * buttons. The title is clamped to two lines and the context line to three.
+ * is settled and removed first. While a dialog or sheet is open they never sit on it (useDialogOpen, useClearOfDialog): at the top
+ * when the dialog leaves room above it, else beside it on a wide screen, else the dialog makes room for them (a strip at the top
+ * that the dialog moves below). The title is clamped to two lines and the context line to three.
  *
  * Undo toast: the window is 10 s. A ring in the Undo button empties and the
  * seconds count down; a bar along the bottom shrinks. Hovering or focusing the
@@ -131,6 +132,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const overDialog = useDialogOpen(items.length > 0)
   const region = useRef<HTMLDivElement>(null)
   useClearance(region, items.length > 0 && !overDialog)
+  const beside = useClearOfDialog(region, items.length > 0 && overDialog)
 
   const api = useMemo<ToastApi>(() => ({ toast, dismiss }), [toast, dismiss])
   const card = (item: Item) => (
@@ -149,13 +151,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         // aria-live attribute alone: without it an error toast raised behind an open dialog ("Could not save the reply") was silent.
         aria-live="off"
         data-over-dialog={overDialog || undefined}
-        style={lift && !overDialog ? { bottom: lift } : undefined}
+        data-beside-dialog={(overDialog && beside && beside.side) || undefined}
+        style={overDialog ? (beside ? beside.style : undefined) : lift ? { bottom: lift } : undefined}
         className={cn(
           'pointer-events-none fixed z-toast flex w-[420px] min-w-[300px] max-w-[calc(100vw-2rem)] flex-col gap-2 max-md:inset-x-4 max-md:w-auto max-md:min-w-0 max-md:max-w-none',
           overDialog
             ? // A dialog or sheet is open: its buttons sit at its bottom (a "Reopened" toast hid Mark won's Cancel and Mark won, an
               // error hid the supplier reply's Save). The toasts go to the top centre on a desktop and to the top on a phone, clear of
-              // every footer. Focus stays in the dialog: the toasts are outside its focus trap and never take focus.
+              // every footer, and never on the dialog itself (useClearOfDialog: beside it, or the dialog moves down). Focus stays in
+              // the dialog: the toasts are outside its focus trap and never take focus.
               'left-1/2 top-4 -translate-x-1/2 max-md:left-4 max-md:top-[calc(env(safe-area-inset-top,0px)+0.5rem)] max-md:translate-x-0'
             : 'bottom-4 right-4 max-md:bottom-[calc(var(--tabbar-h)+var(--sp-1)+env(safe-area-inset-bottom,0px))]',
         )}
@@ -214,6 +218,105 @@ function useDialogOpen(watch: boolean): boolean {
     return () => mo.disconnect()
   }, [watch])
   return open
+}
+
+/** The dialogs that move down to make room for the toasts (dialogImpl.tsx marks its overlay and its panel). */
+const ROOM_PANEL = '[data-toast-room-panel]'
+/** The gap kept between a toast and a dialog, and the toasts' distance from the window's edge. */
+const GAP = 8
+const EDGE = 16
+/** The narrowest a toast may be drawn beside a dialog (its usual min-width). */
+const MIN_BESIDE = 300
+const WIDE = 420
+
+/**
+ * While a dialog is open the toasts are at the top, and must not cover the dialog either (screen review 24 Nov 2026: at the top
+ * centre a toast covered Mark won's title and its quotation chip). In order:
+ *   1. the dialog's top is below the toasts: they stay at the top
+ *   2. a wide screen with room on a side of the dialog: they move to that side, at the top, as wide as the room allows (300 to 420)
+ *   3. otherwise the dialog makes room: <html data-toast-room> with --toast-room, the height the toasts need, moves a dialog drawn
+ *      by dialogImpl.tsx below them (index.css) and the hook shortens it by as much (inline max-height). It stays so until the toasts or the dialog go, so the
+ *      dialog does not jump back and forth.
+ * Returns the region's style for case 2, else null.
+ */
+function useClearOfDialog(region: RefObject<HTMLDivElement | null>, active: boolean): { side: 'left' | 'right'; style: CSSProperties } | null {
+  const [beside, setBeside] = useState<{ side: 'left' | 'right'; style: CSSProperties } | null>(null)
+  useEffect(() => {
+    const box = region.current
+    if (!active || !box || typeof window === 'undefined' || typeof document === 'undefined') {
+      setBeside(null)
+      return
+    }
+    const root = document.documentElement
+    let room = false
+    let shrunk: HTMLElement | null = null
+    const watched = new Set<Element>()
+    // The dialog moved down by `need` is made as much shorter, so all of it stays in the window and its body scrolls (an e2e shot of
+    // Mark won at 1440 by 900: pushed down but as tall as before, the body ran under the footer and the footer off the bottom). Inline
+    // and in px, so no stylesheet rule can outweigh it; the window's resize measures again. A side panel from 1360 is left alone.
+    const fit = (panel: HTMLElement, need: number, phone: boolean) => {
+      if (shrunk && shrunk !== panel) shrunk.style.removeProperty('max-height')
+      if (panel.dataset.placement === 'side' && window.innerWidth >= 1360) return
+      shrunk = panel
+      // below the strip, and above the overlay's 16 px padding on a desktop (a phone sheet sits on the bottom edge)
+      panel.style.maxHeight = `${Math.max(0, window.innerHeight - need - (phone ? 0 : EDGE))}px`
+    }
+    const measure = () => {
+      const dialogs = [...document.querySelectorAll<HTMLElement>(ROOM_PANEL)]
+      const panel = dialogs[dialogs.length - 1] ?? [...document.querySelectorAll<HTMLElement>(DIALOG)].pop()
+      if (!panel) return
+      // a dialog that grows after it opens (Mark won once its lines load) is measured again
+      if (ro && !watched.has(panel)) {
+        watched.add(panel)
+        ro.observe(panel)
+      }
+      const d = panel.getBoundingClientRect()
+      const phone = window.matchMedia?.('(max-width: 767px)').matches ?? false
+      const top = phone ? GAP : EDGE
+      const need = top + box.offsetHeight + GAP
+      if (room) {
+        root.style.setProperty('--toast-room', `${need}px`)
+        if (panel.matches(ROOM_PANEL)) fit(panel, need, phone)
+        return
+      }
+      if (d.height === 0 || d.top >= need) {
+        setBeside(prev => (prev === null ? prev : null))
+        return
+      }
+      const vw = window.innerWidth
+      const right = vw - d.right - 2 * EDGE
+      const left = d.left - 2 * EDGE
+      if (!phone && Math.max(left, right) >= MIN_BESIDE) {
+        const side = right >= left ? 'right' : 'left'
+        const width = Math.min(WIDE, Math.max(left, right))
+        setBeside(prev =>
+          prev && prev.side === side && prev.style.width === width
+            ? prev
+            : { side, style: { top: EDGE, [side]: EDGE, [side === 'right' ? 'left' : 'right']: 'auto', width, minWidth: 0, transform: 'none' } },
+        )
+        return
+      }
+      // no room above or beside: only a dialog that can move down makes room; any other keeps the toasts at the top
+      if (!panel.matches(ROOM_PANEL)) return
+      room = true
+      setBeside(null)
+      root.setAttribute('data-toast-room', '')
+      root.style.setProperty('--toast-room', `${need}px`)
+      fit(panel, need, phone)
+    }
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => measure())
+    ro?.observe(box)
+    measure()
+    window.addEventListener('resize', measure)
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener('resize', measure)
+      shrunk?.style.removeProperty('max-height')
+      root.removeAttribute('data-toast-room')
+      root.style.removeProperty('--toast-room')
+    }
+  }, [region, active])
+  return active ? beside : null
 }
 
 /**

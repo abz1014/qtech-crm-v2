@@ -186,7 +186,7 @@ describe('intake screen', () => {
       return respond(call)
     })
     const user = setup()
-    renderScreen('/rfqs/new', SIGNED_IN, 'enquiry') // New RFQ on /enquiries/new: the form that reads the next job number
+    renderScreen('/rfqs/new', SIGNED_IN, 'enquiry') // New RFQ on /rfqs/new: the form that reads the next job number
     const banner = await screen.findByText('Q-Tech CRM could not be reached')
     expect(screen.getByText('You can fill this in now. Creating the job needs a connection.')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Company' })).toBeEnabled()

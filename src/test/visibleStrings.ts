@@ -167,7 +167,7 @@ export const SCREEN_ENTRIES: Record<string, readonly string[]> = {
     'features/fx/ExchangeRatesPage.tsx',
   ],
   capture: ['features/capture/CaptureRoute.tsx'],
-  /** New enquiry (P4-A, /enquiries/new). */
+  /** New RFQ (P4-A, /rfqs/new). */
   enquiries: ['features/enquiry/NewEnquiryPage.tsx'],
 }
 

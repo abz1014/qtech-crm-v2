@@ -57,7 +57,7 @@ function Downloads({ jobKey, rfqId, look = 'panel' }: { jobKey: string; rfqId: s
       const rfq = header.data
       const data = {
         statement: buildStatement(items.data ?? [], inquiries.data ?? [], { showNoReply: true }),
-        reference: `${label} (${rfqRef(rfq.number)})`,
+        reference: label === rfqRef(rfq.number) ? label : `${label} (${rfqRef(rfq.number)})`,
         customer: rfq.company.name,
         date: businessToday(),
         preparedBy: session.status === 'signed-in' ? session.user.name : '',

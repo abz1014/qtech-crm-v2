@@ -75,14 +75,14 @@ describe('search palette source (R12)', () => {
   })
 
   it('an engineer never gets supplier PO results, even when a PO number is typed; others do', async () => {
-    searchAll.mockResolvedValue([hit('po', 'p1', 'PO-26-0017 · R0', { orderId: 'o1' }), hit('order', 'o1', 'ORD-0001 Co')])
+    searchAll.mockResolvedValue([hit('po', 'p1', 'PO-26-0017', { orderId: 'o1' }), hit('order', 'o1', 'ORD-0001 Co')])
     const eng = searchPaletteSource(0, true).search!('PO-26-0017', new AbortController().signal)
     await vi.advanceTimersByTimeAsync(5)
     expect((await eng).map(i => i.group)).not.toContain('Purchase orders')
     expect(kindOrder('PO-26-0017')[0]).toBe('po')
     const sales = searchPaletteSource(0).search!('PO-26-0017', new AbortController().signal)
     await vi.advanceTimersByTimeAsync(5)
-    expect((await sales).map(i => i.label)).toContain('PO-26-0017 · R0')
+    expect((await sales).map(i => i.label)).toContain('PO-26-0017')
   })
 
   it('no company match means no New RFQ for action', async () => {
@@ -90,6 +90,18 @@ describe('search palette source (R12)', () => {
     const p = searchPaletteSource(0).search!('zzz', new AbortController().signal)
     await vi.advanceTimersByTimeAsync(5)
     expect((await p).some(i => i.label.startsWith('New RFQ for'))).toBe(false)
+  })
+
+  it('a document number is not offered as a new company (screen review 20); an engineer is offered neither add nor New RFQ', async () => {
+    searchAll.mockResolvedValue([hit('company', 'c1', 'Abc Ltd')])
+    const po = searchPaletteSource(0).search!('PO-988374', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    expect((await po).some(i => i.id === 'company-new-typed')).toBe(false)
+    const eng = searchPaletteSource(0, true).search!('Abc', new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(5)
+    const items = await eng
+    expect(items.some(i => i.id === 'company-new-typed')).toBe(false)
+    expect(items.some(i => i.label.startsWith('New RFQ for'))).toBe(false)
   })
 
   it('an exact company name does not offer to add it again', async () => {

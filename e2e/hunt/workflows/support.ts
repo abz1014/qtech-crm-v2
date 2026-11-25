@@ -85,7 +85,8 @@ const safe = (s: string) => s.replace(/[^a-z0-9-]+/gi, '_').slice(0, 90)
 export async function shot(page: Page, name: string, fullPage = true): Promise<string> {
   const path = join(OUT, `${String(++seq).padStart(3, '0')}-${safe(name)}.png`)
   try {
-    await page.screenshot({ path, fullPage, timeout: 10_000 })
+    // running animations are finished first, so a dialog that is fading in is drawn whole (review item 22)
+    await page.screenshot({ path, fullPage, timeout: 10_000, animations: 'disabled', caret: 'hide' })
   } catch {
     /* page gone */
   }

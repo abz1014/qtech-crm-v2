@@ -238,7 +238,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     const download = page.waitForEvent('download')
     await dialog(page).getByRole('button', { name: 'Share' }).click()
     taps++
-    expect((await download).suggestedFilename()).toBe(`${refOf(q)}-R0.pdf`)
+    expect((await download).suggestedFilename()).toBe(`${refOf(q)}.pdf`)
     expect(taps).toBe(2) // Issue, Share
 
     await dialog(page).getByRole('button', { name: 'Done' }).click()
@@ -246,7 +246,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect(page.getByRole('dialog')).toBeHidden()
     await openStage(page, 'Quotation')
     const row = page.getByTestId('quotation-0')
-    await expect(row).toContainText(refOf(q)) // on screen the number, no "R0" (the PDF and its file name keep it)
+    await expect(row).toContainText(refOf(q)) // the first issue is the number alone, on screen and in the file name: no "R0"
     await expect(row).not.toContainText(`${refOf(q)} R0`)
     await expect(row.locator('[data-status]')).toHaveCount(0) // the current version carries no mark (the normal state)
     await expect(row).toContainText('PKR 2,891.50')
@@ -277,7 +277,7 @@ test.describe('issue a quotation (FE-2: one price per item, then Issue and Share
     await expect.poll(() => page.evaluate(() => (window as unknown as { __shared?: unknown[] }).__shared?.length ?? 0)).toBe(1)
     const shared = await page.evaluate(() => (window as unknown as { __shared: { name: string; type: string; size: number }[] }).__shared[0])
     expect(shared.type).toBe('application/pdf')
-    expect(shared.name).toMatch(/^QTS-[A-Z]{2,6}-\d+-R0\.pdf$/)
+    expect(shared.name).toMatch(/^QTS-[A-Z]{2,6}-\d+\.pdf$/)
     expect(shared.size).toBeGreaterThan(2000)
   })
 })

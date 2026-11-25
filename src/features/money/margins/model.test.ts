@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cashTotals, marginNote, marginPct, marginTotals, noCostsYet, sortCash, sortMargins, type MarginRow } from '@/features/money/margins/model'
+import { cashTotals, marginNote, marginPct, marginTotals, noCostsYet, shownMargin, sortCash, sortMargins, type MarginRow } from '@/features/money/margins/model'
 
 const row = (n: number, over: Partial<MarginRow> = {}): MarginRow => ({
   orderId: `o${n}`,
@@ -80,6 +80,23 @@ describe('marginNote', () => {
   })
   it('never prints a percentage', () => {
     expect(marginNote({ orders: 2, netSale: 0, expectedCost: 0, actualCost: 0, margin: 0, provisional: 3, basisUnknown: 1 })).not.toContain('%')
+  })
+})
+
+describe('shownMargin: an estimate takes the expected supplier cost into account', () => {
+  it('a final margin is the margin', () => {
+    expect(shownMargin(row(1, { expectedCost: 900 }))).toBe(400)
+  })
+  it('not final, the expected cost above the costs so far: the sale less the expected cost', () => {
+    expect(shownMargin(row(1, { state: 'provisional', actualCost: 100, margin: 900, expectedCost: 700 }))).toBe(300)
+    expect(shownMargin(row(1, { state: 'provisional', actualCost: 0, margin: 1000, expectedCost: 1200 }))).toBe(-200)
+  })
+  it('not final, the costs so far already above the expected cost, or no expected cost: the margin so far', () => {
+    expect(shownMargin(row(1, { state: 'provisional', actualCost: 800, margin: 200, expectedCost: 700 }))).toBe(200)
+    expect(shownMargin(row(1, { state: 'provisional', actualCost: 100, margin: 900, expectedCost: null }))).toBe(900)
+  })
+  it('no margin (unknown price basis) stays none', () => {
+    expect(shownMargin(row(1, { state: 'basis_unknown', margin: null }))).toBeNull()
   })
 })
 

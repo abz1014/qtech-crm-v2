@@ -249,7 +249,7 @@ function VisitEditDialog({ order, visit, engineers, office, onClose }: { order: 
               />
             </Field>
             <Field label="Date" requirement="optional">
-              <DateInput value={draft.on} onChange={on => setDraft({ ...draft, on })} defaultToday={false} />
+              <DateInput value={draft.on} onChange={on => setDraft({ ...draft, on })} defaultToday={false} checkYear />
             </Field>
             {office ? (
               <Field label="Engineer" requirement="optional">

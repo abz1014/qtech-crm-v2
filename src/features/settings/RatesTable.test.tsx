@@ -2,7 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RatesTable } from '@/features/settings/RatesTable'
-import { rateAgeLabel, ratesStatusLine, sortRates, sourceLabel } from '@/features/settings/ratesModel'
+import { ratesStatusLine } from '@/features/settings/ratesModel'
+import { buildRateRows } from '@/features/fx/ratesModel'
 import { SessionContext } from '@/app/session'
 import { SettingsHomePage } from '@/features/settings/SettingsHomePage'
 import type { FxLatestRow } from '@/features/rfqs/api'
@@ -30,34 +31,25 @@ beforeEach(() => {
   h.state = { data: RATES, isLoading: false, isError: false, refetch: vi.fn() }
 })
 
-describe('exchange rate helpers', () => {
-  it('puts USD, EUR, CNY, AED first, then the rest A to Z', () => {
-    const sorted = sortRates([row('JPY', 1.8, 0, 'fresh'), ...RATES, row('GBP', 350, 0, 'fresh')])
-    expect(sorted.map(r => r.currency)).toEqual(['USD', 'EUR', 'CNY', 'AED', 'GBP', 'JPY'])
+describe('exchange rate table (one table for Settings home and Exchange rates, review 21)', () => {
+  it('lists USD, EUR, CNY, AED first, then the rest A to Z, then currencies with no rate', () => {
+    const rows = buildRateRows([row('JPY', 1.8, 0, 'fresh'), ...RATES, row('GBP', 350, 0, 'fresh')])
+    expect(rows.map(r => r.currency)).toEqual(['USD', 'EUR', 'CNY', 'AED', 'GBP', 'JPY', 'SAR'])
   })
 
-  it('words the age like the price comparison', () => {
-    expect(rateAgeLabel({ ageDays: 0, staleness: 'fresh' })).toBe('Today')
-    expect(rateAgeLabel({ ageDays: 1, staleness: 'fresh' })).toBe('1 day old')
-    expect(rateAgeLabel({ ageDays: 14, staleness: 'stale' })).toBe('14 days old')
-    expect(rateAgeLabel({ ageDays: 52, staleness: 'unusable' })).toBe('52 days old, not compared')
-    expect(sourceLabel('auto')).toBe('Automatic')
-    expect(sourceLabel('manual')).toBe('Entered manually')
-  })
-})
-
-describe('exchange rate table', () => {
-  it('shows currency, PKR for 1 unit, source, as of and the rate age (text when fresh, a chip only for Old rate / No rate)', () => {
+  it('shows the same columns, date format and age words as Settings > Exchange rates, read-only', () => {
     render(<RatesTable />)
-    const table = screen.getByRole('table', { name: 'Exchange rates' })
-    for (const head of ['Currency', 'PKR for 1 unit', 'Source', 'As of', 'Rate age']) {
+    const table = screen.getByRole('table', { name: 'Latest rate per currency' })
+    for (const head of ['Currency', 'Rate, PKR', 'As of', 'Age']) {
       expect(within(table).getByRole('columnheader', { name: new RegExp(head) })).toBeInTheDocument()
     }
+    expect(within(table).queryByRole('columnheader', { name: /Source|Rate age|PKR for 1 unit/ })).toBeNull()
+    expect(within(table).queryByRole('button', { name: /Add rate|History/ })).toBeNull()
     const usd = within(table).getByText('USD').closest('tr') as HTMLElement
     expect(within(usd).getByText('278.40')).toBeInTheDocument()
     expect(within(usd).getByText('Automatic')).toBeInTheDocument()
-    expect(within(usd).getByText('Thu 26 Nov')).toBeInTheDocument()
-    expect(within(usd).getByText('1 day old')).toBeInTheDocument()
+    expect(within(usd).getByText('26 Nov')).toBeInTheDocument()
+    expect(within(usd).getByText('1 day')).toBeInTheDocument()
     expect(within(usd).queryByText('Fresh')).toBeNull()
     expect(within(table).getByText('Entered manually')).toBeInTheDocument()
     const cny = within(table).getByText('CNY').closest('tr') as HTMLElement
@@ -66,6 +58,8 @@ describe('exchange rate table', () => {
     const aed = within(table).getByText('AED').closest('tr') as HTMLElement
     expect(within(aed).getByText('No rate')).toBeInTheDocument()
     expect(within(aed).getByText('52 days old')).toBeInTheDocument()
+    const order = within(table).getAllByRole('row').slice(1).map(r => r.querySelector('td')?.textContent?.slice(0, 3))
+    expect(order.slice(0, 4)).toEqual(['USD', 'EUR', 'CNY', 'AED'])
   })
 
   it('says plainly when the rates cannot load', () => {
@@ -106,7 +100,11 @@ describe('Settings home', () => {
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: "Today's exchange rates" })).toBeNull()
     expect(screen.queryByRole('link', { name: /Add a rate or see history/ })).toBeNull()
-    expect(screen.getByRole('link', { name: /View company profile/ })).toHaveAttribute('href', '/settings/company')
+    // review 21: not a nearly blank page: their details, their password and the company profile, each with one line
+    expect(screen.getByRole('link', { name: /Company profile/ })).toHaveAttribute('href', '/settings/company')
+    expect(screen.getByRole('link', { name: /Your details/ })).toHaveAttribute('href', '/settings/details')
+    expect(screen.getByRole('link', { name: /Change password/ })).toHaveAttribute('href', '/settings/password')
+    expect(document.body.textContent).not.toMatch(/PKR|rate/i)
   })
 })
 

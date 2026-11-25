@@ -126,7 +126,7 @@ let keySeq = 0
 const newKey = () => `i${++keySeq}`
 
 /**
- * `mode="enquiry"` is New enquiry (P4-A, /enquiries/new): the same form and the same save, worded as a job. The one green button
+ * `mode="enquiry"` is New RFQ (P4-A, /rfqs/new): the same form and the same save, worded as a job. The one green button
  * is "Create job N" (save without asking anyone), "Find suppliers" is the step after it, fields read from the document say
  * "Check this", and a saved enquiry opens its Job page. The default is the New RFQ screen as it was.
  */
@@ -740,7 +740,7 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
   useEffect(() => {
     if (!enquiry || !saved || opened.current || step !== 'saved') return
     opened.current = true
-    toast({ title: `Created job ${saved.number}`, body: company?.name, tone: 'success' })
+    toast({ title: `Created job ${rfqRef(saved.number)}`, body: company?.name, tone: 'success' })
     // The leave guard takes its extra Back entry off (history.back()) as the save turns it off. A push made before that traversal
     // finishes is undone by it (the page stayed on New enquiry), so the job is opened once the traversal has settled.
     let done = false
@@ -904,7 +904,7 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
   })
 
   // The step bar of steps 1 and 2. With nobody ticked on step 2, saving for later is the one green button.
-  const createLabel = nextJob ? `Create job ${nextJob}` : 'Create job'
+  const createLabel = nextJob ? `Create job ${rfqRef(nextJob)}` : 'Create job'
   const saveAction: BarAction = { label: SAVE_FOR_LATER, icon: Save, quiet: true, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Saving' }
   const stepBar: { summary?: ReactNode; warning?: ReactNode; primary?: BarAction; more: BarAction[] } =
     step === 'build'
@@ -1340,7 +1340,8 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
         <div className="grid min-w-0 gap-4">
           <DetailHeader
             name="New RFQ"
-            back={{ label: 'Sell', to: '/jobs?lane=sell' }}
+            // the way back is a menu the person has: Sell for the office, Jobs for anyone else (an engineer has no Sell)
+            back={user?.role === 'admin' || user?.role === 'sales' ? { label: 'Sell', to: '/jobs?lane=sell' } : { label: 'Jobs', to: '/jobs' }}
             phoneSrOnly
             sub={
               <div className="grid gap-2 md:mt-1">

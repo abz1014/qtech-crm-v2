@@ -120,3 +120,30 @@ describe('flex bases (P9)', () => {
     expect(bad).toEqual([])
   })
 })
+
+describe('dialogs are drawn whole in screenshots (screen review 2026-11-24, item 22)', () => {
+  const tailwind = readFileSync(path.join(root, 'tailwind.config.ts'), 'utf8')
+  const index = readFileSync(path.join(root, 'src/index.css'), 'utf8')
+  const dialog = readFileSync(path.join(root, 'src/ui/dialogImpl.tsx'), 'utf8')
+  const config = readFileSync(path.join(root, 'playwright.config.ts'), 'utf8')
+
+  it('the dialog and scrim animations run on --dur-base, which stays short and is zeroed under reduced motion', () => {
+    for (const name of ['fade-in', 'rise-6', 'sheet-in', 'panel-in']) {
+      expect(tailwind, name).toMatch(new RegExp(`'${name}': '${name} var\\(--dur-base\\)`))
+      expect(dialog, name).toContain(`animate-${name}`)
+    }
+    const base = /--dur-base:\s*(\d+)ms/.exec(index)
+    expect(Number(base?.[1])).toBeLessThanOrEqual(200)
+    expect(index).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{\s*:root\s*\{[^}]*--dur-base:\s*0\.01ms/)
+  })
+
+  it('every e2e project runs with reduced motion, and the hunt screenshots finish animations first', () => {
+    expect(config).toMatch(/\n {2}use: \{[^}]*reducedMotion: 'reduce'/)
+    for (const f of ['e2e/hunt/edges/lib.ts', 'e2e/hunt/workflows/support.ts']) {
+      const src = readFileSync(path.join(root, f), 'utf8')
+      const calls = [...src.matchAll(/page\.screenshot\(\{.*$/gm)].map(m => m[0])
+      expect(calls.length, f).toBeGreaterThan(0)
+      for (const c of calls) expect(c, f).toContain("animations: 'disabled'")
+    }
+  })
+})

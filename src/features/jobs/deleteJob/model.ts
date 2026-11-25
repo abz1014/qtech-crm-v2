@@ -44,6 +44,15 @@ const isKind = (k: string): k is BlockerKind => (KINDS as readonly string[]).inc
  * The database's sentence for a kept record ends with "Cancel the job instead.", which the guide's button and intro already say.
  * Cut here rather than migrate 0132: the wording is the screen's, the data is the database's.
  */
+/**
+ * The server's label in house words. 0148 says PKR and RFQ itself; a database still on 0132 says "Rs" and "enquiry", so both are
+ * mapped here too. Only the server's own endings are reworded, never a description someone typed.
+ */
+const plainLabel = (label: string) =>
+  rupeesToPkr(label)
+    .replace(/ \(on the enquiry\)$/, ' (on the RFQ)')
+    .replace(/ come from this enquiry$/, ' come from this RFQ')
+
 const plainWhy = (why: string) => why.replace(/\s*Cancel the job instead\.\s*$/, '').trim()
 
 export function toBlockers(rows: readonly BlockerRow[]): Blocker[] {
@@ -55,7 +64,7 @@ export function toBlockers(rows: readonly BlockerRow[]): Blocker[] {
       orderId: r.order_id,
       orderNumber: r.order_number,
       refId: r.ref_id,
-      label: rupeesToPkr(r.ref_label),
+      label: plainLabel(r.ref_label),
       on: r.ref_on,
       canClear: r.can_clear,
       why: plainWhy(r.why),

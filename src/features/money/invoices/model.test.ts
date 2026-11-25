@@ -11,6 +11,7 @@ import {
   invoiceStart,
   matchesSearch,
   rangeLabel,
+  registerCountLine,
   registerTotals,
   rowMonth,
   stampable,
@@ -72,6 +73,22 @@ describe('what a new invoice opens with', () => {
 
   it('knows when nothing is left to invoice', () => {
     expect(invoiceStart({ ...base, invoicedNet: 1949800, invoicedGst: 350964 })).toMatchObject({ net: 0, fullyInvoiced: true })
+  })
+
+  it('a leftover of PKR 1 or less is fully invoiced (as v_order_state), the exact leftover kept (the dialog prefills nothing)', () => {
+    expect(invoiceStart({ ...base, invoicedNet: 1949800, invoicedGst: 350963 })).toMatchObject({ net: 0, gst: 1, gross: 1, fullyInvoiced: true })
+    expect(invoiceStart({ ...base, invoicedNet: 1949799.5, invoicedGst: 350964 })).toMatchObject({ net: 0.5, fullyInvoiced: true })
+    // an order with no invoice yet is never fully invoiced, however small (v_order_state: not_invoiced)
+    expect(invoiceStart({ ...base, itemsNet: 0.5, itemsGst: 0 })).toMatchObject({ net: 0.5, fullyInvoiced: false })
+    expect(invoiceStart({ ...base, invoicedNet: 1949798, invoicedGst: 350964 })).toMatchObject({ net: 2, fullyInvoiced: false })
+  })
+
+  it('works in whole paisa: what is left after float-looking invoices is exact, so invoicing it closes the order to 0', () => {
+    const a = { ...base, itemsNet: 1000.3, itemsGst: 0, exemptLineCount: 8, invoicedNet: 0.1, invoicedGst: 0 }
+    expect(invoiceStart(a).net).toBe(1000.2)
+    const s = invoiceStart({ ...base, invoicedNet: 1449800.1, invoicedGst: 260964 })
+    expect(s).toMatchObject({ net: 499999.9, gst: 90000, gross: 589999.9 })
+    expect(invoiceStart({ ...base, invoicedNet: 1449800.1 + s.net, invoicedGst: 260964 + s.gst })).toMatchObject({ fullyInvoiced: true })
   })
 
   it('due date is the invoice date plus the order terms', () => {
@@ -179,5 +196,14 @@ describe('is the month\'s GST return perhaps in? (W11)', () => {
   it('a recorded FBR payment says yes whatever the day, and no date says no', () => {
     expect(gstReturnMayBeFiled('2026-10-12', '2026-10-13', true)).toBe(true)
     expect(gstReturnMayBeFiled(null, '2026-12-31', true)).toBe(false)
+  })
+})
+
+describe('registerCountLine (screen review 2026-11-24, item 14)', () => {
+  it('is the one count: invoices as the totals count them, credit notes and void invoices said apart', () => {
+    const all = [row(), row({ invoiceId: 'i2' }), row({ invoiceId: 'i3' }), row({ invoiceId: 'c1', rowKind: 'credit_note' }), row({ invoiceId: 'v1', voided: true })]
+    expect(registerCountLine(all, all)).toBe('Showing 3 of 3 invoices and 1 credit note and 1 void invoice')
+    expect(registerCountLine(all.slice(0, 1), all)).toBe('Showing 1 of 3 invoices')
+    expect(registerCountLine([row()], [row()])).toBe('Showing 1 of 1 invoice')
   })
 })

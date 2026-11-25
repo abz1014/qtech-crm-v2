@@ -1,6 +1,6 @@
 import { useContext } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CircleHelp, Download, Keyboard, KeyRound, LogOut, Receipt, Settings, Users } from 'lucide-react'
+import { CircleHelp, Download, Keyboard, KeyRound, LogOut, HandCoins, Settings, Users } from 'lucide-react'
 import { PaletteContext } from '@/app/palette/usePalette'
 import { KEYBOARD_MEDIA } from '@/app/shell/shortcuts'
 import { useMediaQuery } from '@/lib/useMediaQuery'
@@ -50,7 +50,7 @@ export function AccountMenuImpl({ user, touch = false, defaultOpen = false }: { 
         <MenuSeparator />
         {user.role === 'engineer' || user.role === 'sales' ? (
           // 0087 (owner decision 2026-10-22): engineers record what they paid themselves, for the admin to approve
-          <MenuItem icon={Receipt} onClick={() => navigate('/my-expenses')}>
+          <MenuItem icon={HandCoins} onClick={() => navigate('/my-expenses')}>
             I paid
           </MenuItem>
         ) : null}

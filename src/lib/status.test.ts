@@ -59,10 +59,10 @@ describe('status registry vs tokens.css', () => {
 describe('status vocabulary (DESIGN_SYSTEM section 6, consistency spec 1.7)', () => {
   const visible = STATUS_ENTRIES.filter(([, , s]) => !s.hidden)
 
-  it('(a) the non-hidden entries use at most 35 labels (35 today)', () => {
+  it('(a) the non-hidden entries use at most 35 labels (34 today: Needs suppliers became No price yet, 25 Nov 2026)', () => {
     const labels = new Set(visible.map(([, , s]) => s.label))
     expect(labels.size).toBeLessThanOrEqual(35)
-    expect(labels.size).toBe(35)
+    expect(labels.size).toBe(34)
   })
 
   it('(b) each visible label has exactly one tone', () => {
@@ -143,7 +143,7 @@ describe('every section 5 value has an entry', () => {
 
   it('maps the view outputs to the slugs the design uses', () => {
     expect(resolveStatus('sourcing', 'floated_awaiting').key).toBe('sourcing:awaiting')
-    expect(resolveStatus('sourcing', 'no_offer_anywhere').label).toBe('Needs suppliers')
+    expect(resolveStatus('sourcing', 'no_offer_anywhere').label).toBe('No price yet')
     expect(resolveStatus('tcs', 'delivered_to_client').key).toBe('tcs:delivered')
     expect(resolveStatus('fbr', 'receipt_received').key).toBe('fbr:receipt')
     expect(resolveStatus('invoicing', 'fully_invoiced').key).toBe('invoicing:full')

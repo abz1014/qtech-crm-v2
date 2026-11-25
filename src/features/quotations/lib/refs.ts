@@ -1,10 +1,11 @@
 /**
  * The quotation number as printed. A quotation with a customer code (0147) is "QTS-IFL-4810": the code and the running number. An
- * older one has no code and keeps "QT-26-0042" (the number and the year it was first issued). With a revision, " R2" is added.
+ * older one has no code and keeps "QT-26-0042" (the number and the year it was first issued). A later revision adds " Rev 2", as the PDF
+ * prints it. The first issue (revision 0) shows the number alone: "R0" is jargon (screen review, 24 Nov 2026).
  */
 export function quotationRef(number: number, issuedOn: string, revision?: number, code?: string | null): string {
   const base = code ? `QTS-${code}-${number}` : `QT-${issuedOn.slice(2, 4)}-${String(number).padStart(4, '0')}`
-  return revision === undefined ? base : `${base} R${revision}`
+  return revision ? `${base} Rev ${revision}` : base
 }
 
 /** Calendar addition on the date parts, so no timezone can move the day. */

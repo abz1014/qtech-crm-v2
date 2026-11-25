@@ -47,7 +47,7 @@ test('a PDF dropped on To do becomes a job in two clicks: Use the company, Creat
   await dropFile(page, { name: 'enquiry.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) })
 
   // The document on one side, what was read on the other.
-  await expect(page).toHaveURL(/\/enquiries\/new$/)
+  await expect(page).toHaveURL(/\/rfqs\/new$/)
   await expect(page.getByTestId('source-file')).toContainText('enquiry.pdf')
   await expect(page.getByRole('textbox', { name: 'Description of item 1' })).toHaveValue(/^Level switch LSX-200 24V/)
   await expect(page.getByRole('textbox', { name: 'Quantity of item 1' })).toHaveValue('2 nos')
@@ -56,7 +56,7 @@ test('a PDF dropped on To do becomes a job in two clicks: Use the company, Creat
   await expect(page.getByText(/From the PDF, check this/).first()).toBeVisible()
 
   await page.getByRole('button', { name: `Use ${customer.name}` }).click() // click 1
-  await page.getByRole('button', { name: /^Create job \d+$/ }).click() // click 2
+  await page.getByRole('button', { name: /^Create job RFQ-\d{4}$/ }).click() // click 2
 
   await expect(page).toHaveURL(/\/jobs\/\d+$/)
   await expect(page.getByText(customer.name).first()).toBeVisible()

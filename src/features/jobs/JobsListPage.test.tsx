@@ -27,7 +27,7 @@ const rows = [
 const fake = (c: FakeCall) => {
   if (c.target === 'v_jobs') return { data: rows }
   if (c.target === 'companies') return { data: [{ id: 'c1', name: 'Ibrahim Fibres Limited' }] }
-  // the ids of orders imported from the old CRM (legacy_source set): Job O-45 is one of them
+  // the ids of orders imported from the old CRM (legacy_source set): ORD-0045 is one of them
   if (c.target === 'orders') return { data: [{ id: 'oO-45' }] }
   if (c.target === 'users') return { data: [{ id: 'u', name: 'Faizan' }, { id: 'other', name: 'Hammad' }] }
   return { data: [] }
@@ -66,21 +66,21 @@ describe('Jobs list', () => {
   it('the admin opens on Open: every job that is not history, with the seven columns and one green button', async () => {
     installFakeDb(fake)
     const { container } = mount('admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
-    expect(screen.getAllByRole('row', { name: /Job O-45/ }).length).toBeGreaterThan(0)
-    expect(screen.queryAllByRole('row', { name: /Job 120/ })).toHaveLength(0)
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
+    expect(screen.getAllByRole('row', { name: /ORD-0045/ }).length).toBeGreaterThan(0)
+    expect(screen.queryAllByRole('row', { name: /RFQ-0120/ })).toHaveLength(0)
     const headers = screen.getAllByRole('columnheader').map(h => h.textContent?.trim()).filter(Boolean)
     expect(headers).toEqual(['Job', 'Customer', 'Customer PO', 'Items', 'Where it stands', 'Next step', 'Owner'])
     expect([...container.querySelectorAll('button.bg-primary')]).toHaveLength(1)
     expect(screen.getByRole('button', { name: 'New RFQ' })).toBeInTheDocument()
-    expect(container).toHaveTextContent('Repeat of Job 139')
+    expect(container).toHaveTextContent('Repeat of RFQ-0139')
   })
 
   it('the customer cell shows two lines and the items cell one, with the whole text in the title', async () => {
     const longItems = 'Sample flow meter FM-100 DN50, sample pressure transmitter PT-20, sample level switch LS-3, sample junction box JB-9, sample cable gland M20'
     installFakeDb((c: FakeCall) => (c.target === 'v_jobs' ? { data: [view('139', { items_summary: longItems })] } : fake(c)))
     const { container } = mount('admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
     const clamped = [...container.querySelectorAll('table .line-clamp-2, table .line-clamp-1')] as HTMLElement[]
     expect(clamped.map(e => e.getAttribute('title'))).toEqual(expect.arrayContaining(['Ibrahim Fibres Limited', longItems]))
   })
@@ -88,7 +88,7 @@ describe('Jobs list', () => {
   it('an imported line that already ends in "+1 more", plus two more lines, shows one count on the card and in the table', async () => {
     installFakeDb((c: FakeCall) => (c.target === 'v_jobs' ? { data: [view('139', { items_summary: 'IC TLC0838C 20PIN SMD ×6 +1 more +2 more' })] } : fake(c)))
     const { container } = mount('admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
     expect(container).toHaveTextContent('4 items · IC TLC0838C 20PIN SMD ×6')
     expect(container.textContent).not.toMatch(/\+\d+ more/)
   })
@@ -97,22 +97,22 @@ describe('Jobs list', () => {
     installFakeDb(fake)
     const user = userEvent.setup()
     mount('admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
     await user.click(screen.getByRole('radio', { name: /History/ }))
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 120/ }).length).toBeGreaterThan(0))
-    expect(screen.getAllByRole('row', { name: /Job 121/ })[0]).toHaveTextContent('Lost: price too high')
-    expect(screen.queryAllByRole('row', { name: /Job 139/ })).toHaveLength(0)
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0120/ }).length).toBeGreaterThan(0))
+    expect(screen.getAllByRole('row', { name: /RFQ-0121/ })[0]).toHaveTextContent('Lost: price too high')
+    expect(screen.queryAllByRole('row', { name: /RFQ-0139/ })).toHaveLength(0)
   })
 
   it('an imported job is a live job but raises no red task: its step is grey and says Imported', async () => {
     installFakeDb(fake)
     mount('admin')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job O-45/ }).length).toBeGreaterThan(0))
-    const imported = screen.getAllByRole('row', { name: /Job O-45/ })[0]
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0045/ }).length).toBeGreaterThan(0))
+    const imported = screen.getAllByRole('row', { name: /ORD-0045/ })[0]
     expect(imported).toHaveTextContent('Imported · Choose a supplier for the items')
     expect(imported.querySelector('[data-tone="now"]')).toBeNull()
     // a live job with the same kind of step keeps its tone
-    const live = screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))
+    const live = screen.getAllByRole('row', { name: /RFQ-0139/ }).find(r => !/ORD-0045/.test(r.textContent ?? ''))
     expect(live?.querySelector('[data-tone="late"]')).not.toBeNull()
   })
 
@@ -122,13 +122,13 @@ describe('Jobs list', () => {
     mount('admin')
     await waitFor(() => expect(document.querySelectorAll('[data-card]').length).toBe(3))
     const cards = [...document.querySelectorAll('[data-card]')] as HTMLElement[]
-    const live = cards.find(c => /Job 139/.test(c.textContent ?? ''))!
+    const live = cards.find(c => /RFQ-0139/.test(c.textContent ?? ''))!
     expect(live.querySelector('[data-stage-line]')).toHaveTextContent('Stage 4 of 7 · Supplier order')
     expect(live.querySelectorAll('[data-stage-mini]')).toHaveLength(0)
     expect(live).toHaveTextContent('3 items · Flow meter RST 1158S')
     expect(live).toHaveTextContent('The goods are late: follow up with the supplier')
     expect(live).not.toHaveTextContent('Imported')
-    const imported = cards.find(c => /Job O-45/.test(c.textContent ?? ''))!
+    const imported = cards.find(c => /ORD-0045/.test(c.textContent ?? ''))!
     expect(imported).toHaveTextContent('Imported')
     expect(imported).toHaveTextContent('Choose a supplier for the items')
     expect(imported.textContent).not.toContain('Imported · ')
@@ -150,8 +150,8 @@ describe('Jobs list', () => {
   it('an engineer opens on Mine, sees no button to start an enquiry and no amount', async () => {
     installFakeDb(fake)
     const { container } = mount('engineer')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
-    expect(screen.queryAllByRole('row', { name: /Job 140/ })).toHaveLength(0)
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
+    expect(screen.queryAllByRole('row', { name: /RFQ-0140/ })).toHaveLength(0)
     expect(screen.queryByRole('button', { name: 'New RFQ' })).toBeNull()
     expect(container.textContent).not.toMatch(/PKR|Rs\.? ?\d/)
   })
@@ -163,6 +163,39 @@ describe('Jobs list', () => {
     expect(screen.queryByText(/Showing 0/)).toBeNull()
   })
 
+  describe('screen review 2026-11-24 (items 14 and 17)', () => {
+    it('?owner=all picks Open, not Mine; ?owner=mine picks Mine', async () => {
+      installFakeDb(fake)
+      const { unmount } = mount('sales', '/jobs?owner=all')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0140/ }).length).toBeGreaterThan(0))
+      expect(screen.getByRole('radio', { name: 'Open' })).toBeChecked()
+      expect(screen.getByText('Showing 3 open jobs')).toBeInTheDocument()
+      unmount()
+      mount('admin', '/jobs?owner=mine')
+      await waitFor(() => expect(screen.getByRole('radio', { name: 'Mine' })).toBeChecked())
+    })
+
+    it('Mine says "Showing your 1 job", never "mine jobs"', async () => {
+      installFakeDb(fake)
+      const { container } = mount('sales')
+      expect(await screen.findByText('Showing your 1 job')).toBeInTheDocument()
+      expect(container.textContent).not.toMatch(/mine jobs?/)
+    })
+
+    it('with no job at all it says No jobs yet, not "Every job is done"', async () => {
+      installFakeDb(c => (c.target === 'v_jobs' ? { data: [] } : fake(c)))
+      const { container } = mount('admin')
+      expect(await screen.findByText('No jobs yet')).toBeInTheDocument()
+      expect(container.textContent).not.toMatch(/Every job is done/)
+    })
+
+    it('with only finished jobs it still says every job is done', async () => {
+      installFakeDb(c => (c.target === 'v_jobs' ? { data: rows.filter(r => r.is_history) } : fake(c)))
+      mount('admin')
+      expect(await screen.findByText(/Every job is done/)).toBeInTheDocument()
+    })
+  })
+
   it('/jobs?new=1 (Order without enquiry) opens the new-order dialog once, for the office only', async () => {
     installFakeDb(fake)
     mount('sales', '/jobs?new=1')
@@ -172,7 +205,7 @@ describe('Jobs list', () => {
   it('an engineer who lands on ?new=1 gets no dialog', async () => {
     installFakeDb(fake)
     mount('engineer', '/jobs?new=1')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
@@ -188,15 +221,15 @@ describe('Jobs list', () => {
       for (const role of ['admin', 'sales'] as const) {
         installFakeDb(withPo)
         const { unmount } = mount(role, '/jobs?chip=open')
-        await waitFor(() => expect(screen.getAllByRole('row', { name: /Job O-45/ })[0]).toHaveTextContent('FIB-PO-8841'))
+        await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0045/ })[0]).toHaveTextContent('FIB-PO-8841'))
         const headers = screen.getAllByRole('columnheader').map(h => h.textContent?.trim()).filter(Boolean)
         expect(headers.slice(0, 3)).toEqual(['Job', 'Customer', 'Customer PO'])
         // one line cut with an ellipsis, the whole number in its title: a 50-character PO must not widen the table (audit 1, blocker 1)
         const po = screen.getAllByTitle('FIB-PO-8841').find(e => e.tagName === 'SPAN' && e.className.includes('truncate'))
         expect(po?.className.split(' ')).toContain('max-w-[9rem]')
         expect(po?.className).not.toContain('whitespace-nowrap')
-        expect(screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))).not.toHaveTextContent('FIB-PO')
-        expect(screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))).toHaveTextContent('—')
+        expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).find(r => !/ORD-0045/.test(r.textContent ?? ''))).not.toHaveTextContent('FIB-PO')
+        expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).find(r => !/ORD-0045/.test(r.textContent ?? ''))).toHaveTextContent('—')
         unmount()
       }
     })
@@ -204,7 +237,7 @@ describe('Jobs list', () => {
     it('an engineer has no Customer PO column and the page never asks for customer_po_number', async () => {
       const { calls } = installFakeDb(withPo)
       const { container } = mount('engineer', '/jobs?chip=open')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job O-45/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /ORD-0045/ }).length).toBeGreaterThan(0))
       expect(screen.getAllByRole('columnheader').map(h => h.textContent?.trim()).filter(Boolean)).toEqual(['Job', 'Customer', 'Items', 'Where it stands', 'Next step', 'Owner'])
       expect(container.textContent).not.toContain('FIB-PO-8841')
       expect(asked(calls)).toHaveLength(0)
@@ -214,16 +247,16 @@ describe('Jobs list', () => {
       installFakeDb(withPo)
       const user = userEvent.setup()
       const admin = mount('admin')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
       expect(radios().slice(-6)).toEqual(['All', 'Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
       await user.click(screen.getByRole('radio', { name: /History/ }))
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 120/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0120/ }).length).toBeGreaterThan(0))
       expect(radios().slice(-2)).toEqual(['All', 'Orders'])
       expect(screen.queryByRole('radio', { name: 'To invoice' })).toBeNull()
       admin.unmount()
       installFakeDb(withPo)
       mount('engineer')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
       expect(radios().slice(-4)).toEqual(['All', 'Orders', 'Waiting for supplier', 'To deliver'])
       expect(screen.queryByRole('radio', { name: 'To invoice' })).toBeNull()
       expect(screen.queryByRole('radio', { name: 'To be paid' })).toBeNull()
@@ -233,21 +266,21 @@ describe('Jobs list', () => {
       installFakeDb(withPo)
       const user = userEvent.setup()
       mount('admin', '/jobs?chip=open')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0140/ }).length).toBeGreaterThan(0))
       await user.click(screen.getByRole('radio', { name: 'Waiting for supplier' }))
-      await waitFor(() => expect(screen.queryAllByRole('row', { name: /Job 140/ })).toHaveLength(0))
-      expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0)
+      await waitFor(() => expect(screen.queryAllByRole('row', { name: /RFQ-0140/ })).toHaveLength(0))
+      expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0)
       expect(screen.getByText(/Showing 2 open jobs · Waiting for supplier/)).toBeInTheDocument()
       await user.click(screen.getByRole('radio', { name: 'To invoice' }))
       expect(await screen.findByText('No open jobs to invoice')).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: 'Show all open jobs' }))
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0140/ }).length).toBeGreaterThan(0))
     })
 
     it('an engineer who lands on ?stage=invoice sees every job (All), not an empty list', async () => {
       installFakeDb(withPo)
       mount('engineer', '/jobs?stage=invoice')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
       expect(screen.queryByText(/No .* to invoice/)).toBeNull()
     })
   })
@@ -257,13 +290,19 @@ describe('Jobs list', () => {
     const laneRows = [...rows.slice(0, 3), view('120', { stage: 'paid', stage_detail: null, is_history: true, order_id: 'o120' }), rows[4]!, view('141', { stage: 'enquiry', stage_detail: null })]
     const lanes = (c: FakeCall) => (c.target === 'v_jobs' ? { data: laneRows } : fake(c))
     const radios = () => screen.getAllByRole('radio').map(r => r.textContent?.trim())
-    const jobRows = () => screen.queryAllByRole('row').map(r => /Job (O-\d+|\d+)/.exec(r.textContent ?? '')?.[1]).filter(Boolean)
+    // the job key back from the label: "RFQ-0139" is 139, "ORD-0045" is O-45
+    const jobRows = () =>
+      screen
+        .queryAllByRole('row')
+        .map(r => /(RFQ|ORD)-(\d+)/.exec(r.textContent ?? ''))
+        .map(m => (m ? `${m[1] === 'ORD' ? 'O-' : ''}${Number(m[2])}` : null))
+        .filter(Boolean)
 
     it('Sell holds the jobs with no order yet, titled Sell, with RFQs and Quotations and a link to every job', async () => {
       installFakeDb(lanes)
       const user = userEvent.setup()
       mount('admin', '/jobs?lane=sell')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0140/ }).length).toBeGreaterThan(0))
       expect(screen.getByRole('heading', { level: 1, name: 'Sell' })).toBeInTheDocument()
       expect(jobRows().sort()).toEqual(['140', '141'])
       expect(screen.getByText('2 open · 1 in history')).toBeInTheDocument()
@@ -271,12 +310,12 @@ describe('Jobs list', () => {
       expect(screen.getByRole('button', { name: 'New RFQ' })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'All jobs' })).toHaveAttribute('href', '/jobs')
       await user.click(screen.getByRole('radio', { name: 'Quotations' }))
-      await waitFor(() => expect(screen.queryAllByRole('row', { name: /Job 141/ })).toHaveLength(0))
+      await waitFor(() => expect(screen.queryAllByRole('row', { name: /RFQ-0141/ })).toHaveLength(0))
       expect(jobRows()).toEqual(['140'])
       expect(screen.getByText(/Showing 1 open job · Quotations/)).toBeInTheDocument()
       // Sell's History is the lost enquiry, with no stage filter (nothing finished stands at RFQ or Quotation)
       await user.click(screen.getByRole('radio', { name: /History/ }))
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 121/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0121/ }).length).toBeGreaterThan(0))
       expect(jobRows()).toEqual(['121'])
       expect(screen.queryByTestId('stage-filter')).toBeNull()
     })
@@ -284,7 +323,7 @@ describe('Jobs list', () => {
     it('Deliver holds the jobs with an order, with the live stage filter; a Sell stage in the address is All', async () => {
       installFakeDb(lanes)
       mount('sales', '/jobs?lane=deliver&chip=open&stage=quotation')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
       expect(screen.getByRole('heading', { level: 1, name: 'Deliver' })).toBeInTheDocument()
       expect(jobRows().sort()).toEqual(['139', 'O-45'])
       expect(radios().slice(-6)).toEqual(['All', 'Orders', 'Waiting for supplier', 'To deliver', 'To invoice', 'To be paid'])
@@ -318,15 +357,15 @@ describe('Jobs list', () => {
           </SessionProvider>
         </QueryClientProvider>,
       )
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
-      await user.click(screen.getAllByRole('row', { name: /Job 139/ }).find(r => !/O-45/.test(r.textContent ?? ''))!)
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
+      await user.click(screen.getAllByRole('row', { name: /RFQ-0139/ }).find(r => !/ORD-0045/.test(r.textContent ?? ''))!)
       expect(await screen.findByTestId('where')).toHaveTextContent('/jobs/139?from=deliver')
     })
 
     it('the bare /jobs list is every job, titled Jobs, with no All jobs link and no Sell stages', async () => {
       installFakeDb(lanes)
       mount('admin', '/jobs')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 141/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0141/ }).length).toBeGreaterThan(0))
       expect(screen.getByRole('heading', { level: 1, name: 'Jobs' })).toBeInTheDocument()
       expect(jobRows().sort()).toEqual(['139', '140', '141', 'O-45'])
       expect(screen.queryByRole('link', { name: 'All jobs' })).toBeNull()
@@ -345,7 +384,7 @@ describe('Jobs list', () => {
     it("an engineer's Deliver is their Jobs list, as before", async () => {
       installFakeDb(lanes)
       mount('engineer', '/jobs?lane=deliver')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
       expect(screen.getByRole('heading', { level: 1, name: 'Jobs' })).toBeInTheDocument()
       expect(screen.queryByRole('link', { name: 'All jobs' })).toBeNull()
       expect(radios().slice(-4)).toEqual(['All', 'Orders', 'Waiting for supplier', 'To deliver'])
@@ -355,7 +394,7 @@ describe('Jobs list', () => {
   it('an engineer at desktop width never reads the word paid, even on a paid job in History', async () => {
     installFakeDb(fake)
     const { container } = mount('engineer', '/jobs?chip=history')
-    await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 120/ }).length).toBeGreaterThan(0))
+    await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0120/ }).length).toBeGreaterThan(0))
     // the ruler stops at Delivery for an engineer (owner, audit 2)
     expect(container.textContent).toContain('Delivered · With the office')
     expect(container.textContent).not.toMatch(/\bpaid\b|stages done/i)
@@ -365,10 +404,10 @@ describe('Jobs list', () => {
     it("?person= shows only that person's open jobs, says whose they are, and offers Open and History only", async () => {
       installFakeDb(fake)
       const { container } = mount('admin', '/jobs?person=other')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
-      expect(screen.getAllByRole('row', { name: /Job O-45/ }).length).toBeGreaterThan(0)
-      // Job O-45 says "Repeat of Job 139", so the row's name is matched from its start
-      expect(screen.queryAllByRole('row', { name: /^Job 139\b/ })).toHaveLength(0)
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0140/ }).length).toBeGreaterThan(0))
+      expect(screen.getAllByRole('row', { name: /ORD-0045/ }).length).toBeGreaterThan(0)
+      // ORD-0045 says "Repeat of RFQ-0139", so the row's name is matched from its start
+      expect(screen.queryAllByRole('row', { name: /^RFQ-0139\b/ })).toHaveLength(0)
       expect(container).toHaveTextContent('Showing 2 open jobs of Hammad')
       expect(screen.queryByRole('radio', { name: 'Mine' })).toBeNull()
       expect(screen.getByRole('radio', { name: 'Open' })).toBeChecked()
@@ -380,9 +419,9 @@ describe('Jobs list', () => {
     it('picking Everyone in the Person select clears the filter', async () => {
       installFakeDb(fake)
       mount('admin', '/jobs?person=other')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0140/ }).length).toBeGreaterThan(0))
       await userEvent.selectOptions(screen.getByTestId('person-filter'), '')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
     })
 
     it('a person with no open jobs gets a calm empty state with the way back to everyone', async () => {
@@ -394,7 +433,7 @@ describe('Jobs list', () => {
     it('sales and engineers have no Person select and ?person= changes nothing for them', async () => {
       installFakeDb(fake)
       mount('sales', '/jobs?person=other&chip=open')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 139/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0139/ }).length).toBeGreaterThan(0))
       expect(screen.queryByTestId('person-filter')).toBeNull()
     })
   })

@@ -9,9 +9,11 @@ import { Kbd } from '@/ui/Kbd'
 import { Skeleton } from '@/ui/Skeleton'
 import { Icon } from '@/ui/Icon'
 import IntakeScreen from '@/features/rfqs/IntakeScreen'
+import { useSession } from '@/app/session'
+import { NoAccessPage } from '@/app/pages/NoAccessPage'
 
 /*
- * New RFQ (P4-A, /enquiries/new and /rfqs/new, one page): the customer's document on one side, what was read from it on the other. The right side IS
+ * New RFQ (P4-A, /rfqs/new; the old /enquiries/new redirects there): the customer's document on one side, what was read from it on the other. The right side IS
  * the existing intake (features/rfqs/IntakeScreen, read as it always was: PDF, photo, spreadsheet and paste go through PdfIntake,
  * fileIntake and the parsers), in its "enquiry" mode: unsure fields say "Check this" and the one green button is "Create job N".
  * This page adds only the left side and the way a file arrives:
@@ -32,7 +34,20 @@ const isReadableFile = (f: { type?: string; name?: string }) => isPdfFile(f) || 
 
 const PICK = 'application/pdf,image/*,.xlsx,.xls,.csv'
 
+/**
+ * Who may start an RFQ: admin and sales. An engineer who types the address (/rfqs/new or /enquiries/new) gets the lock screen, as the
+ * + Create menu and the palette offer them nothing (screen review 2026-11-24, item 12). Screen only; the database decides the rest.
+ */
+export const RFQ_STARTERS = ['admin', 'sales'] as const
+
 export default function NewEnquiryPage() {
+  const session = useSession()
+  const role = session.status === 'signed-in' ? session.user.role : ''
+  if (!(RFQ_STARTERS as readonly string[]).includes(role)) return <NoAccessPage area="New RFQ" roles={RFQ_STARTERS} />
+  return <NewEnquiry />
+}
+
+function NewEnquiry() {
   const location = useLocation()
   const navigate = useNavigate()
   const capture = (location.state as { capture?: Capture } | null)?.capture

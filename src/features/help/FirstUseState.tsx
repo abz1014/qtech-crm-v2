@@ -18,6 +18,8 @@ export interface FirstUseStateProps {
   role: string
   /** Admin on Today: the owner is still the only person on the team, so the one button is adding people. */
   alone?: boolean
+  /** Sales on Home: the team already has RFQs or orders, so the words point at Jobs instead of a first RFQ. */
+  teamHasWork?: boolean
   /** The "show everyone's" switch, for a list that has one (engineers on Orders). */
   onEveryone?: () => void
   /** How many there are for everyone, shown on that button. */
@@ -27,8 +29,8 @@ export interface FirstUseStateProps {
 
 const ICON: Record<FirstUseScreen | NothingYetScreen, LucideIcon> = { today: CalendarCheck, rfqs: FileText, orders: Package, receivables: Banknote }
 
-export function FirstUseState({ screen, role, alone, onEveryone, everyoneCount, className }: FirstUseStateProps) {
-  const copy = firstUseCopy(screen, role, { alone })
+export function FirstUseState({ screen, role, alone, teamHasWork, onEveryone, everyoneCount, className }: FirstUseStateProps) {
+  const copy = firstUseCopy(screen, role, { alone, teamHasWork })
   if (!copy) return null
   return <FirstUseCard copy={copy} icon={ICON[screen]} onEveryone={onEveryone} everyoneCount={everyoneCount} className={className} />
 }

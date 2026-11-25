@@ -52,27 +52,27 @@ const paste = (text: string) => {
 }
 
 describe('Capture provider', () => {
-  it('a dropped file on To do or the Jobs list opens New enquiry with the file', async () => {
+  it('a dropped file on To do or the Jobs list opens New RFQ with the file', async () => {
     const file = new File(['%PDF'], 'enquiry.pdf', { type: 'application/pdf' })
     for (const at of ['/todo', '/jobs']) {
       const view = mount(at)
       act(() => void drop(file))
-      await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/enquiries/new'))
+      await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/rfqs/new'))
       expect(screen.getByLabelText('carried')).toHaveTextContent('|enquiry.pdf')
       view.unmount()
     }
   })
 
-  it('a message pasted on To do opens New enquiry with the text', async () => {
+  it('a message pasted on To do opens New RFQ with the text', async () => {
     mount('/todo')
     act(() => void paste('Please quote 2 nos level switch'))
-    await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/enquiries/new'))
+    await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/rfqs/new'))
     expect(screen.getByLabelText('carried')).toHaveTextContent('Please quote 2 nos level switch|')
   })
 
   it('does nothing on a job page (Add to this job listens there), on the intake screens, or anywhere else', () => {
     const file = new File(['%PDF'], 'enquiry.pdf', { type: 'application/pdf' })
-    for (const at of ['/jobs/139', '/enquiries/new', '/rfqs/new', '/money/expenses', '/companies']) {
+    for (const at of ['/jobs/139', '/rfqs/new', '/money/expenses', '/companies']) {
       const view = mount(at)
       expect(drop(file).defaultPrevented).toBe(false)
       expect(paste('some text').defaultPrevented).toBe(false)
@@ -94,13 +94,13 @@ describe('Capture provider', () => {
       act(() => void drag('dragenter'))
       act(() => void drop(file))
       expect(screen.queryByTestId('drop-overlay')).toBeNull()
-      await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/enquiries/new'))
+      await waitFor(() => expect(screen.getByLabelText('where')).toHaveTextContent('/rfqs/new'))
       view.unmount()
     }
   })
 
   it('no overlay for an engineer, on a job page, or on the intake screens', () => {
-    const cases: [string, string][] = [['/todo', 'engineer'], ['/jobs/139', 'sales'], ['/enquiries/new', 'admin'], ['/rfqs/new', 'admin'], ['/companies', 'admin']]
+    const cases: [string, string][] = [['/todo', 'engineer'], ['/jobs/139', 'sales'], ['/rfqs/new', 'admin'], ['/companies', 'admin']]
     for (const [at, role] of cases) {
       const view = mount(at, role)
       act(() => void drag('dragenter'))

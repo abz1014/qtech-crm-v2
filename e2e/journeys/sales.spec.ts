@@ -190,7 +190,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 3. The job page ---------------------------------------------------------------------------------------------------------------------
   await test.step('open the job from the Jobs list or by its address', async () => {
     await page.goto(`/rfqs/${rfq.id}`)
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(rfq.number)}`)
   })
 
   // ---- 4. Supplier replies: one typed, one pasted -------------------------------------------------------------------------------
@@ -309,7 +309,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     // 0147: the first quotation of a customer is numbered QTS-<customer code>-<running number>
     expect(q.quote_code).toMatch(/^[A-Z]{2,6}$/)
     const ref = `QTS-${q.quote_code}-${q.number}`
-    expect(file.suggestedFilename()).toBe(`${ref}-R0.pdf`)
+    expect(file.suggestedFilename()).toBe(`${ref}.pdf`)
     const stored = await fetchStoredPdf('sales', 'generated-docs', q.pdf_path as string)
     expect(pdfIsValid(stored)).toBe(true)
     const text = stored ? pdfText(stored) : null
@@ -410,7 +410,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
     await expect(d.getByTestId('po-source-1')).toContainText('order')
     await d.getByRole('button', { name: 'Issue PO' }).click()
     await expect(dialog(page)).toHaveCount(0, { timeout: 30_000 })
-    await expect(page.getByText(/^Issued PO-\d\d-\d{4} · R0/)).toBeVisible()
+    await expect(page.getByText(/^Issued PO-\d\d-\d{4}(?! Rev)/)).toBeVisible()
     fe2('Issue PO (every line priced): Issue PO on the leg, Issue PO in the dialog', (await readCount(page)).mouse, 2)
 
     const [po] = await must(
@@ -495,7 +495,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   // ---- 12. Admin records the payment ---------------------------------------------------------------------------------------------------------
   await test.step('(admin) record the payment in full: 2 taps, the amount is the balance due', async () => {
     const admin = await openPage(adminCtx, `/orders/${order.id}`)
-    await expect(admin.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
+    await expect(admin.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(rfq.number)}`)
     await openStage(admin, 'Invoice')
     await resetCount(admin)
     await stagesOf(admin).getByRole('button', { name: 'Record payment' }).first().click()

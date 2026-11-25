@@ -67,7 +67,7 @@ describe('Team view, open jobs', () => {
     expect(links.map(a => a.querySelector('[data-stands]')?.textContent)).toEqual(['RFQ · suppliers not asked yet', 'Quotation · 0 of 1 suppliers replied', 'Supplier order · supplier order to place'])
     expect(within(panel).getByRole('link', { name: 'See all 4 open jobs' })).toHaveAttribute('href', `/jobs?person=${SALES}`)
     // history is never an open job
-    expect(panel).not.toHaveTextContent('Job 205')
+    expect(panel).not.toHaveTextContent('RFQ-0205')
   })
 
   it('a person with no open jobs says so, with no link', async () => {

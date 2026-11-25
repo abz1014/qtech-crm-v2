@@ -397,7 +397,7 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     await must(rest('admin', 'rpc/issue_purchase_order', { method: 'POST', body: { p_po_id: crypto.randomUUID(), p_supplier_order_id: legS1.id } }))
     await openAs(page, 'sales', `/orders/${s.order.id}`)
     await openStage(page, 'Supplier order')
-    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
+    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4}$/)
     await expect(page.getByTestId('leg-A-changed')).toHaveCount(0)
 
     // move 1 of the 3 pieces on leg A to supplier 3 through the database (what the dialog does), then reload
@@ -412,13 +412,13 @@ test.describe('O09: the order page shows a split item, splits a line, edits the 
     await expect(changed).toContainText('was ×3, now ×2')
     await shot(page, 'a8-order-changed-since-po-1440')
 
-    // 1 tap on the indicator opens the Issue dialog on that leg; issuing R1 clears it
+    // 1 tap on the indicator opens the Issue dialog on that leg; issuing Rev 1 clears it
     const t = tapper()
     await t.tap(changed.getByRole('button', { name: `Revise PO, ${s.s1.name}` }))
     await expect(dialog(page).getByRole('heading', { name: /Issue|Re-issue/ })).toBeVisible()
     await t.tap(dialog(page).getByRole('button', { name: /^Issue (PO|R1)/ }).last())
     await expect(page.getByTestId('leg-A-changed')).toHaveCount(0)
-    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/ · R1$/)
+    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/ Rev 1$/)
   })
 
   test('there is no Received step on a supplier order: Mark placed, then Delivered today', async ({ page }) => {

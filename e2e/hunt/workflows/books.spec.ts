@@ -568,7 +568,7 @@ test('books: In vs out for a month and a quarter equals the hand totals and the 
       if ((await page.getByRole('button', { name: 'Export CSV' }).count()) > 0) {
         const csv = await exportCsv(page)
         // A header-only CSV is right for an empty month; it is a finding only when the screen shows rows.
-        const emptyOnScreen = (await page.getByText(/No balance is due on an invoice|Nothing is payable to suppliers|No invoices yet|No one is credited|No expenses|Nothing in |No payment was received/).count()) > 0
+        const emptyOnScreen = (await page.getByText(/No balance is due on an invoice|Nothing is payable to suppliers|No invoices yet|No invoices in |No one is credited|No expenses|Nothing in |No payment was received/).count()) > 0
         if (csv.rows.length < 2 && !emptyOnScreen) note(info, { kind: 'observation', where: `report ${k} csv`, what: `${csv.name} has ${csv.rows.length} rows`, detail: csv.rows })
         const widths = new Set(csv.rows.filter(r => r.length > 1).map(r => r.length))
         if (widths.size > 1) note(info, { kind: 'observation', where: `report ${k} csv`, what: `${csv.name}: rows of different widths ${[...widths].join('/')}` })

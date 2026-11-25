@@ -31,7 +31,6 @@ test.describe('customer refunds and credit', () => {
   test('an overpayment is a credit balance: refund part of it, apply the rest to another order, no cash moves for the apply', async ({ page }) => {
     const company = await createCompany(uniqueName('Credit Customer'), { invoice_address: 'Plot 1, Korangi, Karachi', sales_tax_registered: false })
     const a = await seedOrder(company.id, 100000) // gross 118,000
-    const b = await seedOrder(company.id, 20000) // gross 23,600
     await pay(a.id, 150000) // overpaid by 32,000
 
     await openAs(page, 'admin', `/companies/${company.id}`)
@@ -66,6 +65,12 @@ test.describe('customer refunds and credit', () => {
     await again.getByRole('button', { name: 'Save refund' }).click()
     await expect(again.getByTestId('duplicate-refund')).toContainText('Looks like a refund already recorded')
     await again.getByRole('button', { name: 'Cancel' }).click()
+
+    // a second order that still owes: Refund is no longer offered, the credit goes against what is due first (screen review 6)
+    const b = await seedOrder(company.id, 20000) // gross 23,600
+    await page.reload()
+    await expect(panel.getByTestId('credit-owes')).toBeVisible()
+    await expect(panel.getByRole('button', { name: 'Refund', exact: true })).toHaveCount(0)
 
     // Apply the remaining 22,000 to order B (owes 23,600)
     const before = await must(rest<{ balance: number; settled: number }[]>('admin', 'rpc/order_receivables', { method: 'POST', body: { p_order_id: b.id } }))

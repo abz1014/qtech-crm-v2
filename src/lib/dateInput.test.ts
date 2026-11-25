@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDateText, parseDateText } from '@/lib/dateInput'
+import { farDateWarning, formatDateText, parseDateText } from '@/lib/dateInput'
 
 const TODAY = '2026-11-27'
 
@@ -41,5 +41,19 @@ describe('date text (U07)', () => {
     for (const bad of ['', 'abc', '31/02/2026', '32 nov', '27 xyz', '13/13', '0/5']) {
       expect(parseDateText(bad, TODAY)).toBeNull()
     }
+  })
+})
+
+describe('farDateWarning (review 18)', () => {
+  it('warns, softly, when a date is more than a year from today either way', () => {
+    expect(farDateWarning('2020-01-01', TODAY)).toBe('That is more than a year ago. Check the year.')
+    expect(farDateWarning('2025-11-26', TODAY)).toMatch(/more than a year ago/)
+    expect(farDateWarning('2028-01-01', TODAY)).toBe('That is more than a year away. Check the year.')
+  })
+  it('is quiet for dates within a year, and for empty or broken text', () => {
+    for (const ok of ['2026-11-27', '2025-11-27', '2027-11-27', '2026-01-01']) expect(farDateWarning(ok, TODAY), ok).toBeNull()
+    expect(farDateWarning('', TODAY)).toBeNull()
+    expect(farDateWarning(null, TODAY)).toBeNull()
+    expect(farDateWarning('27/11', TODAY)).toBeNull()
   })
 })

@@ -8,8 +8,8 @@ import { SCENES } from '../docread/scenes'
 /*
  * R05 end to end, against the local CI stack: the intake = float screen, as the fixture users, through the real
  * login form. Each test makes its own companies, brands and suppliers with unique names, so tests do not depend on
- * each other or on the seed beyond its fixture users. /rfqs/new is the New RFQ page (the same page as /enquiries/new, Forest
- * polish-b): its green button is "Create job N", which saves and opens the job; "Ask suppliers now" (gate 2) turns the same
+ * each other or on the seed beyond its fixture users. /rfqs/new is the New RFQ page (the old /enquiries/new redirects there, Forest
+ * polish-b): its green button is "Create job RFQ-NNNN", which saves and opens the job; "Ask suppliers now" (gate 2) turns the same
  * form into the suppliers and message steps, and anything saved from there opens the job too.
  *
  * FE-2 targets asserted here (BUILD_PLAN FE-2, with gate 2's optional asking):
@@ -38,8 +38,8 @@ async function askSuppliersNow(page: Page): Promise<void> {
   await page.getByRole('checkbox', { name: /Ask suppliers now/ }).check()
 }
 
-/** The New RFQ page's green button: "Create job N" (the number is the next one, read when the page opens). */
-const createJob = (page: Page) => page.getByRole('button', { name: /^Create job \d+$/ })
+/** The New RFQ page's green button: "Create job RFQ-NNNN" (the number is the next one, read when the page opens). */
+const createJob = (page: Page) => page.getByRole('button', { name: /^Create job RFQ-\d{4}$/ })
 
 /** Saving from New RFQ opens the new job's page (Created job N). */
 async function jobOpened(page: Page, companyId: string): Promise<RfqRow> {
@@ -364,7 +364,8 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
 test.describe('what is required and what is pre-filled (FE-2)', () => {
   test('a company and one typed item are enough; qty is 1, GST 18, today and the owner fill themselves', async ({ page }) => {
     const customer = await createCompany(uniqueName('Bare Minimum'))
-    await openAs(page, 'engineer', '/rfqs/new')
+    // an engineer starts no RFQ (owner 2026-11-06, screen review 12): sales enters it
+    await openAs(page, 'sales', '/rfqs/new')
     // Not ready: the reason is beside the button, and a press puts the focus on what is missing (owner test 2026-10-20).
     await expect(page.getByText('Choose the company first, then paste or add an item.')).toBeVisible()
     await createJob(page).click()
@@ -376,7 +377,7 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
 
     const rfq = await jobOpened(page, customer.id)
     expect(rfq.received_on).toBe(karachiDay())
-    expect(rfq.owner_id).toBe('a0000000-0000-4000-8000-000000000003') // the engineer who entered it
+    expect(rfq.owner_id).toBe('a0000000-0000-4000-8000-000000000002') // the salesperson who entered it
     const items = await itemsOf(rfq.id)
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({ description: 'Spare gasket set', qty: 1, unit: null, gst_rate: 18, brand_id: null })

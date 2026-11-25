@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { openAs } from '../support/stack'
+import { openAs, rfqRef } from '../support/stack'
 import { seedWorld, type World } from './fixtures'
 import { moneyKeysIn, service } from './lib'
 import { CURRENCY_AMOUNT, ENGINEER_MONEY_WORDS, GST_AMOUNT, MONEY_REQUEST } from './routes'
@@ -74,7 +74,7 @@ test('engineer: the palette finds the job and the customer, and shows no invoice
   const dialog = page.getByRole('dialog', { name: 'Search or jump to' })
 
   await input.fill(`Job ${world.rfq.number}`)
-  await expect(page.getByRole('option', { name: new RegExp(`Job ${world.rfq.number} · ${world.company.name}`) })).toBeVisible()
+  await expect(page.getByRole('option', { name: new RegExp(`${rfqRef(world.rfq.number)} · ${world.company.name}`) })).toBeVisible()
   expect(moneyIn(await dialog.innerText()), 'the job row').toEqual([])
 
   await input.fill(world.company.name)
@@ -108,13 +108,13 @@ test('engineer: Jobs list and Job page show no amount, no money word, and not th
     if (body.includes(`${world.tag}-PO`)) poInAnswers.push(`${res.status()} ${new URL(res.url()).pathname}`)
   })
   await openAs(page, 'engineer', `/jobs?q=${encodeURIComponent(world.tag)}`)
-  await expect(page.getByRole('row', { name: new RegExp(`Job ${world.rfq.number}\\b`) }).first()).toBeVisible()
+  await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(world.rfq.number)}\\b`) }).first()).toBeVisible()
   await page.waitForLoadState('networkidle').catch(() => undefined)
   expect(moneyIn(await page.locator('#main').innerText()), 'Jobs list').toEqual([])
   expect(poRequests, 'the Jobs list asks for no customer PO number (the Customer PO column is for admin and sales)').toEqual([])
 
   await page.goto(`/jobs/${world.rfq.number}`)
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${world.rfq.number}`)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(world.rfq.number)}`)
   await page.waitForLoadState('networkidle').catch(() => undefined)
   const text = await page.locator('#main').innerText()
   expect(moneyIn(text), 'Job page').toEqual([])
@@ -129,19 +129,23 @@ test('engineer: Jobs list and Job page show no amount, no money word, and not th
 
 test('admin sees the same file on the Job page, with the toggle', async ({ page }) => {
   await openAs(page, 'admin', `/jobs/${world.rfq.number}`)
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${world.rfq.number}`)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(world.rfq.number)}`)
   // the file is in the Notes and files row, closed until opened
   await page.getByRole('button', { name: /^Notes and files/ }).click()
   await expect(page.getByText(po)).toBeVisible()
   await expect(page.getByRole('checkbox', { name: 'Has prices: hide from engineers' }).first()).toBeChecked()
 })
 
-test('engineer: New enquiry opens with no price anywhere', async ({ page }) => {
+test('engineer: New RFQ by address is the lock screen, with no price anywhere', async ({ page }) => {
   const w = watch(page)
   await openAs(page, 'engineer', '/enquiries/new')
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeVisible()
+  await page.goto('/rfqs/new')
+  await expect(page.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeVisible()
+  await page.goto('/companies?new=1')
+  await expect(page.getByRole('heading', { name: 'New company is for admins and sales', level: 1 })).toBeVisible()
   await page.waitForLoadState('networkidle').catch(() => undefined)
-  expect(moneyIn(await page.locator('#main').innerText()), 'New RFQ').toEqual([])
+  expect(moneyIn(await page.locator('#main').innerText()), 'lock screen').toEqual([])
   expect(w.requests).toEqual([])
   expect([...new Set(w.leaks)]).toEqual([])
 })

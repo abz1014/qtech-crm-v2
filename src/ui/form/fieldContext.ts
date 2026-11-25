@@ -8,6 +8,8 @@ export interface FieldContextValue {
   describedBy: string | undefined
   /** The Field says "Required": the control gets aria-required so screen readers say it too (WCAG 1.3.1, 3.3.2). */
   required?: boolean
+  /** A control tells the Field why its text is refused ("Type the amount in digits"), shown on the Field's error line. */
+  reportProblem?: (problem: string | null) => void
 }
 export const FieldContext = createContext<FieldContextValue | null>(null)
 export const useFieldContext = () => useContext(FieldContext)

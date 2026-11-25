@@ -103,7 +103,7 @@ function MissingBanner({ profile, onAdd }: { profile: Pick<CompanyProfile, Docum
         ) : undefined
       }
     >
-      {onAdd ? m.detail : `${m.detail} Ask an admin to add them in Settings.`}
+      {onAdd ? m.detail : `${m.detail} Ask an admin to add ${m.fields.length === 1 ? 'it' : 'them'}.`}
     </Banner>
   )
 }

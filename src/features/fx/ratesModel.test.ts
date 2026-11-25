@@ -19,8 +19,8 @@ describe('currency names', () => {
 
 describe('rates table', () => {
   const rows = buildRateRows([row('GBP', 372.4, 54), row('USD', 281.35, 0), row('CNY', 38.85, 8, 'manual')])
-  it('orders fresh, stale, unusable, then currencies with no rate', () => {
-    expect(rows.map(r => r.currency)).toEqual(['USD', 'CNY', 'GBP', 'AED', 'EUR', 'JPY', 'SAR'])
+  it('orders the common currencies first, then A to Z, then currencies with no rate (the same everywhere, review 21)', () => {
+    expect(rows.map(r => r.currency)).toEqual(['USD', 'CNY', 'GBP', 'EUR', 'AED', 'JPY', 'SAR'])
   })
   it('offers every currency of the app, with no rate, so Add rate is always there', () => {
     expect(rows.find(r => r.currency === 'EUR')).toMatchObject({ ratePkr: null, staleness: null, source: null })

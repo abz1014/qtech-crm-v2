@@ -17,20 +17,20 @@ const mem = (over: Partial<PrefillMemory>): PrefillMemory => ({ itemId: 'a', quo
 
 describe('1 the latest issued quotation', () => {
   it('prices a line from it, labelled with the revision, ticked', () => {
-    const r = prefillLines(base({ latest: { ref: 'QT-26-0058 R1', lines: [{ rfq_item_id: 'a', unit_price_net: 1500, qty: 2 }] } }))
-    expect(r.a).toMatchObject({ include: true, price: 1500, source: 'quotation', sourceText: 'from QT-26-0058 R1' })
+    const r = prefillLines(base({ latest: { ref: 'QT-26-0058 Rev 1', lines: [{ rfq_item_id: 'a', unit_price_net: 1500, qty: 2 }] } }))
+    expect(r.a).toMatchObject({ include: true, price: 1500, source: 'quotation', sourceText: 'from QT-26-0058 Rev 1' })
   })
-  it('a line the latest revision dropped is unticked "Not in QT.. R1", and ticking it falls back to the draft, memory or nothing', () => {
+  it('a line the latest revision dropped is unticked "Not in QT.. Rev 1", and ticking it falls back to the draft, memory or nothing', () => {
     const r = prefillLines(
       base({
-        latest: { ref: 'QT-26-0058 R1', lines: [{ rfq_item_id: 'a', unit_price_net: 1500, qty: 2 }] },
+        latest: { ref: 'QT-26-0058 Rev 1', lines: [{ rfq_item_id: 'a', unit_price_net: 1500, qty: 2 }] },
         memory: [mem({ itemId: 'b', soldPrice: 800, soldOrderNumber: 31, soldOn: '2026-09-02' })],
       }),
     )
-    expect(r.b).toMatchObject({ include: false, notIn: 'Not in QT-26-0058 R1', price: 800, source: 'last_sold' })
+    expect(r.b).toMatchObject({ include: false, notIn: 'Not in QT-26-0058 Rev 1', price: 800, source: 'last_sold' })
   })
   it('wins over a draft and the memory, and ignores whatever rfq_items holds from an earlier revision', () => {
-    const r = prefillLines(base({ latest: { ref: 'QT-26-0058 R1', lines: [{ rfq_item_id: 'a', unit_price_net: 1500, qty: 2 }] }, draft: { a: 999 }, memory: [mem({ quotedPrice: 5 })] }))
+    const r = prefillLines(base({ latest: { ref: 'QT-26-0058 Rev 1', lines: [{ rfq_item_id: 'a', unit_price_net: 1500, qty: 2 }] }, draft: { a: 999 }, memory: [mem({ quotedPrice: 5 })] }))
     expect(r.a.price).toBe(1500)
   })
   it('notes a quantity that differs from the item, and the item quantity stays', () => {
@@ -56,8 +56,8 @@ describe('2 the unissued Issue quotation draft', () => {
 
 describe('3 the customer price memory', () => {
   it('last quoted first, with the quotation and the date', () => {
-    const r = prefillLines(base({ memory: [mem({ quotedPrice: 900, quotedRef: 'QT-26-0042 R1', quotedOn: '2026-10-12', soldPrice: 800 })] }))
-    expect(r.a).toMatchObject({ price: 900, source: 'last_quoted', sourceText: 'last quoted QT-26-0042 R1 on 12 Oct 2026' })
+    const r = prefillLines(base({ memory: [mem({ quotedPrice: 900, quotedRef: 'QT-26-0042 Rev 1', quotedOn: '2026-10-12', soldPrice: 800 })] }))
+    expect(r.a).toMatchObject({ price: 900, source: 'last_quoted', sourceText: 'last quoted QT-26-0042 Rev 1 on 12 Oct 2026' })
   })
   it('else last sold, with the order and the date', () => {
     const r = prefillLines(base({ memory: [mem({ soldPrice: 800, soldOrderNumber: 31, soldOn: '2026-09-02' })] }))

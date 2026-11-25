@@ -146,19 +146,20 @@ test.describe('Forest review pictures (wave B)', () => {
   test('New RFQ, empty and filled (sales)', async ({ page }) => {
     const tag = Math.random().toString(36).slice(2, 6).toUpperCase()
     const customer = await createCompany(uniqueName(`Pak-Meridian Integrated Process Automation ${tag} (Private) Limited`), { city: 'Sheikhupura' })
-    await openAs(page, 'sales', '/enquiries/new')
+    await openAs(page, 'sales', '/rfqs/new')
     for (const [w, h] of WIDTHS) {
       await page.setViewportSize({ width: w, height: h })
-      await page.goto('/enquiries/new')
+      await page.goto('/rfqs/new')
       await expect(page.getByTestId('enquiry-dropzone')).toBeVisible()
       await pic(page, 'new-rfq-empty')
-      // the other address of New RFQ (Sell's button, a company page's "New RFQ")
-      await page.goto('/rfqs/new')
+      // the old address of New RFQ redirects to /rfqs/new
+      await page.goto('/enquiries/new')
+      await expect(page).toHaveURL(/\/rfqs\/new$/)
       await page.locator('#main').waitFor()
       await page.waitForLoadState('networkidle')
       await pic(page, 'rfqs-new-empty')
     }
-    await page.goto('/enquiries/new')
+    await page.goto('/rfqs/new')
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.getByRole('combobox', { name: 'Company' }).fill(customer.name.slice(0, 24))
     await page.getByRole('option', { name: new RegExp(tag) }).click()

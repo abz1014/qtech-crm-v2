@@ -83,7 +83,7 @@ export function sampleData(itemCount: number, showNoReply = true): StatementPdfD
   })
   return {
     statement: buildStatement(items, inquiries, { showNoReply }),
-    reference: 'Job 139 (RFQ-0139)',
+    reference: 'RFQ-0139',
     customer: 'Acme Cement Ltd',
     date: '2026-10-29',
     preparedBy: 'Sana Sales',

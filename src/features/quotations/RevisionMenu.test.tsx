@@ -34,7 +34,7 @@ function setup(ui: React.ReactNode, role = 'admin') {
 }
 
 const menu = (over: Partial<React.ComponentProps<typeof RevisionMenu>> = {}) => (
-  <RevisionMenu rfqId="r-1" quotationId="q-1" revision={1} hasPdf latest only={false} label="QT-26-0012 revision 1" context="QT-26-0012 R1 · Indus" {...over} />
+  <RevisionMenu rfqId="r-1" quotationId="q-1" revision={1} hasPdf latest only={false} label="QT-26-0012 revision 1" context="QT-26-0012 Rev 1 · Indus" {...over} />
 )
 
 describe('the quotation revision menu', () => {
@@ -65,10 +65,10 @@ describe('delete the latest PO revision', () => {
     const { fake, removed } = setup(
       <DeletePoRevisionConfirm orderId="o-1" po={{ id: 'p-1', number: 17, revision: 2, firstIssuedOn: '2026-10-02' }} supplierName="Keller GmbH" onClose={() => undefined} />,
     )
-    expect(screen.getByRole('dialog', { name: 'Delete PO-26-0017 R2?' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Delete PO-26-0017 Rev 2?' })).toBeInTheDocument()
     expect(screen.getByText(/are unchanged/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
-    expect(await screen.findByText('PO-26-0017 R2 deleted')).toBeInTheDocument()
+    expect(await screen.findByText('PO-26-0017 Rev 2 deleted')).toBeInTheDocument()
     expect(fake.calls.find(c => c.target === 'rpc:delete_po_revision')?.ops[0]).toEqual(['args', [{ p_po_id: 'p-1' }]])
     expect(removed).toEqual([])   // the PDF stays for the 30-day purge (0120)
   })

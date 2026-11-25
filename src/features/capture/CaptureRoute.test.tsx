@@ -57,7 +57,7 @@ describe('Capture route: Photo or note with nothing shared', () => {
     expect(screen.queryByText('Nothing to add')).toBeNull()
     expect(screen.queryByTestId('share-target')).toBeNull()
     await user.type(screen.getByLabelText('Find the job'), 'Harbour')
-    await user.click(await screen.findByRole('button', { name: /Job 139/ }))
+    await user.click(await screen.findByRole('button', { name: /RFQ-0139/ }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139{"photoOrNote":true}'))
   })
 
@@ -77,7 +77,7 @@ describe('Capture route: Photo or note with nothing shared', () => {
     )
     const list = await screen.findByRole('list', { name: 'Your jobs' })
     const rows = within(list).getAllByRole('button')
-    expect(rows.map(b => b.textContent)).toEqual(['Job 202 · Company 202Part of 202', 'Job 201 · Company 201' + '3 items · Flowmeter'])
+    expect(rows.map(b => b.textContent)).toEqual(['RFQ-0202 · Company 202Part of 202', 'RFQ-0201 · Company 201' + '3 items · Flowmeter'])
     expect(screen.queryByText(/Company 203|Company 204/)).toBeNull()
     expect(list.textContent).not.toMatch(/PKR|Rs|PO/)
     expect(screen.getByLabelText('Find the job')).not.toHaveFocus()
@@ -122,7 +122,7 @@ describe('Capture route: Photo or note with nothing shared', () => {
     expect(screen.queryByRole('list', { name: 'Your jobs' })).toBeNull() // the kept item's picker is the search box alone
     expect(screen.getByLabelText('Find the job')).toHaveFocus()
     await user.type(screen.getByLabelText('Find the job'), 'Harbour')
-    await user.click(await screen.findByRole('button', { name: /Job 139/ }))
+    await user.click(await screen.findByRole('button', { name: /RFQ-0139/ }))
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/jobs/139?shared=oldnull'))
   })
 

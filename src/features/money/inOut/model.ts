@@ -310,7 +310,10 @@ export interface TrendRow {
   period: Period
   label: string
   in: string
+  /** Expenses and supplier payments: the same Money out as the period's own figures above the table. */
   out: string
+  /** 0126: money paid back to customers, apart from Money out, so in less out less refunds is the net beside it. */
+  refunds: string
   net: string
   profit: string
 }
@@ -320,8 +323,9 @@ export function trend(p: Period, flows: readonly FlowRow[], profits: readonly Pr
   const n = p.kind === 'month' ? 6 : 4
   return Array.from({ length: n }, (_, i) => shiftPeriod(p, i - n + 1)).map(q => {
     const c = cashTotals(q, flows)
-    // 0126: the trend's out is all cash out (expenses and refunds), so in less out is the net beside it
-    return { period: q, label: periodShort(q), in: c.in, out: sum([c.out, c.refunds]), net: c.net, profit: profitTotals(q, profits).profit }
+    // Money out is the period's own Money out (screen review 24 Nov 2026: a November row of 1,517,934 beside a Money out of
+    // 1,513,934 was the refunds counted in one and not the other). Refunds are their own figure, as above the table.
+    return { period: q, label: periodShort(q), in: c.in, out: c.out, refunds: c.refunds, net: c.net, profit: profitTotals(q, profits).profit }
   })
 }
 
@@ -398,7 +402,8 @@ export function inOutCsv(v: InOutView): { headers: string[]; rows: unknown[][] }
     for (const d of c.details) rows.push(['Money out by detail', v.label, c.name, d.detail ?? 'No detail', d.count, n(d.amount), ''])
   }
   if (toPaisa(v.unexplainedOut) !== 0n) rows.push(['Money out by category', v.label, 'Changed after the month was locked', '', '', n(v.unexplainedOut), ''])
-  for (const t of v.trend) rows.push(['Trend', t.label, 'In / out / net / profit', '', '', n(t.net), '', n(t.in), n(t.out), n(t.profit)])
+  for (const t of v.trend)
+    rows.push(['Trend', t.label, 'In / out / net / profit', toPaisa(t.refunds) !== 0n ? `Refunds ${n(t.refunds)}` : '', '', n(t.net), '', n(t.in), n(t.out), n(t.profit)])
   return {
     headers: ['Section', 'Period', 'Line', 'Detail', 'Count', 'Amount (PKR)', `Previous: ${prevLabel} (PKR)`, 'In (PKR)', 'Out (PKR)', 'Profit (PKR)'],
     rows,

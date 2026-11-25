@@ -34,14 +34,14 @@ import type { Role } from '@/features/today/types'
  */
 const SECTIONS: ReadonlyArray<{ kind: ReviewKind; title: string; why: string }> = [
   { kind: 'quotation', title: 'Quotations with no decision after 10 working days', why: 'Ask the customer, or let it go.' },
-  { kind: 'enquiry', title: 'RFQs with no supplier asked after 10 days', why: 'Ask suppliers now, or close it.' },
+  { kind: 'enquiry', title: 'RFQs with no quotation after 10 days', why: 'Send the quotation now, or close it.' },
   { kind: 'goods', title: 'Goods more than 14 days late', why: 'Follow up with the supplier, or move the date.' },
   { kind: 'payment', title: 'Payments more than 30 days late', why: 'They also stay at the top of Home.' },
 ]
 
 const CLOSE_NOTE: Record<'quotation' | 'enquiry', string> = {
   quotation: 'Weekly review: no decision from the customer',
-  enquiry: 'Weekly review: no supplier was asked',
+  enquiry: 'Weekly review: no quotation was sent',
 }
 
 export default function ReviewPage() {
@@ -151,7 +151,8 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
         <h1 className="text-2xl font-heavy tracking-tight max-md:sr-only">Weekly review</h1>
         <p className="text-base text-fg-muted">
           {headerDate(today)}
-          {review ? <> · <b className="num font-medium text-fg" data-review-count>{total}</b> to decide · about 10 minutes</> : null}
+          {/* the time is only said when there is something to decide (screen review 17: "0 to decide · about 10 minutes") */}
+          {review ? <> · <b className="num font-medium text-fg" data-review-count>{total}</b> to decide{total > 0 ? ' · about 10 minutes' : ''}</> : null}
         </p>
       </header>
 

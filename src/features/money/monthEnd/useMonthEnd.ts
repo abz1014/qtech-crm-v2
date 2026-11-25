@@ -1,13 +1,11 @@
 import { useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { businessToday } from '@/lib/dates'
+import { thisMonthKey, useMonthParam } from '@/features/money/monthParam'
 import { useClosedMonths, useMonthEndDetails, useMonthEndStatus, usePnlMonths } from '@/features/money/monthEnd/hooks'
 import {
   buildChecklist,
   checksWithItems,
   closeState,
   defaultMonthEndMonth,
-  isOpenableMonth,
   shiftMonth,
   type CheckCard,
   type CloseState,
@@ -15,9 +13,13 @@ import {
 } from '@/features/money/monthEnd/model'
 
 /*
- * What every Month-end view shares: the month in the address (?month=2026-10; last month when absent), the checklist counts,
- * whether the month is closed and whether it may be closed now.
+ * What every Month-end view shares: the month in the address (?month=2026-10), the checklist counts, whether the month is
+ * closed and whether it may be closed now. With no month (or one that cannot be shown, put right in the address with a note,
+ * monthParam.ts), Lock a month opens on the month that just ended (the one being closed) and every report on this month,
+ * as Money in and out does (screen review 2026-11-24, item 11).
  */
+export type MonthEndDefault = 'last-month' | 'this-month'
+
 export interface MonthEndCtx {
   today: string
   month: string
@@ -38,12 +40,9 @@ export interface MonthEndCtx {
   refetch: () => void
 }
 
-export function useMonthEnd(): MonthEndCtx {
-  const today = businessToday()
-  const [params, setParams] = useSearchParams()
-  const asked = params.get('month')
-  // A future month (or one before 2000) from a link falls back to the default month, as Reports does (HE-21).
-  const month = isOpenableMonth(asked, today) ? asked : defaultMonthEndMonth(today)
+export function useMonthEnd(opens: MonthEndDefault = 'last-month'): MonthEndCtx {
+  // A future month (or one before 2000, or 2026-13) from a link falls back to the default month (HE-21), with a note.
+  const { month, today, setMonth } = useMonthParam(opens === 'this-month' ? thisMonthKey : defaultMonthEndMonth)
   const status = useMonthEndStatus(month)
   const details = useMonthEndDetails(month)
   const closedQ = useClosedMonths()
@@ -54,11 +53,6 @@ export function useMonthEnd(): MonthEndCtx {
     () => (closedQ.data && pnl.data ? closeState(month, today, new Set(closedQ.data.map(c => c.key)), Object.keys(pnl.data)) : null),
     [closedQ.data, pnl.data, month, today],
   )
-  const setMonth = (m: string) => {
-    const next = new URLSearchParams(params)
-    next.set('month', m)
-    setParams(next, { replace: true })
-  }
   return {
     today,
     month,

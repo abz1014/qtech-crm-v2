@@ -400,7 +400,7 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
       await post('supplier_inquiries', { rfq_id: past.id, supplier_id: noOffer.id, sent_on: karachiDay(-30), no_offer_on: karachiDay(-29) })
     }
 
-    const reach = async (p: Page, role: 'sales' | 'engineer') => {
+    const reach = async (p: Page, role: 'sales') => {
       await openAs(p, role, '/rfqs/new')
       await p.getByRole('combobox', { name: 'Company' }).fill(customer.name)
       await p.getByRole('option', { name: new RegExp(customer.name) }).click()
@@ -422,13 +422,11 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
     await expect(page.getByText('Ticked: suppliers who supplied these items before. Tick or untick any.')).toBeVisible()
     await expect(page.getByText('Nobody has supplied these before. Tick who to ask.')).toHaveCount(0)
 
-    // An engineer loads no item memory (it carries prices), so (a) is not known to be a past supplier: nothing is ticked and the page says so.
+    // An engineer starts no RFQ (owner 2026-11-06, screen review 12): the address is the lock screen, so no item memory is loaded.
     const ctx = await browser.newContext()
     const eng = await ctx.newPage()
-    await reach(eng, 'engineer')
-    for (const s of [supplied, replied, noOffer]) await expect(eng.getByRole('checkbox', { name: s.name })).not.toBeChecked()
-    await expect(eng.getByText('Tick who to ask.', { exact: true })).toBeVisible()
-    await expect(eng.getByText('Nobody has supplied these before.')).toHaveCount(0)
+    await openAs(eng, 'engineer', '/rfqs/new')
+    await expect(eng.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeVisible()
     await ctx.close()
   })
 })

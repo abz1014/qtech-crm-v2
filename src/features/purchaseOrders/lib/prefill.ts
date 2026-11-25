@@ -7,7 +7,7 @@
 
 import { formatDay, formatShortDate } from '@/lib/formatDay'
 import { paisaToFixed, productPaisa, type Amount } from '@/lib/money'
-import { poRef, rfqRef } from '@/lib/refs'
+import { poRef, poRevRef, rfqRef } from '@/lib/refs'
 
 export type PriceSource = 'order' | 'quote' | 'last_po' | 'typed'
 
@@ -58,7 +58,7 @@ export function sourceText(row: PrefillRow, typed: Typed, today: string): Source
     }
   }
   if (src === 'last_po') {
-    const ref = row.sourceNumber !== null && row.sourceOn ? `${poRef(row.sourceNumber, row.sourceOn)}${row.sourceRevision ? ` R${row.sourceRevision}` : ''}` : 'Last PO'
+    const ref = row.sourceNumber !== null && row.sourceOn ? poRevRef(row.sourceNumber, row.sourceOn, row.sourceRevision) : 'Last PO'
     return { chip: 'last PO', detail: `${ref}${row.sourceOn ? `, ${formatDay(row.sourceOn).replace(/^\w{3} /, '')} ${row.sourceOn.slice(0, 4)}` : ''}` }
   }
   return { chip: 'typed', detail: priceOf(row, typed) === null ? 'Type a price' : 'Entered manually, check it' }

@@ -184,7 +184,7 @@ function Sentences({ f }: { f: MoneyHomeFigures }) {
       {f.profit ? (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card border bg-surface p-card text-lg shadow-e1" data-testid="profit-line">
           <span>
-            <b className="mr-2 font-heavy">Profit, {f.profit.monthName}:</b>
+            <b className="mr-2 font-heavy">{f.profit.heading}:</b>
             <b className="num font-semibold">PKR {rs(f.profit.amount)}</b> after GST and costs, on invoices.
           </span>
           <Link

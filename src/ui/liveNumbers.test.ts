@@ -24,6 +24,10 @@ describe('number styling: a plain zero, tabular figures', () => {
     expect(body).not.toMatch(/--font-mono/)
   })
 
+  it('loads no monospace face and defines no mono font token (owner rule: no mono anywhere)', () => {
+    expect(css).not.toMatch(/Geist Mono|geist-mono|--font-mono|monospace/i)
+  })
+
   it('nothing in the app stylesheet turns on the slashed zero', () => {
     expect(css).not.toMatch(/slashed-zero/)
     expect(css).not.toMatch(/["']zero["']/)

@@ -45,7 +45,7 @@ const CompanyProfilePage = lazy(() => import('@/features/settings/CompanyProfile
 const MyClaimsPage = lazy(() => import('@/features/money/expenses/MyClaimsPage').then(m => ({ default: m.MyClaimsPage })))
 /** The Android share target and sign-in return point (R22): opens the Shared with Q-Tech CRM page. */
 const CaptureRoute = lazy(() => import('@/features/capture/CaptureRoute'))
-/** New RFQ (P4-A; /enquiries/new and /rfqs/new): the document beside what was read; wraps the intake. */
+/** New RFQ (P4-A; /rfqs/new, the old /enquiries/new redirects there): the document beside what was read; wraps the intake. */
 const NewEnquiryPage = lazy(routeChunks.enquiryNew)
 /** The old RFQ and Order addresses (they redirect to Jobs, src/app/oldAddresses.tsx) keep the access they had: every staff role. */
 const oldItem = (label: string, path: string): NavItem => ({ key: 'jobs', label, path, icon: Briefcase, roles: ['admin', 'sales', 'engineer'] })
@@ -61,6 +61,12 @@ const moneyItem = navItems.find(i => i.key === 'money')
 function ReportsRedirect() {
   const { search } = useLocation()
   return <Navigate to={{ pathname: '/money/reports', search }} replace />
+}
+
+/** /enquiries/new was the New RFQ address until 25 Nov 2026. Old links land on /rfqs/new with their query and state (a capture). */
+function EnquiryNewRedirect() {
+  const { search, hash, state } = useLocation()
+  return <Navigate to={{ pathname: '/rfqs/new', search, hash }} state={state} replace />
 }
 
 /** `/today` was the home screen until redesign phase 3 (To do). Its query string is kept. */
@@ -284,17 +290,9 @@ function AppRouteTable() {
             />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
-          <Route
-            path="enquiries/new"
-            element={
-              <RequireRole item={rfqsItem}>
-                <Suspense fallback={<PageLoading />}>
-                  <NewEnquiryPage />
-                </Suspense>
-              </RequireRole>
-            }
-          />
-          {/* /rfqs/new (Sell's New RFQ, a company page's New RFQ / Ask for prices, the palette) is the same New RFQ page. */}
+          {/* The old /enquiries/new address: New RFQ, with the query and what was handed over (a capture) kept. */}
+          <Route path="enquiries/new" element={<EnquiryNewRedirect />} />
+          {/* /rfqs/new is the New RFQ page: Sell's New RFQ, a company page's New RFQ / Ask for prices, the palette, a capture. */}
           <Route
             path="rfqs/new"
             element={

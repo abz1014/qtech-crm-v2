@@ -165,10 +165,13 @@ describe('refunds paid back to customers (0126)', () => {
     expect(inOutCsv(v).rows.some(r => String(r[2]).startsWith('Refunds paid back'))).toBe(false)
   })
 
-  it('the trend counts refunds as cash out, so in less out is the net beside it', () => {
+  it('the trend shows the same Money out as the period, the refunds beside it, and in less both is the net', () => {
     const v = buildInOut(periodOf('month', '2020-01'), withRefund(FLOWS), PROFITS, DETAILS, NAMES)
     const jan = v.trend.find(t => t.label === 'Jan 2020')!
-    expect(jan.out).toBe('4500.00')
+    expect(jan.out).toBe(v.cash.out)
+    expect(jan.out).toBe('4000.00')
+    expect(jan.refunds).toBe('500.00')
+    expect(jan.net).toBe(v.cash.net)
     expect(jan.net).toBe('-1499.50')
   })
 

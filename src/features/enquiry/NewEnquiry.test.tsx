@@ -31,7 +31,7 @@ function respond(call: FakeCall): FakeResult {
 
 const SIGNED_IN: SessionState = { status: 'signed-in', user: { id: 'u1', name: 'Ayesha Rana', role: 'sales' } }
 
-function renderPage(entry: string | { pathname: string; state?: unknown } = '/enquiries/new') {
+function renderPage(entry: string | { pathname: string; state?: unknown } = '/rfqs/new') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
@@ -39,7 +39,7 @@ function renderPage(entry: string | { pathname: string; state?: unknown } = '/en
         <MemoryRouter initialEntries={[entry]}>
           <ToastProvider>
             <Routes>
-              <Route path="/enquiries/new" element={<NewEnquiryPage />} />
+              <Route path="/rfqs/new" element={<NewEnquiryPage />} />
               <Route path="/jobs/:key" element={<h1>The job page</h1>} />
             </Routes>
           </ToastProvider>
@@ -64,7 +64,7 @@ describe('New enquiry', () => {
     renderPage()
     expect(screen.getByTestId('enquiry-dropzone')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Create job 162' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Create job RFQ-0162' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Looks right: find suppliers' })).toBeNull()
   })
 
@@ -99,10 +99,43 @@ describe('New enquiry', () => {
     expect(await screen.findByText('2 items found')).toBeInTheDocument()
     expect(screen.getByTestId('source-text')).toHaveTextContent('Hach HQ1110 portable meter')
     expect(screen.getByText(/Check this: split from the document/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Create job 162' }))
+    await user.click(screen.getByRole('button', { name: 'Create job RFQ-0162' }))
     await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:float_rfq')).toBe(true))
     const args = opArgs(db.calls.find(c => c.target === 'rpc:float_rfq') as FakeCall, 'args')?.[0] as { p_mark_sent?: boolean; p_supplier_ids?: string[] }
     expect(args.p_mark_sent ?? false).toBe(false)
     expect(await screen.findByRole('heading', { name: 'The job page' })).toBeInTheDocument()
+  })
+})
+
+describe('who may start an RFQ (screen review 2026-11-24, item 12)', () => {
+  const as = (role: 'admin' | 'sales' | 'engineer', path: string) =>
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <SessionContext.Provider value={{ status: 'signed-in', user: { id: 'u1', name: 'Someone', role } }}>
+          <MemoryRouter initialEntries={[path]}>
+            <ToastProvider>
+              <Routes>
+                <Route path="/enquiries/new" element={<NewEnquiryPage />} />
+                <Route path="/rfqs/new" element={<NewEnquiryPage />} />
+              </Routes>
+            </ToastProvider>
+          </MemoryRouter>
+        </SessionContext.Provider>
+      </QueryClientProvider>,
+    )
+
+  it.each(['/rfqs/new', '/enquiries/new'])('an engineer who types %s gets the lock screen, not the intake', path => {
+    installFakeDb(respond)
+    as('engineer', path)
+    expect(screen.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByTestId('enquiry-dropzone')).toBeNull()
+  })
+
+  it('sales gets the page, and its way back is Sell, a menu they have', async () => {
+    installFakeDb(respond)
+    as('sales', '/rfqs/new')
+    expect(screen.getByTestId('enquiry-dropzone')).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /Sell/ }).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('button', { name: 'Create job RFQ-0162' })).toBeInTheDocument()
   })
 })

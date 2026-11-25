@@ -84,7 +84,7 @@ test.describe('O07: Issue PO', () => {
 
     await d.getByRole('button', { name: 'Issue PO' }).click()
     await expect(dialog(page)).toHaveCount(0, { timeout: 30_000 })
-    await expect(page.getByText(/^Issued PO-\d\d-\d{4} · R0/)).toBeVisible()
+    await expect(page.getByText(/^Issued PO-\d\d-\d{4}(?! Rev)/)).toBeVisible()
 
     const [po] = await posOf(s.leg)
     expect(po.revision).toBe(0)
@@ -120,11 +120,11 @@ test.describe('O07: Issue PO', () => {
     if (stored && process.env.REVIEW_DIR) renderPdfPng(stored, process.env.REVIEW_DIR, 'o07-po-pdf-r0-page1')
 
     // the supplier order shows the PO chip; View PO and the next revision are in its menu
-    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4} · R0$/)
+    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/^PO-\d\d-\d{4}$/)
     await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
     await expect(page.getByRole('menuitem', { name: 'View PO' })).toBeVisible()
-    await expect(page.getByRole('menuitem', { name: 'Revise PO (R1)' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Revise PO (Rev 1)' })).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(legLoc(page, 'A').getByTestId('leg-A-state')).toContainText('Ordered')
     await shot(page, 'o07-leg-with-po-1440')
@@ -154,10 +154,10 @@ test.describe('O07: Issue PO', () => {
     await expect(dialog(page)).toHaveCount(0, { timeout: 30_000 })
     await openStage(page, 'Supplier order')
     await legLoc(page, 'A').getByRole('button', { name: `More for ${s.supplier.name}` }).click()
-    const button = page.getByRole('menuitem', { name: 'Revise PO (R1)' })
+    const button = page.getByRole('menuitem', { name: 'Revise PO (Rev 1)' })
     await expect(button).toBeVisible()
     await button.click()
-    await expect(dialog(page).locator('.num').filter({ hasText: /^PO-\d\d-\d{4} · R1$/ })).toBeVisible()
+    await expect(dialog(page).locator('.num').filter({ hasText: /^PO-\d\d-\d{4} Rev 1$/ })).toBeVisible()
     // the price written back by the first issue is now the order's own
     await expect(dialog(page).getByTestId('po-source-1')).toContainText('order')
     await price(page, 1).fill('650')
@@ -170,7 +170,7 @@ test.describe('O07: Issue PO', () => {
     expect(pos[0].lines[0].unit_price).toBe(612)
     expect(pos[1].pdf_path).toBe(`${pos[1].id}/1.pdf`)
     expect(pdfIsValid(await fetchStoredPdf('admin', 'generated-docs', pos[1].pdf_path as string))).toBe(true)
-    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/R1$/)
+    await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveText(/ Rev 1$/)
   })
 
   test('a leg with no currency asks for one before it can be priced; with the profile incomplete the PO is still issued and says why there is no PDF', async ({ page }) => {
@@ -228,7 +228,7 @@ test.describe('O07: Issue PO', () => {
     await openAs(page, 'engineer', `/orders/${s.order.id}`)
     await openStage(page, 'Supplier order')
     await expect(legLoc(page, 'A').getByTestId('leg-A-po')).toHaveCount(0)
-    await expect(page.getByText(/No PO yet|PO-\d\d-\d{4} · R0/)).toHaveCount(0)
+    await expect(page.getByText(/No PO yet|^PO-\d\d-\d{4}$/)).toHaveCount(0)
     await expect(page.getByRole('button', { name: /Issue PO|View PO|Revise PO/ })).toHaveCount(0)
     await expect(page.getByRole('menuitem', { name: /View PO|Revise PO/ })).toHaveCount(0)
   })

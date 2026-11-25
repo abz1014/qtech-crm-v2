@@ -67,12 +67,12 @@ export const AUDIT_ROUTES: readonly AuditRoute[] = [
   // The comparative statement has no page since 2026-11-16 (Excel and PDF downloads on the job page; the old address opens the job).
   { id: 'issue-quotation', path: '/jobs/{fx:pricesIn}?issue=1', roles: AS, dialog: true },
   { id: 'mark-won', path: '/jobs/{fx:quoted}?won=1', roles: AS, dialog: true },
-  { id: 'new-rfq', path: '/enquiries/new', roles: ALL },
+  { id: 'new-rfq', path: '/rfqs/new', roles: AS },
   { id: 'capture', path: '/capture', roles: ALL },
   { id: 'i-paid', path: '/my-expenses', roles: ['sales', 'engineer'] },
   // ---------------------------------------------------------------- Companies
   { id: 'companies', path: '/companies', roles: ALL, wide: true, long: true },
-  { id: 'company-new', path: '/companies?new=1', roles: ALL, dialog: true },
+  { id: 'company-new', path: '/companies?new=1', roles: AS, dialog: true },
   { id: 'company', path: '/companies/{company}', roles: ALL, long: true },
   { id: 'company-fx', path: '/companies/{fx:customer}', roles: ALL, light: true },
   { id: 'supplier', path: '/companies/{supplier}', roles: ALL, long: true },
@@ -105,7 +105,7 @@ export const AUDIT_ROUTES: readonly AuditRoute[] = [
   { id: 'report-in-out', path: '/money/reports/in-out', roles: A, wide: true },
   { id: 'report-expenses', path: '/money/reports/expenses?by=month', roles: A, wide: true },
   { id: 'report-expenses-quarter', path: '/money/reports/expenses?by=quarter', roles: A, wide: true, light: true },
-  { id: 'report-enquiries', path: '/money/reports/enquiries', roles: AS, wide: true },
+  { id: 'report-rfqs', path: '/money/reports/rfqs', roles: AS, wide: true },
   // ---------------------------------------------------------------- Settings
   { id: 'settings', path: '/settings', roles: ALL },
   { id: 'settings-team', path: '/settings/team', roles: A, wide: true },
