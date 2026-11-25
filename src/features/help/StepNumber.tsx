@@ -14,7 +14,7 @@ export function StepNumber({ n, besideButton = false, className }: { n: number; 
     <span
       aria-hidden="true"
       className={cn(
-        'grid size-6 shrink-0 place-items-center rounded-pill bg-brand-100 font-mono text-sm font-heavy leading-none text-brand-700',
+        'grid size-6 shrink-0 place-items-center rounded-pill bg-brand-100 num text-sm font-heavy leading-none text-brand-700',
         besideButton && 'mt-[calc((var(--control-sm-h)-var(--sp-6))/2)]',
         className,
       )}

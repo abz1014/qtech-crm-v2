@@ -17,7 +17,8 @@ export const C = {
 
 export const s = StyleSheet.create({
   page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 56, paddingHorizontal: 36 },
-  mono: { fontFamily: 'Geist Mono' },
+  // Figures and references: the same Geist as the text, never a monospace face (owner rule: no mono anywhere).
+  num: { fontFamily: 'Geist' },
   muted: { color: C.muted },
   strongText: { fontWeight: 600 },
   right: { textAlign: 'right' },

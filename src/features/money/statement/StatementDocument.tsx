@@ -12,7 +12,8 @@ const C = { ink: '#111113', muted: '#5a5a63', strong: '#d2d2d8', sunken: '#f4f4f
 
 const s = StyleSheet.create({
   page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 44, paddingHorizontal: 36 },
-  mono: { fontFamily: 'Geist Mono' },
+  // Figures and references: the same Geist as the text, never a monospace face (owner rule: no mono anywhere).
+  num: { fontFamily: 'Geist' },
   muted: { color: C.muted },
   strongText: { fontWeight: 600 },
   right: { textAlign: 'right' },
@@ -68,7 +69,7 @@ export function StatementDocument({
           <View style={s.company}>
             <Text style={[s.companyName, s.right]}>{companyName}</Text>
             {profile.address ? <Text style={[s.right, s.muted]}>{profile.address}</Text> : null}
-            {taxLine ? <Text style={[s.right, s.mono]}>{taxLine}</Text> : null}
+            {taxLine ? <Text style={[s.right, s.num]}>{taxLine}</Text> : null}
             {contactLine ? <Text style={[s.right, s.muted]}>{contactLine}</Text> : null}
           </View>
         </View>
@@ -100,20 +101,20 @@ export function StatementDocument({
           <Text style={[s.cDoc, s.strongText]}>Opening balance</Text>
           <Text style={s.cNum} />
           <Text style={s.cNum} />
-          <Text style={[s.cBal, s.mono, s.strongText]}>{fixed(statement.opening)}</Text>
+          <Text style={[s.cBal, s.num, s.strongText]}>{fixed(statement.opening)}</Text>
         </View>
         {statement.rows.map((r, i) => (
           <View key={i} style={s.tr} wrap={false}>
             <Text style={s.cDate}>{shortDay(r.on)}</Text>
             <Text style={s.cDoc}>
               {KIND_LABEL[r.kind]}
-              {r.ref ? <Text style={s.mono}>{`  ${r.ref}`}</Text> : null}
+              {r.ref ? <Text style={s.num}>{`  ${r.ref}`}</Text> : null}
               {r.orderNumber ? <Text style={s.muted}>{`  · order ${String(r.orderNumber).padStart(4, '0')}`}</Text> : null}
               {r.note ? <Text style={s.muted}>{`  · ${rupeesToPkr(r.note)}`}</Text> : null}
             </Text>
-            <Text style={[s.cNum, s.mono]}>{r.debit > 0n ? fixed(r.debit) : ''}</Text>
-            <Text style={[s.cNum, s.mono]}>{r.credit > 0n ? fixed(r.credit) : ''}</Text>
-            <Text style={[s.cBal, s.mono]}>{fixed(r.balance)}</Text>
+            <Text style={[s.cNum, s.num]}>{r.debit > 0n ? fixed(r.debit) : ''}</Text>
+            <Text style={[s.cNum, s.num]}>{r.credit > 0n ? fixed(r.credit) : ''}</Text>
+            <Text style={[s.cBal, s.num]}>{fixed(r.balance)}</Text>
           </View>
         ))}
         {statement.rows.length === 0 ? (
@@ -124,7 +125,7 @@ export function StatementDocument({
 
         <View style={s.total} wrap={false}>
           <Text>Closing balance on {longDay(statement.to)}</Text>
-          <Text style={s.mono}>PKR {fixed(statement.closing)}</Text>
+          <Text style={s.num}>PKR {fixed(statement.closing)}</Text>
         </View>
         <Text style={[s.muted, { marginTop: 6 }]}>
           A positive balance is what {customerName} owes us. Charged {fixed(statement.charged)}, paid or credited {fixed(statement.credited)} in this period.

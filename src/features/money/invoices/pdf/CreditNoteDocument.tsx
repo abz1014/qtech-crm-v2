@@ -13,7 +13,8 @@ const C = { ink: '#111113', muted: '#5a5a63', strong: '#d2d2d8', sunken: '#f4f4f
 
 const s = StyleSheet.create({
   page: { fontFamily: 'Geist', fontSize: 10, color: C.ink, paddingTop: 36, paddingBottom: 44, paddingHorizontal: 36 },
-  mono: { fontFamily: 'Geist Mono' },
+  // Figures and references: the same Geist as the text, never a monospace face (owner rule: no mono anywhere).
+  num: { fontFamily: 'Geist' },
   muted: { color: C.muted },
   strongText: { fontWeight: 600 },
   right: { textAlign: 'right' },
@@ -68,7 +69,7 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
           <View style={s.company}>
             <Text style={[s.companyName, s.right]}>{companyName}</Text>
             {profile.address ? <Text style={[s.right, s.muted]}>{profile.address}</Text> : null}
-            {taxLine ? <Text style={[s.right, s.mono]}>{taxLine}</Text> : null}
+            {taxLine ? <Text style={[s.right, s.num]}>{taxLine}</Text> : null}
             {contactLine ? <Text style={[s.right, s.muted]}>{contactLine}</Text> : null}
           </View>
         </View>
@@ -81,7 +82,7 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
           <View style={s.meta}>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Credit note no.</Text>
-              <Text style={[s.metaValue, s.mono, s.strongText]}>{doc.number}</Text>
+              <Text style={[s.metaValue, s.num, s.strongText]}>{doc.number}</Text>
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Date</Text>
@@ -89,7 +90,7 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
             </View>
             <View style={s.metaRow}>
               <Text style={s.metaLabel}>Against invoice</Text>
-              <Text style={[s.metaValue, s.mono, s.strongText]}>{doc.invoiceNumber}</Text>
+              <Text style={[s.metaValue, s.num, s.strongText]}>{doc.invoiceNumber}</Text>
             </View>
             {doc.invoiceDate ? (
               <View style={s.metaRow}>
@@ -107,11 +108,11 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
             <Text>{doc.buyer.address}</Text>
             <View style={[s.refRow, { marginTop: 4 }]}>
               <Text style={s.refLabel}>NTN / CNIC</Text>
-              <Text style={s.mono}>{doc.buyer.ntn ?? ''}</Text>
+              <Text style={s.num}>{doc.buyer.ntn ?? ''}</Text>
             </View>
             <View style={s.refRow}>
               <Text style={s.refLabel}>STRN</Text>
-              {doc.buyer.registered && doc.buyer.strn ? <Text style={s.mono}>{doc.buyer.strn}</Text> : <Text>Not registered for sales tax</Text>}
+              {doc.buyer.registered && doc.buyer.strn ? <Text style={s.num}>{doc.buyer.strn}</Text> : <Text>Not registered for sales tax</Text>}
             </View>
           </View>
           <View style={[s.box, s.boxR]}>
@@ -119,13 +120,13 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
             {doc.customerPo ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Your PO</Text>
-                <Text style={[s.strongText, s.mono]}>{doc.customerPo}</Text>
+                <Text style={[s.strongText, s.num]}>{doc.customerPo}</Text>
               </View>
             ) : null}
             {doc.orderRef ? (
               <View style={s.refRow}>
                 <Text style={s.refLabel}>Our order</Text>
-                <Text style={[s.strongText, s.mono]}>{doc.orderRef}</Text>
+                <Text style={[s.strongText, s.num]}>{doc.orderRef}</Text>
               </View>
             ) : null}
             <View style={s.refRow}>
@@ -146,30 +147,30 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
             <Text style={s.strongText}>Credit against invoice {doc.invoiceNumber}</Text>
             <Text style={[s.muted, { fontSize: 9.5 }]}>{doc.reason}</Text>
           </View>
-          <Text style={[s.cNet, s.mono]}>{money(doc.net)}</Text>
-          <Text style={[s.cTax, s.mono]}>{money(doc.gst)}</Text>
-          <Text style={[s.cGross, s.mono]}>{money(doc.gross)}</Text>
+          <Text style={[s.cNet, s.num]}>{money(doc.net)}</Text>
+          <Text style={[s.cTax, s.num]}>{money(doc.gst)}</Text>
+          <Text style={[s.cGross, s.num]}>{money(doc.gross)}</Text>
         </View>
 
         <View wrap={false}>
           <View style={s.totals}>
             <View style={s.totRow}>
               <Text>Value credited excluding sales tax</Text>
-              <Text style={s.mono}>PKR {money(doc.net)}</Text>
+              <Text style={s.num}>PKR {money(doc.net)}</Text>
             </View>
             <View style={s.totRow}>
               <Text>Sales tax credited</Text>
-              <Text style={s.mono}>PKR {money(doc.gst)}</Text>
+              <Text style={s.num}>PKR {money(doc.gst)}</Text>
             </View>
             <View style={s.gross}>
               <Text style={s.strongText}>Total credited</Text>
-              <Text style={[s.mono, { fontWeight: 500, fontSize: 11 }]}>PKR {money(doc.gross)}</Text>
+              <Text style={[s.num, { fontWeight: 500, fontSize: 11 }]}>PKR {money(doc.gross)}</Text>
             </View>
             <Text style={[s.right, s.muted, { fontSize: 9.5, marginTop: 5 }]}>{doc.words}</Text>
           </View>
           <View style={s.sign}>
             <Text style={s.note}>
-              This credit note reduces the sales tax invoice <Text style={s.mono}>{doc.invoiceNumber}</Text> by the amounts above. Please quote <Text style={s.mono}>{doc.number}</Text> in your accounts.
+              This credit note reduces the sales tax invoice <Text style={s.num}>{doc.invoiceNumber}</Text> by the amounts above. Please quote <Text style={s.num}>{doc.number}</Text> in your accounts.
             </Text>
             <View style={s.signBox}>
               <Text style={s.muted}>{signatureLines(companyName)[0]}</Text>
@@ -179,7 +180,7 @@ export function CreditNoteDocument({ doc, profile, logoSrc }: { doc: CreditNoteD
         </View>
 
         <View style={s.foot} fixed>
-          <Text style={[s.mono, { flex: 1 }]}>{doc.number}</Text>
+          <Text style={[s.num, { flex: 1 }]}>{doc.number}</Text>
           <Text style={{ flex: 1, textAlign: 'center' }}>Credit note</Text>
           <Text style={{ flex: 1, textAlign: 'right' }} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
