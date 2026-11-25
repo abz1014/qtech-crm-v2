@@ -54,5 +54,7 @@ describe('/enquiries/new', () => {
     at({ pathname: '/enquiries/new', search: '?company=c1', state: { capture: { id: 'cap-1', text: 'Please quote', files: [] } } }, 'sales')
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/rfqs/new?company=c1'))
     expect(screen.getByTestId('carried')).toHaveTextContent('cap-1')
+    // let the New RFQ page finish loading inside the test, so nothing it logs arrives after the worker closes
+    expect(await screen.findByRole('heading', { name: 'New RFQ', level: 1 }, { timeout: 10_000 })).toBeInTheDocument()
   })
 })
