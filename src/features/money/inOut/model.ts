@@ -165,6 +165,43 @@ export function profitTotals(p: Period, profits: readonly ProfitRow[]): ProfitTo
 }
 
 /**
+ * An invoiced order and whether its costs are in (review 2026-11-24, screen 06): v_month_profit counts an order's costs in the month of its
+ * first live invoice, so an order invoiced in the period whose costs are not marked complete makes "Profit on invoices" an estimate,
+ * and with no cost entered at all the whole sale reads as profit. Read from the invoices and v_order_money (margin_state, actual_cost).
+ */
+export interface InvoicedOrderCosts {
+  orderId: string
+  /** The month of its first invoice that is not void ("2026-11"), as v_month_profit's first_inv. */
+  firstInvoiceMonth: string
+  /** margin_state is 'final': its costs are marked complete. */
+  final: boolean
+  /** Some cost is entered (actual_cost above 0). */
+  costEntered: boolean
+}
+
+export interface CostsOpen {
+  /** Orders invoiced in the period whose costs are not final. */
+  orders: number
+  /** Of those, the ones with no cost entered at all. */
+  noCosts: number
+}
+
+export function costsOpen(p: Period, rows: readonly InvoicedOrderCosts[]): CostsOpen {
+  const ms = new Set(periodMonths(p))
+  const open = rows.filter(r => ms.has(r.firstInvoiceMonth) && !r.final)
+  return { orders: open.length, noCosts: open.filter(r => !r.costEntered).length }
+}
+
+/** The line under "Profit on invoices" when it is an estimate; null when every order invoiced in the period has its costs final. */
+export function costsOpenNote(c: CostsOpen): string | null {
+  if (c.orders === 0) return null
+  const n = (k: number) => `${k} ${k === 1 ? 'order' : 'orders'}`
+  if (c.noCosts === c.orders) return `Estimate, costs not entered on ${n(c.orders)}`
+  if (c.noCosts > 0) return `Estimate, costs not final on ${n(c.orders)}, ${c.noCosts} with none entered`
+  return `Estimate, costs not final on ${n(c.orders)}`
+}
+
+/**
  * Why profit and cash differ in a period, line by line (0079 header):
  *   profit - cash net = owedMore - gst + costsAhead + drawingsAndTax + refunds + other
  *   owedMore         invoiced (with GST) less cash received: customers now owe us more (+), or paid off earlier invoices (-)
@@ -296,6 +333,8 @@ export interface InOutView {
   profit: ProfitTotals
   prevProfit: ProfitTotals
   reconcile: Reconcile
+  /** Orders invoiced in the period whose costs are not final: "Profit on invoices" is then an estimate. */
+  costsOpen: CostsOpen
   categories: CategoryOut[]
   /** Money out less the category lines: 0 unless a closed month's frozen figure differs from the live books. */
   unexplainedOut: string
@@ -308,6 +347,7 @@ export function buildInOut(
   profits: readonly ProfitRow[],
   details: readonly DetailRow[],
   names: Readonly<Record<string, string>>,
+  orderCosts: readonly InvoicedOrderCosts[] = [],
 ): InOutView {
   const cash = cashTotals(p, flows)
   const profit = profitTotals(p, profits)
@@ -320,6 +360,7 @@ export function buildInOut(
     profit,
     prevProfit: profitTotals(shiftPeriod(p, -1), profits),
     reconcile: reconcile(cash, profit),
+    costsOpen: costsOpen(p, orderCosts),
     categories,
     unexplainedOut: minus(cash.out, sum(categories.map(c => c.amount))),
     trend: trend(p, flows, profits),

@@ -1,6 +1,6 @@
 import { fetchAll, requireSupabase } from '@/lib/supabase'
 import { paisaToFixed, toPaisa } from '@/lib/money'
-import type { DetailRow, FlowRow, ProfitRow } from '@/features/money/inOut/model'
+import type { DetailRow, FlowRow, InvoicedOrderCosts, ProfitRow } from '@/features/money/inOut/model'
 
 /*
  * In vs out (0079): three admin-only views. The month rows are small (one a month), so the cash and profit rows are read whole;
@@ -38,6 +38,29 @@ export async function loadProfit(): Promise<ProfitRow[]> {
         ]
       : [],
   )
+}
+
+/**
+ * Each invoiced order's first live invoice month and whether its costs are in (screen 06): the invoices (void ones left out, as
+ * v_month_profit) and v_order_money's margin_state and actual_cost. Admin only, as the rest of the report.
+ */
+export async function loadInvoicedOrderCosts(): Promise<InvoicedOrderCosts[]> {
+  const db = requireSupabase()
+  const [invoices, money] = await Promise.all([
+    fetchAll((from, to) => db.from('invoices').select('id, order_id, invoice_date').is('voided_at', null).not('order_id', 'is', null).not('invoice_date', 'is', null).order('id').range(from, to)),
+    fetchAll((from, to) => db.from('v_order_money').select('order_id, margin_state, actual_cost').range(from, to)),
+  ])
+  const first = new Map<string, string>()
+  for (const v of invoices) {
+    if (!v.order_id || !v.invoice_date) continue
+    const m = key(v.invoice_date)
+    const had = first.get(v.order_id)
+    if (had === undefined || m < had) first.set(v.order_id, m)
+  }
+  return money.flatMap(r => {
+    const month = r.order_id ? first.get(r.order_id) : undefined
+    return r.order_id && month ? [{ orderId: r.order_id, firstInvoiceMonth: month, final: r.margin_state === 'final', costEntered: toPaisa(r.actual_cost ?? 0) > 0n }] : []
+  })
 }
 
 /** Money out by month, category and detail, from one month key to another ("2026-07" to "2026-12"). */

@@ -3,6 +3,8 @@ import {
   buildInOut,
   categoriesOut,
   chosenPeriod,
+  costsOpen,
+  costsOpenNote,
   inOutCsv,
   isPeriodKey,
   periodLabel,
@@ -11,6 +13,7 @@ import {
   shiftPeriod,
   type DetailRow,
   type FlowRow,
+  type InvoicedOrderCosts,
   type ProfitRow,
   whyTheyDiffer,
 } from '@/features/money/inOut/model'
@@ -188,5 +191,43 @@ describe('Why profit and cash differ: lines at 0 are left out', () => {
   })
   it('names the GST paid on purchases, not input tax', () => {
     expect(whyTheyDiffer({ ...zero, drawingsAndTax: '600.00' })[0].text).toContain('GST paid on purchases')
+  })
+})
+
+/*
+ * Review 2026-11-24, screen 06: November's one invoice was a 300,000 net sale with no supplier cost entered, and the tile read
+ * "Profit on invoices PKR 300,000". The figure stays (no cost is made up), and the page says it is an estimate and why.
+ */
+describe('Profit on invoices with costs not final (screen 06)', () => {
+  const order = (orderId: string, firstInvoiceMonth: string, final: boolean, costEntered: boolean): InvoicedOrderCosts => ({ orderId, firstInvoiceMonth, final, costEntered })
+  const nov = periodOf('month', '2026-11')
+
+  it('an order invoiced in the month with no cost entered: an estimate, costs not entered', () => {
+    const c = costsOpen(nov, [order('o1', '2026-11', false, false)])
+    expect(c).toEqual({ orders: 1, noCosts: 1 })
+    expect(costsOpenNote(c)).toBe('Estimate, costs not entered on 1 order')
+  })
+
+  it('counts only the orders first invoiced in the period, and never a final one', () => {
+    const c = costsOpen(nov, [order('o1', '2026-11', false, true), order('o2', '2026-10', false, false), order('o3', '2026-11', true, true), order('o4', '2026-11', false, false)])
+    expect(c).toEqual({ orders: 2, noCosts: 1 })
+    expect(costsOpenNote(c)).toBe('Estimate, costs not final on 2 orders, 1 with none entered')
+  })
+
+  it('costs entered but not marked complete', () => {
+    expect(costsOpenNote(costsOpen(nov, [order('o1', '2026-11', false, true)]))).toBe('Estimate, costs not final on 1 order')
+  })
+
+  it('every order final, or nothing invoiced: no note', () => {
+    expect(costsOpenNote(costsOpen(nov, [order('o1', '2026-11', true, true)]))).toBeNull()
+    expect(costsOpenNote(costsOpen(nov, []))).toBeNull()
+  })
+
+  it('a quarter takes its three months, and buildInOut carries it with the profit unchanged', () => {
+    const rows = [order('o1', '2026-10', false, false), order('o2', '2026-12', false, false)]
+    expect(costsOpen(periodOf('quarter', '2026-11'), rows)).toEqual({ orders: 2, noCosts: 2 })
+    const v = buildInOut(periodOf('quarter', '2020-02'), FLOWS, PROFITS, DETAILS, NAMES, [order('o1', '2020-01', false, false)])
+    expect(v.costsOpen).toEqual({ orders: 1, noCosts: 1 })
+    expect(v.profit).toEqual(buildInOut(periodOf('quarter', '2020-02'), FLOWS, PROFITS, DETAILS, NAMES).profit)
   })
 })
