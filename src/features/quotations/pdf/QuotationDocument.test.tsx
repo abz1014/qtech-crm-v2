@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { Font, renderToBuffer } from '@react-pdf/renderer'
 import { beforeAll, describe, expect, it } from 'vitest'
+// pdf.js calls Promise.withResolvers, which Node 20 in CI lacks
+import '@/lib/docread/promiseWithResolvers'
 import type { CompanyProfile } from '@/features/settings/companyProfile'
 import type { PdfData, QuotationLine } from '@/features/quotations/api'
 import { QuotationDocument } from '@/features/quotations/pdf/QuotationDocument'
