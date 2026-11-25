@@ -333,14 +333,14 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "city": string | null,"country": string | null,"created_at": string,"created_by": string | null,"id": string,"invoice_address": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"ntn": string | null,"sales_tax_registered": boolean | null,"strn": string | null,"updated_at": string,"quote_code": string | null
+                    "city": string | null,"country": string | null,"created_at": string,"created_by": string | null,"id": string,"invoice_address": string | null,"legacy_flags": (string)[],"legacy_source": Json | null,"name": string,"notes": string | null,"ntn": string | null,"quote_code": string | null,"sales_tax_registered": boolean | null,"strn": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"ntn"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string,"quote_code"?: string | null
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name": string,"notes"?: string | null,"ntn"?: string | null,"quote_code"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"ntn"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string,"quote_code"?: string | null
+                    "city"?: string | null,"country"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invoice_address"?: string | null,"legacy_flags"?: (string)[],"legacy_source"?: Json | null,"name"?: string,"notes"?: string | null,"ntn"?: string | null,"quote_code"?: string | null,"sales_tax_registered"?: boolean | null,"strn"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -403,14 +403,14 @@ isOneToOne: false
                   ]
                 },"company_profile": {
                   Row: {
-                    "address": string | null,"bank_account_title": string | null,"bank_iban": string | null,"bank_name": string | null,"default_payment_terms_days": number,"email": string | null,"id": number,"legal_name": string | null,"ntn": string | null,"phone": string | null,"po_terms": string | null,"quotation_terms": string | null,"quotation_validity_days": number,"strn": string | null,"updated_at": string,"updated_by": string | null,"website": string | null,"quote_next_number": number,"quotation_closing": string | null,"quotation_warranty": string | null,"sales_email": string | null,"sales_phone": string | null
+                    "address": string | null,"bank_account_title": string | null,"bank_iban": string | null,"bank_name": string | null,"default_payment_terms_days": number,"email": string | null,"id": number,"legal_name": string | null,"ntn": string | null,"phone": string | null,"po_terms": string | null,"quotation_closing": string | null,"quotation_terms": string | null,"quotation_validity_days": number,"quotation_warranty": string | null,"quote_next_number": number,"sales_email": string | null,"sales_phone": string | null,"strn": string | null,"updated_at": string,"updated_by": string | null,"website": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"default_payment_terms_days"?: number,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null,"quote_next_number"?: number,"quotation_closing"?: string | null,"quotation_warranty"?: string | null,"sales_email"?: string | null,"sales_phone"?: string | null
+                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"default_payment_terms_days"?: number,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_closing"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"quotation_warranty"?: string | null,"quote_next_number"?: number,"sales_email"?: string | null,"sales_phone"?: string | null,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
                   }
                   Update: {
-                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"default_payment_terms_days"?: number,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null,"quote_next_number"?: number,"quotation_closing"?: string | null,"quotation_warranty"?: string | null,"sales_email"?: string | null,"sales_phone"?: string | null
+                    "address"?: string | null,"bank_account_title"?: string | null,"bank_iban"?: string | null,"bank_name"?: string | null,"default_payment_terms_days"?: number,"email"?: string | null,"id"?: number,"legal_name"?: string | null,"ntn"?: string | null,"phone"?: string | null,"po_terms"?: string | null,"quotation_closing"?: string | null,"quotation_terms"?: string | null,"quotation_validity_days"?: number,"quotation_warranty"?: string | null,"quote_next_number"?: number,"sales_email"?: string | null,"sales_phone"?: string | null,"strn"?: string | null,"updated_at"?: string,"updated_by"?: string | null,"website"?: string | null
                   }
                   Relationships: [
                     {
@@ -1923,14 +1923,14 @@ isOneToOne: false
                   ]
                 },"quotations": {
                   Row: {
-                    "contact_id": string | null,"created_at": string,"created_by": string | null,"delivery_text": string | null,"gst_total": number,"id": string,"issued_on": string,"lines": NonNullable<Json>,"net_total": number,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"revision": number,"rfq_id": string,"signatory_id": string,"valid_until": string,"archived": boolean | null,"quote_code": string | null
+                    "contact_id": string | null,"created_at": string,"created_by": string | null,"delivery_text": string | null,"gst_total": number,"id": string,"issued_on": string,"lines": NonNullable<Json>,"net_total": number,"notes": string | null,"number": number,"payment_terms": string | null,"pdf_path": string | null,"quote_code": string | null,"revision": number,"rfq_id": string,"signatory_id": string,"valid_until": string,"archived": boolean | null
                   }
                   ComputedFields: "archived"
                   Insert: {
-                    "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total": number,"id"?: string,"issued_on"?: string,"lines": NonNullable<Json>,"net_total": number,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"rfq_id": string,"signatory_id"?: string,"valid_until": string,"quote_code"?: string | null
+                    "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total": number,"id"?: string,"issued_on"?: string,"lines": NonNullable<Json>,"net_total": number,"notes"?: string | null,"number": number,"payment_terms"?: string | null,"pdf_path"?: string | null,"quote_code"?: string | null,"revision"?: number,"rfq_id": string,"signatory_id"?: string,"valid_until": string
                   }
                   Update: {
-                    "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total"?: number,"id"?: string,"issued_on"?: string,"lines"?: NonNullable<Json>,"net_total"?: number,"notes"?: string | null,"number"?: number,"payment_terms"?: string | null,"pdf_path"?: string | null,"revision"?: number,"rfq_id"?: string,"signatory_id"?: string,"valid_until"?: string,"quote_code"?: string | null
+                    "contact_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivery_text"?: string | null,"gst_total"?: number,"id"?: string,"issued_on"?: string,"lines"?: NonNullable<Json>,"net_total"?: number,"notes"?: string | null,"number"?: number,"payment_terms"?: string | null,"pdf_path"?: string | null,"quote_code"?: string | null,"revision"?: number,"rfq_id"?: string,"signatory_id"?: string,"valid_until"?: string
                   }
                   Relationships: [
                     {
