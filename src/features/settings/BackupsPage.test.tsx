@@ -69,6 +69,9 @@ describe('Settings > Backups and usage', () => {
     expect(await screen.findByTestId('backup-last')).toHaveTextContent('(today)')
     expect(screen.getByTestId('backup-status')).toHaveTextContent('3.00 MB database, 200.0 MB files (12)')
     expect(screen.getByTestId('backup-drill')).toHaveTextContent('Passed')
+    // review 21: the weekly drill and the monthly key check are told apart, each with its own cadence
+    expect(screen.getByTestId('backup-drill')).toHaveTextContent('It runs by itself every Monday at 03:00.')
+    expect(screen.getByText('The nightly backup, the weekly restore drill, free plan usage and your monthly key check.')).toBeInTheDocument()
     expect(screen.getByTestId('backup-trash')).toHaveTextContent('4 files')
   })
 

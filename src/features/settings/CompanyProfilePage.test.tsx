@@ -131,7 +131,10 @@ describe('company profile rules', () => {
   })
 
   it('documents need the legal name and address, and a GST invoice the NTN and STRN; bank details are never asked for', () => {
-    expect(missingForDocuments(FULL)).toEqual({ fields: ['strn'], title: 'Missing for documents: STRN', detail: 'GST invoices also need the NTN and STRN.' })
+    // review 21: only the empty field is named, so a saved NTN never reads as missing
+    expect(missingForDocuments(FULL)).toEqual({ fields: ['strn'], title: 'Missing for documents: STRN', detail: 'GST invoices also need the STRN.' })
+    expect(missingForDocuments({ ...FULL, ntn: null })?.detail).toBe('GST invoices also need the NTN and STRN.')
+    expect(missingForDocuments({ ...FULL, ntn: '', strn: '17-00' })?.detail).toBe('GST invoices also need the NTN.')
     expect(missingForDocuments({ ...FULL, strn: '17-00' })).toBeNull()
     expect(missingForDocuments(EMPTY)?.title).toBe('Missing for documents: Legal name, Address, NTN, STRN')
     expect(missingForDocuments({ ...FULL, address: ' ', strn: 'x' })?.detail).toBe('Quotations, purchase orders and invoices print the legal name and address at the top.')
@@ -314,7 +317,9 @@ describe('Company profile screen', () => {
   it('non-admins are told to ask an admin when the profile is incomplete', async () => {
     h.row = EMPTY
     mount('sales')
-    expect(await screen.findByText(/Ask an admin to add them in Settings\.$/)).toBeInTheDocument()
+    // review 21: they are already in Settings, so it does not say "in Settings"
+    expect(await screen.findByText(/Ask an admin to add them\.$/)).toBeInTheDocument()
+    expect(screen.queryByText(/in Settings/)).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add them' })).toBeNull()
   })
 

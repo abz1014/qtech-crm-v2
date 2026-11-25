@@ -70,9 +70,20 @@ export function buildRateRows(latest: readonly FxLatestRow[], offered: readonly 
     if (c === 'PKR' || have.has(c)) continue
     rows.push({ currency: c, name: CURRENCY_NAMES[c] ?? c, ratePkr: null, asOf: null, ageDays: null, source: null, staleness: null })
   }
-  // Fresh first, then stale, then unusable, then no rate; alphabetical inside a group.
-  const rank = (r: RateRow) => (r.staleness === 'fresh' ? 0 : r.staleness === 'stale' ? 1 : r.staleness === 'unusable' ? 2 : 3)
-  return rows.sort((a, b) => rank(a) - rank(b) || a.currency.localeCompare(b.currency))
+  // One order everywhere rates are listed (screen review item 21): the common currencies first, in the usual order, then the
+  // rest A to Z, and the currencies with no rate yet last. An old rate keeps its place and says so in its Age chip.
+  return rows.sort((a, b) => (a.ratePkr === null ? 1 : 0) - (b.ratePkr === null ? 1 : 0) || currencyRank(a.currency) - currencyRank(b.currency) || a.currency.localeCompare(b.currency))
+}
+
+const FIRST = ['USD', 'EUR', 'CNY', 'AED']
+const currencyRank = (c: string) => {
+  const i = FIRST.indexOf(c)
+  return i === -1 ? FIRST.length : i
+}
+
+/** "22 Oct": the As of date in the rate table, the history and the form's help, the same everywhere. */
+export function rateDay(iso: string): string {
+  return cardDay.format(new Date(`${iso.slice(0, 10)}T00:00:00Z`))
 }
 
 /** "today", "1 day", "8 days". */

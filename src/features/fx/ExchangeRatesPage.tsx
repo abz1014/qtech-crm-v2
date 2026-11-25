@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { History, Pencil, Plus, RefreshCw } from 'lucide-react'
+import { History, Pencil, RefreshCw } from 'lucide-react'
 import { businessToday } from '@/lib/dates'
-import { cn } from '@/lib/utils'
-import { formatDay } from '@/lib/formatDay'
 import { formatDateText } from '@/lib/dateInput'
 import { storedRate } from '@/lib/formRules'
 import { formatRate } from '@/lib/money'
@@ -10,7 +8,6 @@ import { parseAmount } from '@/lib/number'
 import { mapPgError } from '@/lib/pgErrors'
 import { Banner } from '@/ui/Banner'
 import { Button } from '@/ui/Button'
-import { DataTable, type Column } from '@/ui/DataTable'
 import { Dialog, DialogContent } from '@/ui/Dialog'
 import { EmptyState } from '@/ui/EmptyState'
 import { Icon } from '@/ui/Icon'
@@ -22,13 +19,13 @@ import { TextField } from '@/ui/form/TextField'
 import { PageHeader } from '@/ui/PageHeader'
 import { Skeleton } from '@/ui/Skeleton'
 import { SectionSkeleton } from '@/features/settings/settingsParts'
-import { StatusBadge } from '@/ui/StatusBadge'
 import { useToast } from '@/ui/useToast'
 import { Panel } from '@/features/companies/CompanyParts'
 import { useFxLatest } from '@/features/rfqs/hooks'
 import { useFxHistory, useFxLastAutoRun, useSetFxRate } from '@/features/fx/hooks'
 import { ratesStatusLine } from '@/features/settings/ratesModel'
-import { ageText, autoRunStamp, bandDetail, buildRateRows, manualRateProblem, rateCardLine, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
+import { autoRunStamp, buildRateRows, manualRateProblem, rateDay, sourceText, unusableWarning, type RateRow } from '@/features/fx/ratesModel'
+import { RATE_TABLE_LABEL, RateTable } from '@/features/fx/RateTable'
 
 /*
  * Settings > Exchange rates (R15). Open to the whole team: any staff member may enter today's rate by hand (fx_rates RLS allows
@@ -94,12 +91,12 @@ export function ExchangeRatesPage() {
         <div className="grid items-start gap-card-gap 2xl:grid-cols-[minmax(0,1fr)_21rem]">
           <div className="grid min-w-0 gap-card-gap">
             <Panel
-              title="Latest rate per currency"
+              title={RATE_TABLE_LABEL}
               meta="PKR for 1 unit"
               card
               actions={lastRun.data ? <span className="text-base text-fg-muted" data-fx-auto-run>{autoRunStamp(lastRun.data)}</span> : undefined}
             >
-              <div data-work="" className="min-w-0 border-t"><RatesTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} /></div>
+              <div data-work="" className="min-w-0 border-t"><RateTable rows={rows} onAdd={addRate} onHistory={setHistoryOf} className="rounded-none border-0 shadow-none" /></div>
             </Panel>
             {warnings.map(w => (
               <Banner key={w} tone="warning" title={w.split('. ')[0] + '.'}>
@@ -112,116 +109,6 @@ export function ExchangeRatesPage() {
       )}
       <HistoryDialog currency={historyOf} onClose={() => setHistoryOf(null)} />
     </div>
-  )
-}
-
-const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '')
-
-function RowActions({ r, onAdd, onHistory, touch }: { r: RateRow; onAdd: (c: string) => void; onHistory: (c: string) => void; touch?: boolean }) {
-  const size = touch ? 'touch' : 'sm'
-  // In the table the two actions are icon buttons (a name and a tooltip each) so the Actions column stays narrow; on a phone they are words.
-  return (
-    <span className={cn('inline-flex flex-wrap items-center gap-1', touch ? '-ml-3 justify-start' : 'justify-end')}>
-      {touch ? (
-        <>
-          <Button size={size} variant="quiet" icon={Plus} onClick={() => onAdd(r.currency)} aria-label={`Add rate for ${r.currency}`}>
-            Add rate
-          </Button>
-          <Button size={size} variant="quiet" icon={History} onClick={() => onHistory(r.currency)} aria-label={`History of ${r.currency}`}>
-            History
-          </Button>
-        </>
-      ) : (
-        <>
-          <Button size="sm" variant="quiet" icon={Plus} onClick={() => onAdd(r.currency)} aria-label={`Add rate for ${r.currency}`} title="Add rate" />
-          <Button size="sm" variant="quiet" icon={History} onClick={() => onHistory(r.currency)} aria-label={`History of ${r.currency}`} title="History" />
-        </>
-      )}
-    </span>
-  )
-}
-
-function AgeCell({ r }: { r: RateRow }) {
-  if (r.staleness === null || r.ageDays === null) return <span className="text-fg-muted">—</span>
-  if (r.staleness === 'fresh') return <span className="num text-fg-2">{ageText(r.ageDays)}</span>
-  // the badge and, under it, how old: one line each, so a stale rate does not widen the table
-  return (
-    <span className="grid justify-items-start gap-px">
-      <StatusBadge dimension="fx" value={r.staleness} />
-      <span className="text-base text-fg-muted">{bandDetail(r.ageDays)}</span>
-    </span>
-  )
-}
-
-function RatesTable({ rows, onAdd, onHistory }: { rows: RateRow[]; onAdd: (c: string) => void; onHistory: (c: string) => void }) {
-  const columns: Column<RateRow>[] = [
-    {
-      id: 'currency',
-      header: 'Currency',
-      value: r => r.currency,
-      cell: r => (
-        <span className="grid">
-          <span className="font-medium">{r.currency}</span>
-          <span className="text-base text-fg-muted">{r.name}</span>
-        </span>
-      ),
-    },
-    {
-      id: 'rate',
-      header: 'Rate, PKR',
-      kind: 'num',
-      value: r => r.ratePkr,
-      cell: r => (r.ratePkr === null ? <span className="font-sans text-fg-muted">No rate yet</span> : <span className="num">{formatRate(r.ratePkr)}</span>),
-    },
-    {
-      // The source sits under the date (it was a column of its own, which made the table scroll sideways in the Settings box).
-      id: 'asof',
-      header: 'As of',
-      kind: 'date',
-      value: r => r.asOf,
-      cell: r =>
-        r.asOf ? (
-          <span className="grid">
-            <span className="num">{shortDay(r.asOf)}</span>
-            {r.source ? (
-              <span className="inline-flex items-center gap-1 text-base text-fg-muted">
-                <Icon icon={r.source === 'manual' ? Pencil : RefreshCw} size="sm" />
-                {sourceText(r.source)}
-              </span>
-            ) : null}
-          </span>
-        ) : (
-          <span className="text-fg-muted">—</span>
-        ),
-    },
-    { id: 'age', header: 'Age', value: r => r.ageDays, cell: r => <AgeCell r={r} /> },
-    {
-      id: 'action',
-      header: 'Actions', // read by assistive tech only; the header text is hidden by the table's className below
-      align: 'right',
-      cell: r => <RowActions r={r} onAdd={onAdd} onHistory={onHistory} />,
-    },
-  ]
-  return (
-    <DataTable
-      label="Latest exchange rate per currency"
-      columns={columns}
-      rows={rows}
-      getRowId={r => r.currency}
-      twoLine
-      className="rounded-none border-0 shadow-none [&_thead_th:last-child]:text-transparent"
-      mobileRow={r => (
-        <span className="grid gap-2">
-          <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <span className="min-w-0 text-base font-medium" data-rate-card={r.currency}>
-              {rateCardLine(r)}
-            </span>
-            <AgeCell r={r} />
-          </span>
-          <RowActions r={r} onAdd={onAdd} onHistory={onHistory} touch />
-        </span>
-      )}
-    />
   )
 }
 
@@ -241,7 +128,7 @@ function HistoryDialog({ currency, onClose }: { currency: string | null; onClose
             <ul>
               {history.data.map(h => (
                 <li key={`${h.asOf}-${h.source}`} className="flex items-center gap-4 border-t py-3 text-base first:border-t-0">
-                  <span className="num min-w-[4.5rem] shrink-0">{shortDay(h.asOf)}</span>
+                  <span className="num min-w-[4.5rem] shrink-0">{rateDay(h.asOf)}</span>
                   <span className="inline-flex items-center gap-1 text-fg-2">
                     <Icon icon={h.source === 'manual' ? Pencil : RefreshCw} size="sm" className="text-fg-muted" />
                     {sourceText(h.source)}
@@ -308,7 +195,7 @@ function AddRateCard({ rows, currency, onCurrency, focusTick }: { rows: RateRow[
             void submit(false)
           }}
         >
-          <Field label="Currency" help={lastAuto ? `Last automatic: ${formatRate(lastAuto.ratePkr)} on ${shortDay(lastAuto.asOf)}` : undefined}>
+          <Field label="Currency" help={lastAuto ? `Last automatic: ${formatRate(lastAuto.ratePkr)} on ${rateDay(lastAuto.asOf)}` : undefined}>
             <Select value={currency} onChange={e => onCurrency(e.target.value)} options={rows.map(r => ({ value: r.currency, label: r.currency }))} />
           </Field>
           <Field

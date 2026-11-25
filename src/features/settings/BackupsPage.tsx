@@ -27,12 +27,16 @@ import { SectionSkeleton, SettingsSection as Section } from '@/features/settings
  * Settings > Backups and usage (migration 0120). Admin only. Three things the owner must be able to see without opening GitHub or
  * Supabase: is the nightly backup alive, how full the free plan is (500 MB database, 1 GB files), and the monthly "can I really open
  * a backup with my key" check. The numbers come from admin_health(); the backup job writes the times (scripts/backup).
+ * Two checks with two cadences, named apart (screen review 2026-11-24, item 21): the automatic restore drill runs weekly
+ * (.github/workflows/backup.yml, Monday 03:00 Karachi), the key check is the admin's own, monthly (DECRYPT_TEST_EVERY_DAYS).
  */
+const DRILL_SCHEDULE = 'It runs by itself every Monday at 03:00.'
+
 export function BackupsPage() {
   const q = useHealth()
   return (
     <div className="grid content-start gap-card-gap">
-      <PageHeader title="Backups and usage" lede="Nightly backup status, free plan usage and the monthly check that the key opens a backup." />
+      <PageHeader title="Backups and usage" lede="The nightly backup, the weekly restore drill, free plan usage and your monthly key check." />
       {q.isPending ? (
         <div role="status" aria-busy="true" aria-label="Loading backups and usage" className="grid gap-card-gap">
           <SectionSkeleton rows={4} facts />
@@ -88,7 +92,7 @@ function BackupSection({ h }: { h: HealthRow }) {
         <div className="grid gap-1">
           <dt className="text-base text-fg-muted">Weekly restore drill</dt>
           <dd className="text-base" data-testid="backup-drill">
-            {h.lastDrillAt ? `${h.lastDrillOk ? 'Passed' : 'FAILED'} on ${formatDay(dayOf(h.lastDrillAt))}` : 'Not run yet'}
+            {h.lastDrillAt ? `${h.lastDrillOk ? 'Passed' : 'FAILED'} on ${formatDay(dayOf(h.lastDrillAt))}.` : 'Not run yet.'} {DRILL_SCHEDULE}
           </dd>
         </div>
         <div className="grid gap-1">
