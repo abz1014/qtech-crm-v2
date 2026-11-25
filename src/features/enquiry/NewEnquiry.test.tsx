@@ -64,7 +64,7 @@ describe('New enquiry', () => {
     renderPage()
     expect(screen.getByTestId('enquiry-dropzone')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'New RFQ', level: 1 })).toBeInTheDocument()
-    expect(await screen.findByRole('button', { name: 'Create job 162' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Create job RFQ-0162' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Looks right: find suppliers' })).toBeNull()
   })
 
@@ -99,7 +99,7 @@ describe('New enquiry', () => {
     expect(await screen.findByText('2 items found')).toBeInTheDocument()
     expect(screen.getByTestId('source-text')).toHaveTextContent('Hach HQ1110 portable meter')
     expect(screen.getByText(/Check this: split from the document/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Create job 162' }))
+    await user.click(screen.getByRole('button', { name: 'Create job RFQ-0162' }))
     await waitFor(() => expect(db.calls.some(c => c.target === 'rpc:float_rfq')).toBe(true))
     const args = opArgs(db.calls.find(c => c.target === 'rpc:float_rfq') as FakeCall, 'args')?.[0] as { p_mark_sent?: boolean; p_supplier_ids?: string[] }
     expect(args.p_mark_sent ?? false).toBe(false)

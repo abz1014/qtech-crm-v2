@@ -82,7 +82,7 @@ describe('the delete job flow', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }))
     expect(await screen.findByText('Jobs list page')).toBeInTheDocument()
     expect(fake.calls.find(c => c.target === 'rpc:delete_job')?.ops[0]).toEqual(['args', [{ p_rfq_id: 'r-1', p_order_id: 'o-1' }]])
-    expect(await screen.findByText('Job 139 deleted')).toBeInTheDocument()
+    expect(await screen.findByText('RFQ-0139 deleted')).toBeInTheDocument()
   })
 
   it('with something in the way: shows the guide and no Delete button', async () => {

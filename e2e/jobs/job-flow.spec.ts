@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, karachiDay, must, openAs, rest, rfqRef, uniqueName } from '../support/stack'
 import { setProfile } from '../orders/fixtures'
 import { db, num } from '../verify/support/db'
 import { amount } from '../verify/support/text'
@@ -44,7 +44,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
   const before = await db.adminRpc<{ outstanding: number }[]>('receivables_summary')
 
   await openAs(page, 'admin', `/jobs/${rfq.number}`)
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(rfq.number)}`)
   // priced, not quoted: the ruler waits at Quotation
   await expect(phoneLabel(page)).toContainText('Stage 2 of 7')
 

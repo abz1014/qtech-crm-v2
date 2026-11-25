@@ -1,4 +1,4 @@
-import { createCompany, createRfq, karachiDay, must, rest, uniqueName } from './stack'
+import { createCompany, createRfq, karachiDay, must, orderRef, rest, rfqRef, uniqueName } from './stack'
 
 /*
  * Helpers for the Archive specs (0141). The setting archive_settings is ONE row for the whole database, so a spec that switches it on
@@ -70,6 +70,6 @@ export async function seedArchive(owner: string = ADMIN_ID): Promise<ArchiveFixt
 
 /** Job row names on the Jobs list. */
 export const jobRowName = {
-  rfq: (n: number) => new RegExp(String.raw`Job ${n}\b`),
-  order: (n: number) => new RegExp(String.raw`Job O-${n}\b`),
+  rfq: (n: number) => new RegExp(String.raw`${rfqRef(n)}\b`),
+  order: (n: number) => new RegExp(String.raw`${orderRef(n)}\b`),
 }

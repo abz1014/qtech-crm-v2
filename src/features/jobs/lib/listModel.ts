@@ -1,5 +1,6 @@
 import type { JobRow } from '@/features/jobs/api'
 import { currentStopIndex } from '@/features/jobs/lib/stages'
+import { jobRef } from '@/lib/refs'
 
 /*
  * The Jobs list's view: three chips (Mine, Open, History) and a sort by what is due first. History is closed, settled or lost
@@ -52,8 +53,8 @@ export function byRecent(a: JobRow, b: JobRow): number {
   return (b.lastActivityOn ?? '').localeCompare(a.lastActivityOn ?? '') || b.key.localeCompare(a.key, undefined, { numeric: true })
 }
 
-/** "Job 139", "Job O-45". */
-export const jobLabel = (key: string) => `Job ${key}`
+/** "RFQ-0139", "ORD-0045": one way to write a job's number on every screen (src/lib/refs.ts). */
+export const jobLabel = (key: string) => jobRef(key)
 
 /*
  * The stage filter (2026-11-03): where a job stands on the StageBar ruler, so a filter and the bar always agree. The stop comes from

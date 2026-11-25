@@ -5,6 +5,7 @@ import { CreateInvoiceButton, RecordPaymentButton } from '@/features/money/Order
 import { InvoicePdfButton } from '@/features/money/invoices/pdf/InvoicePdfButton'
 import { CopyReminderButton } from '@/features/orders/CopyReminderButton'
 import { useOrderWork } from '@/features/orders/jobSlots/useOrderWork'
+import { orderRef } from '@/lib/refs'
 
 /*
  * The Invoice stage of the job page (P5-D2). Admin and sales only; an engineer's stage says "Handled by the office" and draws nothing
@@ -51,7 +52,7 @@ export default function InvoiceWork({ job }: JobSlotProps) {
         {buttons.sort((a, b) => Number(b.key === main) - Number(a.key === main)).map(b => b.node)}
         {invoiced > 0 && job.role === 'admin' ? (
           <Link
-            to={`/money/gst-register?q=${encodeURIComponent(`ORD-${String(order.number).padStart(4, '0')}`)}`}
+            to={`/money/gst-register?q=${encodeURIComponent(orderRef(order.number))}`}
             data-slot="invoice-register-link"
             className="inline-flex min-h-touch items-center rounded-control px-3 type-body font-medium text-primary underline-offset-4 hover:underline"
           >

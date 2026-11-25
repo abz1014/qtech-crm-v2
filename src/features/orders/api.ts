@@ -1,5 +1,5 @@
 import { fetchAll, requireSupabase, unwrap } from '@/lib/supabase'
-import { poRef } from '@/lib/refs'
+import { orderRef, poRef } from '@/lib/refs'
 import { PlainError } from '@/lib/errors/plainError'
 import { hideArchived } from '@/lib/archive'
 import type { TableRow, TableUpdate, ViewRow } from '@/features/dbTypes'
@@ -396,7 +396,7 @@ export async function friendlyDuplicatePo(err: unknown): Promise<unknown> {
     const rows = unwrap(await (id ? q.eq('id', id) : q.eq('number', Number(m[2]))).limit(1)) as unknown as Array<{ number: number; archived: boolean | null }>
     const hit = rows[0]
     if (!hit || hit.archived !== true) return err
-    const ref = `ORD-${String(hit.number).padStart(4, '0')}`
+    const ref = orderRef(hit.number)
     return new PlainError(`PO ${m[1]} already exists on ${ref} (in Archive). Unarchive it or use another PO number.`, '23505')
   } catch {
     return err

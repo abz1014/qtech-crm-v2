@@ -1,6 +1,7 @@
 import { fetchAll, requireSupabase } from '@/lib/supabase'
 import { hideArchived } from '@/lib/archive'
 import { generateCSV, downloadCSV } from '@/lib/csvExport'
+import { orderRef } from '@/lib/refs'
 
 /*
  * Export data (process audit 8). The admin downloads the books as CSV files, one per kind: customers and suppliers, enquiries (RFQs),
@@ -41,7 +42,7 @@ const all = <T extends Rec>(table: string, columns: string, order: string, hide 
 const nameMap = async (table: string, key = 'name'): Promise<Map<string, string>> => new Map((await all<Rec>(table, `id, ${key}`, 'id')).map(r => [String(r.id), String(r[key] ?? '')]))
 const num = (v: unknown): number | string => (v === null || v === undefined || v === '' ? '' : Number(v))
 const txt = (v: unknown): string => (v === null || v === undefined ? '' : String(v))
-const orderNo = (v: unknown): string => (v === null || v === undefined ? '' : `ORD-${String(v).padStart(4, '0')}`)
+const orderNo = (v: unknown): string => (v === null || v === undefined ? '' : orderRef(Number(v)))
 const rfqNo = (v: unknown): string => (v === null || v === undefined ? '' : `RFQ-${String(v).padStart(4, '0')}`)
 
 export function companiesTable(rows: readonly Rec[]): ExportTable {

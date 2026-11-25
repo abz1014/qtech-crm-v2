@@ -1,4 +1,5 @@
 import { requireSupabase, unwrap } from '@/lib/supabase'
+import { poRef } from '@/lib/refs'
 import type { StoredFile } from '@/features/rfqs/api'
 import { poLineAmounts, type LastPo, type PrefillRow, type PriceSource } from '@/features/purchaseOrders/lib/prefill'
 
@@ -304,7 +305,7 @@ export async function listSentPos(orderId: string): Promise<import('@/features/p
     const leg = legs.find(l => l.id === p.supplier_order_id)
     const lines = (Array.isArray(p.lines) ? p.lines : []) as Array<{ order_item_id: string; qty: number }>
     out.push({
-      ref: `PO-${p.issued_on.slice(2, 4)}-${String(p.number).padStart(4, '0')}`,
+      ref: poRef(p.number, p.issued_on),
       supplierName: names.get(leg?.supplier_id ?? '') ?? 'the supplier',
       items: lines.map(l => ({ description: byItem.get(l.order_item_id)?.description ?? 'Item', qty: Number(l.qty), unit: byItem.get(l.order_item_id)?.unit ?? null })),
       contact: firstContact.get(leg?.supplier_id ?? '') ?? null,

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { axeViolations } from '../support/axe'
-import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, jobRef, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { JOB_URL } from '../support/job'
 
 /*
@@ -49,7 +49,7 @@ test.describe('delete a job', () => {
     await openMore(page)
     await page.getByRole('menuitem', { name: 'Delete job' }).click()
 
-    const dialog = page.getByRole('dialog', { name: `Delete Job ${job.key}?` })
+    const dialog = page.getByRole('dialog', { name: `Delete ${jobRef(job.key)}?` })
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('[data-slot="delete-also"]')).toContainText('its orders and their lines')
     await expect(dialog.getByText('This cannot be undone.')).toBeVisible()
@@ -57,7 +57,7 @@ test.describe('delete a job', () => {
     await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
 
     await expect(page).toHaveURL(/\/jobs$/)
-    await expect(page.getByRole('status').filter({ hasText: `Job ${job.key} deleted` })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: `${jobRef(job.key)} deleted` })).toBeVisible()
     expect(await orderRows(job.id)).toEqual([])
   })
 
@@ -82,7 +82,7 @@ test.describe('delete a job', () => {
     // the payment is cleared outside the dialog (the step the guide asked for), then the guide is read again
     await must(rest('admin', 'rpc/delete_payment', { method: 'POST', body: { p_payment_id: payment.id } }))
     await guide.getByRole('button', { name: 'Check again' }).click()
-    const confirm = page.getByRole('dialog', { name: `Delete Job ${job.key}?` })
+    const confirm = page.getByRole('dialog', { name: `Delete ${jobRef(job.key)}?` })
     await expect(confirm).toBeVisible()
     await confirm.getByRole('button', { name: 'Delete', exact: true }).click()
     await expect(page).toHaveURL(/\/jobs$/)

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, review, rest, rfqRef, uniqueName } from '../support/stack'
+import { createCompany, createRfq, jobRef, karachiDay, must, openAs, orderRef, review, rest, rfqRef, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { db } from '../verify/support/db'
 import { openStage } from '../support/job'
@@ -49,10 +49,10 @@ test.describe('Jobs list (P5-B)', () => {
     const f = await seed()
     await openAs(page, 'admin', `/jobs?q=${encodeURIComponent(f.company.name)}`)
     await expect(page.getByRole('heading', { name: 'Jobs', level: 1 })).toBeVisible()
-    await expect(page.getByRole('row', { name: new RegExp(`Job ${f.rfq.number}\\b`) }).first()).toBeVisible()
-    await expect(page.getByRole('row', { name: new RegExp(`Job O-${f.direct.number}\\b`) }).first()).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(f.rfq.number)}\\b`) }).first()).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(`${orderRef(f.direct.number)}\\b`) }).first()).toBeVisible()
     // the enquiry and its order are ONE job, not two
-    await expect(page.getByRole('row', { name: new RegExp(`Job O-${f.order.number}\\b`) })).toHaveCount(0)
+    await expect(page.getByRole('row', { name: new RegExp(`${orderRef(f.order.number)}\\b`) })).toHaveCount(0)
     const headers = (await page.getByRole('columnheader').allTextContents()).map(h => h.trim()).filter(Boolean)
     expect(headers).toEqual(['Job', 'Customer', 'Customer PO', 'Items', 'Where it stands', 'Next step', 'Owner'])
     await expect(page.locator('button.bg-primary')).toHaveCount(1)
@@ -66,19 +66,19 @@ test.describe('Jobs list (P5-B)', () => {
     const box = page.getByLabel('Search jobs')
     for (const q of [`Job ${f.rfq.number}`, rfqRef(f.rfq.number), f.po, f.ref]) {
       await box.fill(q)
-      await expect(page.getByRole('row', { name: new RegExp(`Job ${f.rfq.number}\\b`) }).first(), `the list finds the job by "${q}"`).toBeVisible()
+      await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(f.rfq.number)}\\b`) }).first(), `the list finds the job by "${q}"`).toBeVisible()
     }
     await box.fill(`Job O-${f.direct.number}`)
-    await expect(page.getByRole('row', { name: new RegExp(`Job O-${f.direct.number}\\b`) }).first()).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(`${orderRef(f.direct.number)}\\b`) }).first()).toBeVisible()
 
     await openPalette(page)
     const input = page.getByRole('combobox')
     for (const q of [`Job ${f.rfq.number}`, rfqRef(f.rfq.number), f.po, f.ref]) {
       await input.fill(q)
-      await expect(page.getByRole('option', { name: new RegExp(`Job ${f.rfq.number} · ${f.company.name}`) }), `the palette finds the job by "${q}"`).toBeVisible()
+      await expect(page.getByRole('option', { name: new RegExp(`${rfqRef(f.rfq.number)} · ${f.company.name}`) }), `the palette finds the job by "${q}"`).toBeVisible()
     }
     await input.fill(`Job ${f.rfq.number}`)
-    await page.getByRole('option', { name: new RegExp(`Job ${f.rfq.number} · `) }).click()
+    await page.getByRole('option', { name: new RegExp(`${rfqRef(f.rfq.number)} · `) }).click()
     await expect(page).toHaveURL(new RegExp(`/jobs/${f.rfq.number}$`))
   })
 
@@ -86,15 +86,15 @@ test.describe('Jobs list (P5-B)', () => {
     const f = await seed()
     // closing the enquiry without an order would make it lost, but this RFQ has an order: its job stays open
     await openAs(page, 'admin', '/jobs?chip=history')
-    await expect(page.getByRole('row', { name: new RegExp(`Job ${f.rfq.number}\\b`) })).toHaveCount(0)
+    await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(f.rfq.number)}\\b`) })).toHaveCount(0)
     await page.goto(`/jobs?chip=history&q=${f.rfq.number}`)
-    await expect(page.getByRole('row', { name: new RegExp(`Job ${f.rfq.number}\\b`) }).first()).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(f.rfq.number)}\\b`) }).first()).toBeVisible()
   })
 
   test('an engineer sees the list with no amount and no way to start an enquiry', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'engineer', `/jobs?q=${f.rfq.number}`)
-    await expect(page.getByRole('row', { name: new RegExp(`Job ${f.rfq.number}\\b`) }).first()).toBeVisible()
+    await expect(page.getByRole('row', { name: new RegExp(`${rfqRef(f.rfq.number)}\\b`) }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: 'New RFQ' })).toHaveCount(0)
     expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs\.?\s?\d/)
   })
@@ -105,7 +105,7 @@ test.describe('Jobs list (P5-B)', () => {
     for (const width of [375, 320]) {
       await page.setViewportSize({ width, height: 800 })
       await page.goto(`/jobs?q=${encodeURIComponent(f.company.name)}`)
-      await expect(page.getByText(`Job ${f.rfq.number}`).first()).toBeVisible()
+      await expect(page.getByText(`${rfqRef(f.rfq.number)}`).first()).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow, `no sideways scroll at ${width}`).toBeLessThanOrEqual(0)
       if (width === 375) await review(page, 'jobs-list-375')
@@ -119,13 +119,13 @@ test.describe('Jobs list card (2026-11)', () => {
     await db.patch(`orders?id=eq.${f.direct.id}`, { legacy_source: { imported: true, table: 'orders' } })
     await page.setViewportSize({ width: 375, height: 800 })
     await openAs(page, 'admin', `/jobs?q=${encodeURIComponent(f.company.name)}`)
-    const live = page.locator('tr[data-card]').filter({ hasText: `Job ${f.rfq.number}` })
+    const live = page.locator('tr[data-card]').filter({ hasText: `${rfqRef(f.rfq.number)}` })
     await expect(live).toHaveCount(1)
     await expect(live).toContainText(`PO ${f.po}`)
     await expect(live.locator('[data-stage-line]')).toContainText(/Stage \d of 7 · /)
     await expect(live.locator('[data-stage-mini]')).toHaveCount(0)
     await expect(live).not.toContainText('Imported')
-    const old = page.locator('tr[data-card]').filter({ hasText: `Job O-${f.direct.number}` })
+    const old = page.locator('tr[data-card]').filter({ hasText: `${orderRef(f.direct.number)}` })
     await expect(old).toHaveCount(1)
     await expect(old.getByText('Imported', { exact: true })).toBeVisible()
     await expect(old).not.toContainText('Imported ·')
@@ -151,7 +151,7 @@ test.describe('Jobs list: stage filters and Customer PO (2026-11-03)', () => {
     await must(rest('admin', 'order_items', { method: 'POST', body: { order_id: svc.id, position: 0, description: `Commissioning ${tag}`, qty: 1, unit: 'job', unit_price_net: 9000, gst_rate: 18, is_service: true }, prefer: 'return=minimal' }))
     return { svc, po }
   }
-  const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`Job ${key}\\b`) })
+  const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`${jobRef(key)}\\b`) })
   const headersOf = async (page: Page) => (await page.getByRole('columnheader').allTextContents()).map(h => h.trim()).filter(Boolean)
 
   test('the Customer PO column is there for admin and sales (7 headers) and not for an engineer (6)', async ({ browser }) => {
@@ -268,7 +268,7 @@ async function shot(page: Page, name: string): Promise<void> {
 }
 
 test.describe('Sell and Deliver lanes (Forest, gate 2)', () => {
-  const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`Job ${key}\\b`) })
+  const row = (page: Page, key: string) => page.getByRole('row', { name: new RegExp(`${jobRef(key)}\\b`) })
 
   test('Sell holds the enquiry with no order, Deliver the ordered jobs; each has its stages, an All jobs link, and a job opened from a lane carries it', async ({ page }) => {
     const f = await seed()
@@ -310,7 +310,7 @@ test.describe('Sell and Deliver lanes (Forest, gate 2)', () => {
     await openAs(page, 'admin', '/jobs?lane=sell&chip=open')
     await expect(page.getByRole('heading', { name: 'Sell', level: 1 })).toBeVisible()
     // the card whose job label is exactly this job (a card's text runs "Job 2" into "2 items", so a plain text filter also hit Job 2)
-    await expect(page.locator('tr[data-card]').filter({ has: page.getByText(`Job ${sell.number}`, { exact: true }) })).toHaveCount(1)
+    await expect(page.locator('tr[data-card]').filter({ has: page.getByText(`${rfqRef(sell.number)}`, { exact: true }) })).toHaveCount(1)
     await review(page, 'forest-a2-lanes-phone')
 
     const eng = await (await browser.newContext()).newPage()
@@ -334,7 +334,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
       ;(window as unknown as { __keepStepsClosed?: boolean }).__keepStepsClosed = true
     })
     await openAs(page, 'admin', `/jobs/${rfq.number}`)
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${rfq.number}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(rfq.number)}`)
     // the stage and the next step are one block, and the seven steps are one list of rows, every one closed
     await expect(page.locator('[data-stage-block]')).toHaveCount(1)
     await expect(page.locator('[data-stages] > [data-fold-row]')).toHaveCount(7)
@@ -384,7 +384,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await expect(page.locator(ONE_ACTION)).toHaveCount(1)
     // Forest (30-job-page.html): the hero says the step and holds the one green button; the track card says the stage over seven stops
     const hero = page.getByRole('region', { name: 'Next step' })
-    await expect(hero).toContainText(`Next step · Job ${f.rfq.number}`)
+    await expect(hero).toContainText(`Next step · ${rfqRef(f.rfq.number)}`)
     await expect(hero.getByRole('heading', { level: 2 })).toHaveText('Choose a supplier for the items')
     await expect(page.locator('[data-stage-phone]')).toHaveText('Stage 4 of 7 · Supplier order')
     await expect(page.getByRole('list', { name: 'Stages of this job' }).getByRole('listitem')).toHaveCount(7)
@@ -419,7 +419,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
   test('an engineer opens the job with no Money panel and no price', async ({ page }) => {
     const f = await seed()
     await openAs(page, 'engineer', `/jobs/${f.rfq.number}`)
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job ${f.rfq.number}`)
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(f.rfq.number)}`)
     await expect(page.getByRole('region', { name: 'Money for this job' })).toHaveCount(0)
     expect(await page.locator('#main').innerText()).not.toMatch(/PKR|Rs\.?\s?\d/)
     // never payment status, a price or the customer PO

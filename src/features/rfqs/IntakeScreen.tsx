@@ -740,7 +740,7 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
   useEffect(() => {
     if (!enquiry || !saved || opened.current || step !== 'saved') return
     opened.current = true
-    toast({ title: `Created job ${saved.number}`, body: company?.name, tone: 'success' })
+    toast({ title: `Created job ${rfqRef(saved.number)}`, body: company?.name, tone: 'success' })
     // The leave guard takes its extra Back entry off (history.back()) as the save turns it off. A push made before that traversal
     // finishes is undone by it (the page stayed on New enquiry), so the job is opened once the traversal has settled.
     let done = false
@@ -904,7 +904,7 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
   })
 
   // The step bar of steps 1 and 2. With nobody ticked on step 2, saving for later is the one green button.
-  const createLabel = nextJob ? `Create job ${nextJob}` : 'Create job'
+  const createLabel = nextJob ? `Create job ${rfqRef(nextJob)}` : 'Create job'
   const saveAction: BarAction = { label: SAVE_FOR_LATER, icon: Save, quiet: true, onClick: whenReady(() => void saveOnly()), busy: busy === 'save', busyLabel: 'Saving' }
   const stepBar: { summary?: ReactNode; warning?: ReactNode; primary?: BarAction; more: BarAction[] } =
     step === 'build'

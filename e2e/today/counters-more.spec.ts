@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, createRfq, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, createRfq, jobRef, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
 import { dueRows, showAllTodo } from '../support/todo'
 import { db } from '../verify/support/db'
 
@@ -72,11 +72,11 @@ test('Jobs and To do agree: a live late order is red in both; an imported one is
   // Jobs: both are open jobs, the live one says the goods are late (red), the imported one does not raise it
   await page.goto('/jobs?chip=open')
   await page.getByLabel('Search jobs').fill(live.customer)
-  const liveRow = page.getByRole('row', { name: new RegExp(`Job ${live.key}\\b`) }).first()
+  const liveRow = page.getByRole('row', { name: new RegExp(`${jobRef(live.key)}\\b`) }).first()
   await expect(liveRow).toBeVisible()
   await expect(liveRow.locator('[data-tone="late"]')).toContainText('The goods are late')
   await page.getByLabel('Search jobs').fill(old.customer)
-  const oldRow = page.getByRole('row', { name: new RegExp(`Job ${old.key}\\b`) }).first()
+  const oldRow = page.getByRole('row', { name: new RegExp(`${jobRef(old.key)}\\b`) }).first()
   await expect(oldRow).toBeVisible()
   await expect(oldRow.locator('[data-tone="late"]'), 'an imported job raises no red task').toHaveCount(0)
   await expect(oldRow).toContainText(/Imported/)

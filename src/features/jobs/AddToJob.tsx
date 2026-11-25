@@ -33,6 +33,7 @@ import {
 } from '@/features/rfqs/lib'
 import { deleteCapture, safely } from '@/lib/capture/store'
 import { SHARED_GONE, useSharedItem } from '@/features/jobs/sharedItem'
+import { jobLabel } from '@/features/jobs/lib/listModel'
 import { appendNotesSafely, undoAppendedNote } from '@/features/capture/api'
 import { appendNote, noteStamp } from '@/features/capture/model'
 import type { JobSlotProps } from '@/features/jobs/slots'
@@ -200,7 +201,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
       const what = [note ? 'Added to the notes' : '', rows.length ? `${rows.length} ${rows.length === 1 ? (kindNow === 'photo' ? 'photo' : 'file') : kindNow === 'photo' ? 'photos' : 'files'} attached` : ''].filter(Boolean).join(' and ')
       const keep = { text, files: good.map(f => f.file) }
       toast({
-        title: `Added to Job ${job.key}`,
+        title: `Added to ${jobLabel(job.key)}`,
         body: what,
         tone: 'success',
         undo: {
@@ -239,7 +240,7 @@ function AddToJobCard({ job: ctx }: JobSlotProps) {
       void client.invalidateQueries({ queryKey: qk.jobs.all })
       toast({
         title: ids.length === 1 ? 'Answer saved' : `Answer saved on ${ids.length} questions`,
-        body: `Job ${job.key}`,
+        body: jobLabel(job.key),
         tone: 'success',
         undo: {
           onUndo: async () => {

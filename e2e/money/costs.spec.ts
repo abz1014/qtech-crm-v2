@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs'
 import { openStage } from '../support/job'
 import { expect, test, type Page } from '@playwright/test'
-import { createCompany, karachiDay, must, openAs, rest, uniqueName } from '../support/stack'
+import { createCompany, karachiDay, must, openAs, orderRef, rest, uniqueName } from '../support/stack'
 import { axeViolations } from '../support/axe'
 import { forestC2Screens } from './forest-c2'
 
@@ -229,7 +229,7 @@ test.describe('who sees money', () => {
         if (MONEY.test(r.url())) seen.push(`${r.method()} ${r.url()}`)
       })
       await openAs(page, role, `/orders/${o.id}`)
-      await expect(page.getByRole('heading', { level: 1 })).toContainText(`Job O-${o.number}`)
+      await expect(page.getByRole('heading', { level: 1 })).toContainText(`${orderRef(o.number)}`)
       await page.waitForLoadState('networkidle')
       await expect(page.getByRole('region', { name: 'Margin' })).toHaveCount(0)
       for (const path of ['/money/margins', '/money/exceptions']) {

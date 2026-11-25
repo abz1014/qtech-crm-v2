@@ -1,6 +1,7 @@
 import { monthKey, monthLabel } from '@/features/money/expenses/model'
 import { DEFAULT_GST_DEADLINES, gstDatesFor, type GstDeadlines } from '@/features/settings/gstDeadlines'
 import { divRoundHalfUp, gstWholeRupeesPaisa, paisaToFixed, productPaisa, toPaisa, type Amount } from '@/lib/money'
+import { orderRef } from '@/lib/refs'
 
 /*
  * Invoices and the GST register (M01): the pure rules. No React and no database in here, so each rule can be unit-tested.
@@ -275,7 +276,7 @@ export const tcsNotSent = (r: Pick<GstRow, 'courierState' | 'rowKind' | 'voided'
 export function matchesSearch(r: GstRow, text: string): boolean {
   const words = text.toLowerCase().split(/\s+/).filter(Boolean)
   if (words.length === 0) return true
-  const hay = `${r.number ?? ''} ${r.againstNumber ?? ''} ${r.companyName ?? ''} ORD-${String(r.orderNumber ?? '').padStart(4, '0')}`.toLowerCase()
+  const hay = `${r.number ?? ''} ${r.againstNumber ?? ''} ${r.companyName ?? ''} ${orderRef(r.orderNumber ?? 0)}`.toLowerCase()
   return words.every(w => hay.includes(w))
 }
 

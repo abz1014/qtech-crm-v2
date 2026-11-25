@@ -56,7 +56,7 @@ test('a PDF dropped on To do becomes a job in two clicks: Use the company, Creat
   await expect(page.getByText(/From the PDF, check this/).first()).toBeVisible()
 
   await page.getByRole('button', { name: `Use ${customer.name}` }).click() // click 1
-  await page.getByRole('button', { name: /^Create job \d+$/ }).click() // click 2
+  await page.getByRole('button', { name: /^Create job RFQ-\d{4}$/ }).click() // click 2
 
   await expect(page).toHaveURL(/\/jobs\/\d+$/)
   await expect(page.getByText(customer.name).first()).toBeVisible()
