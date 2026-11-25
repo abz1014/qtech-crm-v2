@@ -556,6 +556,9 @@ test.describe('O03: supplier orders, one next-step stamp each', () => {
     const dialog = page.getByRole('dialog')
     // the same wording as Today: the leg's reference is in the text
     await expect(dialog.getByTestId('draft-text')).toContainText('PI-123')
+    // review 19: the preview draws *bold* as bold, never the raw asterisks (the copied text keeps them)
+    await expect(dialog.getByTestId('draft-text')).not.toContainText('*PI-123*')
+    await expect(dialog.getByTestId('draft-text').locator('b', { hasText: 'PI-123' })).toBeVisible()
     await expect(dialog.getByTestId('draft-text')).toContainText('Memosens pH sensor')
     await shot(page, 'o03-goods-chase-dialog-1440')
     await resetClipboard(page)
