@@ -138,17 +138,12 @@ test('admin sees the same file on the Job page, with the toggle', async ({ page 
 
 test('engineer: New RFQ by address is the lock screen, with no price anywhere', async ({ page }) => {
   const w = watch(page)
-<<<<<<< HEAD
-  await openAs(page, 'engineer', '/rfqs/new')
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-=======
   await openAs(page, 'engineer', '/enquiries/new')
   await expect(page.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeVisible()
   await openAs(page, 'engineer', '/rfqs/new')
   await expect(page.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeVisible()
   await openAs(page, 'engineer', '/companies?new=1')
   await expect(page.getByRole('heading', { name: 'New company is for admins and sales', level: 1 })).toBeVisible()
->>>>>>> worktree-agent-ab8fbfcfc0ede8f6a
   await page.waitForLoadState('networkidle').catch(() => undefined)
   expect(moneyIn(await page.locator('#main').innerText()), 'lock screen').toEqual([])
   expect(w.requests).toEqual([])
