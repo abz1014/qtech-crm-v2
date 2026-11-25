@@ -368,12 +368,10 @@ export function PaletteHost({
         shortcut: ["G T"],
         href: TODAY_ROUTE,
       },
-      {
-        id: "new-company",
-        label: "New company",
-        icon: Building2,
-        href: "/companies?new=1",
-      },
+      // An engineer adds a company from a job, not from here (the address gives them the lock screen).
+      ...(role === "admin" || role === "sales"
+        ? [{ id: "new-company", label: "New company", icon: Building2, href: "/companies?new=1" } satisfies PaletteItem]
+        : []),
     ];
     // Typing "paste", "photo" or "capture" finds New enquiry (what Paste or photo became), "keys" or "shortcuts" the shortcuts sheet; the
     // other actions are idle-only (destinations answer typed text).

@@ -2,7 +2,7 @@
 // and Money's late dot, at the default text size. The lanes are a fixed list, not navConfig, so the photo only changes when the shell
 // does. `?scene=shell&role=engineer` draws the engineer's rail and bar instead (e2e/gallery.visual.spec.ts).
 import { useSearchParams } from 'react-router-dom'
-import { Building2, Camera, House, Receipt, Send, Truck, Wallet } from 'lucide-react'
+import { Building2, Camera, House, HandCoins, Send, Truck, Wallet } from 'lucide-react'
 import type { NavKey, ShellLink } from '@/app/navConfig'
 import type { SessionUser } from '@/app/session'
 import { BottomTabs, MobileBar } from '@/app/shell/MobileChrome'
@@ -15,7 +15,7 @@ const DELIVER: ShellLink = { id: 'deliver', label: 'Deliver', to: '/jobs?lane=de
 const MONEY: ShellLink = { id: 'money', label: 'Money', to: '/money', icon: Wallet, count: 'money' }
 const COMPANIES: ShellLink = { id: 'companies', label: 'Companies', to: '/companies', icon: Building2, apart: true }
 const JOBS: ShellLink = { id: 'jobs', label: 'Jobs', to: '/jobs', icon: Truck }
-const I_PAID: ShellLink = { id: 'ipaid', label: 'I paid', to: '/my-expenses', icon: Receipt }
+const I_PAID: ShellLink = { id: 'ipaid', label: 'I paid', to: '/my-expenses', icon: HandCoins }
 const CAMERA: ShellLink = { id: 'camera', label: 'Camera', to: '/capture', icon: Camera }
 
 const OFFICE = { rail: [HOME, SELL, DELIVER, MONEY, COMPANIES], tabs: [HOME, SELL, DELIVER, MONEY] }

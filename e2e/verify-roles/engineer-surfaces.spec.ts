@@ -136,12 +136,16 @@ test('admin sees the same file on the Job page, with the toggle', async ({ page 
   await expect(page.getByRole('checkbox', { name: 'Has prices: hide from engineers' }).first()).toBeChecked()
 })
 
-test('engineer: New enquiry opens with no price anywhere', async ({ page }) => {
+test('engineer: New RFQ by address is the lock screen, with no price anywhere', async ({ page }) => {
   const w = watch(page)
   await openAs(page, 'engineer', '/enquiries/new')
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeVisible()
+  await openAs(page, 'engineer', '/rfqs/new')
+  await expect(page.getByRole('heading', { name: 'New RFQ is for admins and sales', level: 1 })).toBeVisible()
+  await openAs(page, 'engineer', '/companies?new=1')
+  await expect(page.getByRole('heading', { name: 'New company is for admins and sales', level: 1 })).toBeVisible()
   await page.waitForLoadState('networkidle').catch(() => undefined)
-  expect(moneyIn(await page.locator('#main').innerText()), 'New RFQ').toEqual([])
+  expect(moneyIn(await page.locator('#main').innerText()), 'lock screen').toEqual([])
   expect(w.requests).toEqual([])
   expect([...new Set(w.leaks)]).toEqual([])
 })

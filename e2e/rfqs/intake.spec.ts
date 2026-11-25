@@ -364,7 +364,8 @@ test.describe('the draft on this device (UX audit S1: one tap on a tab must not 
 test.describe('what is required and what is pre-filled (FE-2)', () => {
   test('a company and one typed item are enough; qty is 1, GST 18, today and the owner fill themselves', async ({ page }) => {
     const customer = await createCompany(uniqueName('Bare Minimum'))
-    await openAs(page, 'engineer', '/rfqs/new')
+    // an engineer starts no RFQ (owner 2026-11-06, screen review 12): sales enters it
+    await openAs(page, 'sales', '/rfqs/new')
     // Not ready: the reason is beside the button, and a press puts the focus on what is missing (owner test 2026-10-20).
     await expect(page.getByText('Choose the company first, then paste or add an item.')).toBeVisible()
     await createJob(page).click()
@@ -376,7 +377,7 @@ test.describe('what is required and what is pre-filled (FE-2)', () => {
 
     const rfq = await jobOpened(page, customer.id)
     expect(rfq.received_on).toBe(karachiDay())
-    expect(rfq.owner_id).toBe('a0000000-0000-4000-8000-000000000003') // the engineer who entered it
+    expect(rfq.owner_id).toBe('a0000000-0000-4000-8000-000000000002') // the salesperson who entered it
     const items = await itemsOf(rfq.id)
     expect(items).toHaveLength(1)
     expect(items[0]).toMatchObject({ description: 'Spare gasket set', qty: 1, unit: null, gst_rate: 18, brand_id: null })

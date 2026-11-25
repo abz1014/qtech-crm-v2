@@ -26,7 +26,7 @@ test('route matrix: every page opens for the roles allowed and shows the no-acce
   const routes: [string, Allowed][] = [
     ['/todo', ALL],
     ['/rfqs', ALL],
-    ['/rfqs/new', ALL],
+    ['/rfqs/new', MONEY],
     [`/rfqs/${r.rfq.id}`, ALL],
     ['/orders', ALL],
     [`/orders/${o.order.id}`, ALL],

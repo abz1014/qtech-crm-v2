@@ -43,6 +43,7 @@ import {
   needsAttention,
   tcsNotSent,
   rangeLabel,
+  registerCountLine,
   registerTotals,
   rowMonth,
   stampable,
@@ -458,7 +459,11 @@ export function GstRegisterPage() {
         }}
         selection={{ selected: ticked, onChange: s => setTicked(s), rowLabel: r => r.number ?? 'invoice' }}
         onRowOpen={r => setOpening(isCreditNote(r) ? (r.againstInvoiceId ?? r.invoiceId) : r.invoiceId)}
-        footerLabel={`All ${totals.count} ${totals.count === 1 ? 'invoice' : 'invoices'} shown`}
+        // one count on the screen (screen review 14): the foot row is the total of the lines shown, the count line says how many
+        footerLabel="Total"
+        summary={register.isSuccess && shown.length > 0 ? registerCountLine(shown, all) : undefined}
+        // the screen-reader count after a filter says "of" every line too, not "1 of 1"
+        total={all.length}
         loading={register.isPending}
         error={
           register.isError

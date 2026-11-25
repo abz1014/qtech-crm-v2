@@ -318,7 +318,7 @@ function Loaded({ company }: { company: CompanyDetail }) {
       }}
     />
   ) : null
-  const detailsPanel = <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} />
+  const detailsPanel = <DetailsPanel company={company} customerSince={customerSide && !supplierOnly ? customerSince : null} brands={supplierSide || !company.isCustomer} taxDetails={!isEngineer} />
   const notesPanel = company.notes ? (
     <Panel card title="Notes">
       <p className="whitespace-pre-line px-5 pb-3 pt-1 text-base text-fg-2 [overflow-wrap:anywhere]">{company.notes}</p>
@@ -666,7 +666,7 @@ function TaxDetails({ companyId, divided }: { companyId: string; divided: boolea
  * company with neither yet) and whether they also supply us (left out for "both": the header chip already says so). On the
  * supplier side, and for a company with no role yet: the brands they carry, with Add and remove.
  */
-function DetailsPanel({ company, customerSince, brands }: { company: CompanyDetail; customerSince: number | null; brands: boolean }) {
+function DetailsPanel({ company, customerSince, brands, taxDetails }: { company: CompanyDetail; customerSince: number | null; brands: boolean; taxDetails: boolean }) {
   const rows: { key: string; value: ReactNode }[] = []
   if (customerSince !== null) {
     rows.push(
@@ -676,7 +676,8 @@ function DetailsPanel({ company, customerSince, brands }: { company: CompanyDeta
     )
     if (company.role !== 'both') rows.push({ key: 'Also a supplier', value: company.isSupplier ? 'Yes' : 'No' })
   }
-  const tax = company.isCustomer
+  // invoice tax details are money: never for an engineer (screen review 12)
+  const tax = taxDetails && company.isCustomer
   if (rows.length === 0 && !brands && !tax) return null
   return (
     <Panel card title="Details">

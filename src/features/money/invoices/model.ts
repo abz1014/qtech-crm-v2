@@ -293,6 +293,24 @@ export function registerTotals(rows: readonly GstRow[]): { count: number; net: n
   }
 }
 
+/**
+ * The register's one count line (screen review 14: "All 3 invoices shown" sat next to "Showing 5 of 5 invoices"). Invoices are
+ * counted as the totals count them; a credit note or a void invoice is a line of the register, said apart:
+ * "Showing 3 of 3 invoices and 2 credit notes".
+ */
+export function registerCountLine(shown: readonly GstRow[], all: readonly GstRow[]): string {
+  const invoices = (rows: readonly GstRow[]) => rows.filter(r => !isInert(r)).length
+  const n = invoices(shown)
+  const total = invoices(all)
+  const notes = shown.filter(isCreditNote).length
+  const voids = shown.filter(r => !isCreditNote(r) && r.voided === true).length
+  const extra = [
+    notes > 0 ? `${notes} ${notes === 1 ? 'credit note' : 'credit notes'}` : '',
+    voids > 0 ? `${voids} void ${voids === 1 ? 'invoice' : 'invoices'}` : '',
+  ].filter(Boolean)
+  return `Showing ${n} of ${total} ${total === 1 ? 'invoice' : 'invoices'}${extra.length ? ` and ${extra.join(' and ')}` : ''}`
+}
+
 /** "Sep to Nov 2026" over the months present. */
 export function rangeLabel(rows: readonly GstRow[]): string {
   const dates = rows.map(r => r.invoiceDate).filter((d): d is string => !!d).sort()

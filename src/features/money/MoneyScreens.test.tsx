@@ -227,7 +227,10 @@ describe('GST register (M01)', () => {
     await user.click(screen.getByRole('radio', { name: /Needs attention/ }))
     expect(screen.queryByText('INV-2299')).not.toBeInTheDocument()
     expect(screen.getByText('INV-2291')).toBeInTheDocument()
-    expect(screen.getByText('All 1 invoice shown')).toBeInTheDocument()
+    // one count on the screen (screen review 14): the count line, and the foot row is the Total
+    // the line on screen and the screen-reader announcement say the same count
+    expect(screen.getAllByText(/^Showing \d+ of \d+ invoices?$/).map(e => e.textContent)).toEqual(['Showing 1 of 3 invoices', 'Showing 1 of 3 invoices'])
+    expect(screen.queryByText(/invoices? shown$/)).toBeNull()
   })
 
   it('Search invoices narrows the register and says so when nothing matches', async () => {

@@ -24,9 +24,9 @@ const rows = [
 let fake: ReturnType<typeof installFakeDb> | null = null
 afterEach(() => fake?.uninstall())
 
-function mount(role: 'admin' | 'sales') {
+function mount(role: 'admin' | 'sales', data: unknown[] = rows) {
   fake = installFakeDb((c: FakeCall) => {
-    if (c.target === 'v_rfq_state') return { data: rows }
+    if (c.target === 'v_rfq_state') return { data }
     if (c.target === 'users') return { data: [{ id: 'me', role, name: 'Ayesha Rana', job_title: null, phone: null }] }
     if (c.verb === 'update') return { data: [{ id: 'x' }] }
     return { data: [] }
@@ -53,6 +53,18 @@ describe('Weekly review', () => {
     expect(within(screen.getByRole('region', { name: /^RFQs with no supplier asked/ })).getAllByRole('listitem')).toHaveLength(1)
     expect(document.querySelector('[data-review-count]')?.textContent).toBe('3')
     expect(screen.queryByRole('region', { name: /^Payments more than 30 days/ })).toBeNull()
+  })
+
+  it('says the time only when there is something to decide (screen review 17)', async () => {
+    const { container, unmount } = mount('admin')
+    await waitFor(() => expect(document.querySelector('[data-review-count]')?.textContent).toBe('3'))
+    expect(container).toHaveTextContent('3 to decide · about 10 minutes')
+    unmount()
+    fake?.uninstall()
+    const empty = mount('admin', [])
+    await waitFor(() => expect(document.querySelector('[data-review-count]')?.textContent).toBe('0'))
+    expect(empty.container).toHaveTextContent('0 to decide')
+    expect(empty.container.textContent).not.toMatch(/minutes/)
   })
 
   it('is admin only', () => {

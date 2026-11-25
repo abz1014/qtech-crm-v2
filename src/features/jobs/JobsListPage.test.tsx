@@ -163,6 +163,39 @@ describe('Jobs list', () => {
     expect(screen.queryByText(/Showing 0/)).toBeNull()
   })
 
+  describe('screen review 2026-11-24 (items 14 and 17)', () => {
+    it('?owner=all picks Open, not Mine; ?owner=mine picks Mine', async () => {
+      installFakeDb(fake)
+      const { unmount } = mount('sales', '/jobs?owner=all')
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      expect(screen.getByRole('radio', { name: 'Open' })).toBeChecked()
+      expect(screen.getByText('Showing 3 open jobs')).toBeInTheDocument()
+      unmount()
+      mount('admin', '/jobs?owner=mine')
+      await waitFor(() => expect(screen.getByRole('radio', { name: 'Mine' })).toBeChecked())
+    })
+
+    it('Mine says "Showing your 1 job", never "mine jobs"', async () => {
+      installFakeDb(fake)
+      const { container } = mount('sales')
+      expect(await screen.findByText('Showing your 1 job')).toBeInTheDocument()
+      expect(container.textContent).not.toMatch(/mine jobs?/)
+    })
+
+    it('with no job at all it says No jobs yet, not "Every job is done"', async () => {
+      installFakeDb(c => (c.target === 'v_jobs' ? { data: [] } : fake(c)))
+      const { container } = mount('admin')
+      expect(await screen.findByText('No jobs yet')).toBeInTheDocument()
+      expect(container.textContent).not.toMatch(/Every job is done/)
+    })
+
+    it('with only finished jobs it still says every job is done', async () => {
+      installFakeDb(c => (c.target === 'v_jobs' ? { data: rows.filter(r => r.is_history) } : fake(c)))
+      mount('admin')
+      expect(await screen.findByText(/Every job is done/)).toBeInTheDocument()
+    })
+  })
+
   it('/jobs?new=1 (Order without enquiry) opens the new-order dialog once, for the office only', async () => {
     installFakeDb(fake)
     mount('sales', '/jobs?new=1')

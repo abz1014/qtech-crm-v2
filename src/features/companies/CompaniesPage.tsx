@@ -2,6 +2,8 @@ import { useContext, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Building2, Plus, X } from 'lucide-react'
 import { PaletteContext } from '@/app/palette/usePalette'
+import { NoAccessPage } from '@/app/pages/NoAccessPage'
+import { useSession } from '@/app/session'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { useQueryParamText } from '@/lib/useQueryParamText'
@@ -11,6 +13,7 @@ import { RoleChip } from '@/features/companies/CompanyParts'
 import { commonCountry } from '@/features/companies/commonCountry'
 import { listPlace } from '@/features/companies/companyMeta'
 import { matchCompany } from '@/features/companies/companySearch'
+import { looksLikeCompanyName } from '@/features/companies/companyName'
 import { Button } from '@/ui/Button'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { EmptyState } from '@/ui/EmptyState'
@@ -45,7 +48,19 @@ const matches: Record<Filter, (r: CompanyListRow) => boolean> = {
   prospects: r => r.role === 'prospect' || r.role === null,
 }
 
+/**
+ * The Companies list. An engineer reaches it by a link (they add customers and suppliers from a job, not here), so the page offers them
+ * no New company, and the palette's address for it (/companies?new=1) gets the lock screen (screen review 2026-11-24, item 12).
+ */
 export function CompaniesPage() {
+  const session = useSession()
+  const [params] = useSearchParams()
+  const engineer = session.status === 'signed-in' && session.user.role === 'engineer'
+  if (engineer && params.get('new') !== null) return <NoAccessPage area="New company" roles={['admin', 'sales']} />
+  return <CompaniesList canAdd={!engineer} />
+}
+
+function CompaniesList({ canAdd }: { canAdd: boolean }) {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [params, setParams] = useSearchParams()
@@ -124,8 +139,8 @@ export function CompaniesPage() {
 
   const clearSearch = text.trim() !== '' || filter !== 'all'
   // A typed phone number is not a company name: offer "New company" then, not "Add “0301 5550142”".
-  // any script's letters make it a name (an Urdu name gets "Add …" too); a number alone is not offered as a company name
-  const typedName = /\p{L}/u.test(text) ? text.trim() : ''
+  // any script's letters make it a name (an Urdu name gets "Add …" too); a number alone, or a document number (PO-988374), is not
+  const typedName = looksLikeCompanyName(text) ? text.trim() : ''
 
   return (
     <div className="mx-auto grid w-full max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-6 md:px-8">
@@ -143,9 +158,11 @@ export function CompaniesPage() {
           </span>
         }
         primary={
-          <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-            New company
-          </Button>
+          canAdd ? (
+            <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+              New company
+            </Button>
+          ) : undefined
         }
       />
 
@@ -222,13 +239,17 @@ export function CompaniesPage() {
                   >
                     Clear search
                   </Button>
-                  <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-                    {typedName ? `Add “${typedName}”` : 'New company'}
-                  </Button>
+                  {canAdd ? (
+                    <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+                      {typedName ? `Add “${typedName}”` : 'New company'}
+                    </Button>
+                  ) : null}
                 </>
               }
             >
-              Searched companies by name, city, contact and phone number. Check the spelling, or add it as a new company.
+              {canAdd
+                ? 'Searched companies by name, city, contact and phone number. Check the spelling, or add it as a new company.'
+                : 'Searched companies by name, city, contact and phone number. Check the spelling.'}
               {text.trim() && palette ? (
                 <>
                   {' Or '}
@@ -244,12 +265,14 @@ export function CompaniesPage() {
               icon={Building2}
               title="No companies yet"
               actions={
-                <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
-                  New company
-                </Button>
+                canAdd ? (
+                  <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>
+                    New company
+                  </Button>
+                ) : undefined
               }
             >
-              Companies are added when RFQs are logged, or here. Only a name is needed.
+              {canAdd ? 'Companies are added when RFQs are logged, or here. Only a name is needed.' : 'Companies are added when RFQs are logged.'}
             </EmptyState>
           )
         }

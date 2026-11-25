@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { JobRow } from '@/features/jobs/api'
-import { byRecent, chipCounts, defaultChip, inChip, inStage, isLane, isStageFilter, itemsSummary, laneOfJob, mergeMore, normalizePerson, normalizeStage, openJobsOf, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
+import { byRecent, chipCounts, chipFromParams, defaultChip, showingSummary, inChip, inStage, isLane, isStageFilter, itemsSummary, laneOfJob, mergeMore, normalizePerson, normalizeStage, openJobsOf, stagesFor, STAGE_FILTERS, STAGE_LABEL, type StageFilter } from '@/features/jobs/lib/listModel'
 
 const job = (over: Partial<JobRow>): JobRow => ({
   key: '1', kind: 'enquiry', rfqId: 'r', orderId: null, companyId: 'c', companyName: 'Customer', siteName: null, ownerId: 'u1', ownerName: 'A', items: 'x',
@@ -191,5 +191,22 @@ describe('Person filter (admin)', () => {
     ]
     expect(openJobsOf(all, 'u2').map(j => j.key)).toEqual(['3', '1'])
     expect(openJobsOf(all, 'u9')).toEqual([])
+  })
+})
+
+describe('chipFromParams and showingSummary (screen review 2026-11-24, item 14)', () => {
+  it('reads ?chip= first, then the old ?owner= words both ways', () => {
+    expect(chipFromParams('history', 'all')).toBe('history')
+    expect(chipFromParams(null, 'all')).toBe('open')
+    expect(chipFromParams(null, 'mine')).toBe('mine')
+    expect(chipFromParams('nonsense', null)).toBeNull()
+    expect(chipFromParams(null, null)).toBeNull()
+  })
+  it('says the count in plain English, never "mine jobs"', () => {
+    expect(showingSummary(2, 'mine')).toBe('Showing your 2 jobs')
+    expect(showingSummary(1, 'mine')).toBe('Showing your 1 job')
+    expect(showingSummary(5, 'open')).toBe('Showing 5 open jobs')
+    expect(showingSummary(3, 'history')).toBe('Showing 3 jobs in history')
+    expect(showingSummary(2, 'open', 'Hammad', 'To deliver')).toBe('Showing 2 open jobs of Hammad · To deliver')
   })
 })

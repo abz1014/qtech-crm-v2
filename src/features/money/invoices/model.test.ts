@@ -11,6 +11,7 @@ import {
   invoiceStart,
   matchesSearch,
   rangeLabel,
+  registerCountLine,
   registerTotals,
   rowMonth,
   stampable,
@@ -179,5 +180,14 @@ describe('is the month\'s GST return perhaps in? (W11)', () => {
   it('a recorded FBR payment says yes whatever the day, and no date says no', () => {
     expect(gstReturnMayBeFiled('2026-10-12', '2026-10-13', true)).toBe(true)
     expect(gstReturnMayBeFiled(null, '2026-12-31', true)).toBe(false)
+  })
+})
+
+describe('registerCountLine (screen review 2026-11-24, item 14)', () => {
+  it('is the one count: invoices as the totals count them, credit notes and void invoices said apart', () => {
+    const all = [row(), row({ invoiceId: 'i2' }), row({ invoiceId: 'i3' }), row({ invoiceId: 'c1', rowKind: 'credit_note' }), row({ invoiceId: 'v1', voided: true })]
+    expect(registerCountLine(all, all)).toBe('Showing 3 of 3 invoices and 1 credit note and 1 void invoice')
+    expect(registerCountLine(all.slice(0, 1), all)).toBe('Showing 1 of 3 invoices')
+    expect(registerCountLine([row()], [row()])).toBe('Showing 1 of 1 invoice')
   })
 })

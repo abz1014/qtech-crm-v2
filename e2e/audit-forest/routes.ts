@@ -67,12 +67,12 @@ export const AUDIT_ROUTES: readonly AuditRoute[] = [
   // The comparative statement has no page since 2026-11-16 (Excel and PDF downloads on the job page; the old address opens the job).
   { id: 'issue-quotation', path: '/jobs/{fx:pricesIn}?issue=1', roles: AS, dialog: true },
   { id: 'mark-won', path: '/jobs/{fx:quoted}?won=1', roles: AS, dialog: true },
-  { id: 'new-rfq', path: '/enquiries/new', roles: ALL },
+  { id: 'new-rfq', path: '/enquiries/new', roles: AS },
   { id: 'capture', path: '/capture', roles: ALL },
   { id: 'i-paid', path: '/my-expenses', roles: ['sales', 'engineer'] },
   // ---------------------------------------------------------------- Companies
   { id: 'companies', path: '/companies', roles: ALL, wide: true, long: true },
-  { id: 'company-new', path: '/companies?new=1', roles: ALL, dialog: true },
+  { id: 'company-new', path: '/companies?new=1', roles: AS, dialog: true },
   { id: 'company', path: '/companies/{company}', roles: ALL, long: true },
   { id: 'company-fx', path: '/companies/{fx:customer}', roles: ALL, light: true },
   { id: 'supplier', path: '/companies/{supplier}', roles: ALL, long: true },

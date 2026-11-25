@@ -1340,7 +1340,8 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
         <div className="grid min-w-0 gap-4">
           <DetailHeader
             name="New RFQ"
-            back={{ label: 'Sell', to: '/jobs?lane=sell' }}
+            // the way back is a menu the person has: Sell for the office, Jobs for anyone else (an engineer has no Sell)
+            back={user?.role === 'admin' || user?.role === 'sales' ? { label: 'Sell', to: '/jobs?lane=sell' } : { label: 'Jobs', to: '/jobs' }}
             phoneSrOnly
             sub={
               <div className="grid gap-2 md:mt-1">

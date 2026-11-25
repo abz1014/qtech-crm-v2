@@ -45,7 +45,6 @@ export interface RouteSpec {
 
 const AS = ['admin', 'sales'] as const
 const A = ['admin'] as const
-const ALL = ['admin', 'sales', 'engineer'] as const
 const MONTH_REPORTS = ['pnl', 'categories', 'aging', 'owe', 'gst', 'team'] as const
 
 export const ROUTES: readonly RouteSpec[] = [
@@ -61,7 +60,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/rfqs?tab=closed', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/, note: 'old board address: the Jobs list, History' },
   { path: '/rfqs?show=prices', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/ },
   { path: '/rfqs?old=1', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs$/, note: 'the retired switch is dropped' },
-  { path: '/rfqs/new', admin: 'ok', sales: 'ok', engineer: 'ok' },
+  { path: '/rfqs/new', admin: 'ok', sales: 'ok', engineer: 'no', note: 'an engineer starts no RFQ (owner 2026-11-06): the lock screen' },
   { path: '/rfqs/{rfq}', admin: 'ok', sales: 'ok', engineer: 'ok', landsOn: /\/jobs\/\d+$/, note: 'redirects to the Job that holds the RFQ' },
   { path: '/rfqs/{rfq}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation dialog (admin and sales; an engineer gets the page without it)' },
   { path: '/rfqs/{rfq}?won=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Mark won dialog (admin and sales; an engineer gets the page without it)' },
@@ -96,8 +95,8 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/jobs/9999999', admin: 'no', sales: 'no', engineer: 'no', note: 'no such job: the not-found state' },
   { path: '/jobs/{job}/extra', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ Companies
-  { path: '/companies', admin: 'ok', sales: 'ok', engineer: 'ok', openers: [{ name: /^New company$/, roles: ALL }] },
-  { path: '/companies?new=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: New company dialog' },
+  { path: '/companies', admin: 'ok', sales: 'ok', engineer: 'ok', openers: [{ name: /^New company$/, roles: AS }] },
+  { path: '/companies?new=1', admin: 'ok', sales: 'ok', engineer: 'no', note: 'deep link: New company dialog; an engineer gets the lock screen' },
   {
     path: '/companies/{company}',
     admin: 'ok',
@@ -154,7 +153,7 @@ export const ROUTES: readonly RouteSpec[] = [
   { path: '/settings/nope', admin: 'no', sales: 'no', engineer: 'no' },
   // ------------------------------------------------------------------ Capture (share target and sign-in return point)
   // ------------------------------------------------------------------ redesign phase 3 to 5 additions
-  { path: '/enquiries/new', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'New RFQ (one intake page); no price for an engineer' },
+  { path: '/enquiries/new', admin: 'ok', sales: 'ok', engineer: 'no', note: 'New RFQ (one intake page); an engineer gets the lock screen' },
   { path: '/todo/review', admin: 'ok', sales: 'no', engineer: 'no', note: 'the weekly review is admin only' },
   { path: '/my-expenses', admin: 'no', sales: 'ok', engineer: 'ok', note: '"I paid": an engineer or a salesperson records what they paid (their own claims only, 0124)' },
   { path: '/jobs/{job}?issue=1', admin: 'ok', sales: 'ok', engineer: 'ok', note: 'deep link: Issue quotation on the Job page (an engineer gets the page without the dialog)' },
