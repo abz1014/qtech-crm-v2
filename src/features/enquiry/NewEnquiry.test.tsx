@@ -136,6 +136,6 @@ describe('who may start an RFQ (screen review 2026-11-24, item 12)', () => {
     as('sales', '/rfqs/new')
     expect(screen.getByTestId('enquiry-dropzone')).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /Sell/ }).length).toBeGreaterThan(0)
-    expect(await screen.findByRole('button', { name: 'Create job 162' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Create job RFQ-0162' })).toBeInTheDocument()
   })
 })

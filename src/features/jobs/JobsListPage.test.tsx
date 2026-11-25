@@ -167,7 +167,7 @@ describe('Jobs list', () => {
     it('?owner=all picks Open, not Mine; ?owner=mine picks Mine', async () => {
       installFakeDb(fake)
       const { unmount } = mount('sales', '/jobs?owner=all')
-      await waitFor(() => expect(screen.getAllByRole('row', { name: /Job 140/ }).length).toBeGreaterThan(0))
+      await waitFor(() => expect(screen.getAllByRole('row', { name: /RFQ-0140/ }).length).toBeGreaterThan(0))
       expect(screen.getByRole('radio', { name: 'Open' })).toBeChecked()
       expect(screen.getByText('Showing 3 open jobs')).toBeInTheDocument()
       unmount()
