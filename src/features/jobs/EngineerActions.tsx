@@ -58,13 +58,9 @@ function LegDelivered({ order, leg, variant, offline, supplier }: { order: Order
   return (
     <Button size="lg" variant={variant} icon={Truck} className={BIG} disabled={offline} busy={actions.pending} busyLabel="Saving" onClick={() => void actions.doStamp()} aria-label={label}>
       {supplier ? (
-        // Two orders on their way: which supplier, in visible words on a second line (the hidden comma keeps the words one sentence).
-        <span className="grid min-w-0 gap-px">
-          <span>
-            Delivered today<span className="sr-only">, </span>
-          </span>
-          <span className="text-sm font-medium [overflow-wrap:anywhere]">{supplier}</span>
-        </span>
+        // Two orders on their way: which supplier, on a second line. One text node, so the words people see are exactly the
+        // button's name (axe label-content-name-mismatch flagged the old two-span version).
+        <span className="min-w-0 whitespace-pre-line [overflow-wrap:anywhere]">{`Delivered today,\n${supplier}`}</span>
       ) : (
         label
       )}
