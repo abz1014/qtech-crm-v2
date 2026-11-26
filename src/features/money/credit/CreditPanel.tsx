@@ -87,7 +87,7 @@ export function CreditPanel({
             </div>
             {owes ? (
               <p className="text-right text-sm text-fg-2" data-testid="credit-owes">
-                They still owe on their orders. Apply the credit there first. Refund is offered once nothing is due.
+                A balance is still to collect on their orders. Apply the credit there first. Refund is offered once nothing is due.
               </p>
             ) : null}
           </div>

@@ -671,7 +671,7 @@ function ByDetail({ v }: { v: ExpenseReportView }) {
             </span>
           </div>
         )}
-        empty={<EmptyState title="No details typed in this period">Enter a detail when adding an expense (the car, the bill). This list shows what each one cost, across categories.</EmptyState>}
+        empty={<EmptyState title="No details typed in this period">Enter a detail when adding an expense (the car, the office). This list shows what each one cost, across categories.</EmptyState>}
       />
     </div>
   )

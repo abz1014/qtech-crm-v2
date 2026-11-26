@@ -7,7 +7,7 @@ screens: /my-expenses
 related: site-question
 ---
 1. Select your initials at the top, then [I paid].
-2. Enter [How much, PKR]. [What for], the [Job] and [Which visit?] are optional. Today's visit is already selected.
+2. Enter [How much, PKR]. [What for], the [Job] and [Visit] are optional. Today's visit is already selected.
 3. Select [Photo of the receipt] and take the photo.
 4. Select [Send for approval].
 

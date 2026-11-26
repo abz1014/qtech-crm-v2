@@ -89,7 +89,7 @@ export function guessGroupId(typed: string, categories: readonly Category[], gro
 }
 
 /** The label of Detail on a misc ("Other") expense: it is the title, and the database refuses the expense without one (0091). */
-export const MISC_TITLE_LABEL = 'What was it for?'
+export const MISC_TITLE_LABEL = 'What for'
 export const MISC_TITLE_ERROR = 'Write what it was for, e.g. Courier from shop to office'
 
 /** Active "Other" categories, one per group, in the order of their groups. */

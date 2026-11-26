@@ -80,7 +80,7 @@ export const ACCOUNTS_LINKS: readonly { to: string; label: string; hint: string 
   { to: '/money/accounts/gst', label: 'GST to FBR', hint: 'What to pay and what is paid' },
   { to: '/money/month-end/bank', label: 'Bank check', hint: "Tick this month's bank lines" },
   { to: '/money/month-end', label: 'Lock a month', hint: 'Lock a month when it is checked' },
-  { to: '/money/expenses', label: 'Monthly bills', hint: 'Salaries, rent, internet' },
+  { to: '/money/expenses', label: 'Monthly expenses', hint: 'Salaries, rent, internet' },
   { to: '/money/review-imported', label: 'Review imported', hint: 'Decide once what is still open' },
   { to: '/money/reports', label: 'Reports', hint: 'Profit, expenses, late payments' },
   { to: '/settings/categories', label: 'Expense categories', hint: 'Groups, categories, budgets' },

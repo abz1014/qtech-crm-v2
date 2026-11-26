@@ -431,7 +431,7 @@ function AgingBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
         // Below 1536 one column says what is still owed and its age (the four age columns need the room of a wide window; their
         // totals are the summary above).
         id: 'owed',
-        header: 'Still owed',
+        header: 'Still to collect',
         kind: 'money',
         value: r => r.remaining,
         ...whole<AgingRow>(r => r.remaining),
