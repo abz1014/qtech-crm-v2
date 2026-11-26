@@ -319,7 +319,7 @@ function bestReason(row: RankRow, long: boolean, showPkr: boolean): Reason {
   // Every quote in one currency: the claim needs no conversion.
   if (!b.pkr) {
     if (!long) return reason('price', 'best', [t('Best price')])
-    return reason('price', 'best', [t(`Best price: ${row.currency} ${formatAmount(row.price, 'auto')} each, every quote is in ${row.currency}`)])
+    return reason('price', 'best', [t(`Best price: ${row.currency} ${formatAmount(row.price, 'auto')} each, every supplier price is in ${row.currency}`)])
   }
   // Ranked on PKR at today's rate: said only when the person asked for PKR.
   if (!showPkr) return ownPriceReason(row)

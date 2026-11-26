@@ -351,13 +351,13 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     expect(await axeViolations(page)).toEqual([])
   })
 
-  test('quote first: Attach our quote saves the quote with the job files, marks it sent, and the job waits for the order', async ({ page }) => {
+  test('quote first: Attach our quotation saves the quotation with the job files, marks it sent, and the job waits for the order', async ({ page }) => {
     const f = await seed()
     const rfq = await createRfq(f.company.id, { customer_ref: `${f.ref}-Q`, due_on: karachiDay(7) })
     await must(rest('admin', 'rfq_items', { method: 'POST', body: { rfq_id: rfq.id, position: 0, description: 'Pressure switch', qty: 2 }, prefer: 'return=minimal' }))
     await openAs(page, 'sales', `/jobs/${rfq.number}`)
     await expect(page.locator('[data-stage-block]')).toContainText('Send the quotation')
-    // the green button opens Issue quotation on the Quotation stage. Closed, the stage stays open with Attach our quote beside it
+    // the green button opens Issue quotation on the Quotation stage. Closed, the stage stays open with Attach our quotation beside it
     await page.getByRole('button', { name: 'Send quotation' }).click()
     await expect(page.getByRole('dialog', { name: 'Issue quotation' })).toBeVisible()
     await page.keyboard.press('Escape')
@@ -366,7 +366,7 @@ test.describe('Job page (P5-C, P5-D1)', () => {
     await panel.scrollIntoViewIfNeeded()
     await expect(panel.getByRole('button', { name: 'Issue quotation' })).toBeVisible()
     await panel.getByTestId('attach-quote-input').setInputFiles({ name: 'QTS-test-quote.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 test quote') })
-    await expect(page.getByRole('status').filter({ hasText: 'Quote attached and marked sent' })).toBeVisible()
+    await expect(page.getByRole('status').filter({ hasText: 'Quotation attached and marked sent' })).toBeVisible()
     await expect.poll(async () => (await must(rest<{ quoted_on: string | null }[]>('admin', `rfqs?id=eq.${rfq.id}&select=quoted_on`)))[0].quoted_on).toBe(karachiDay())
     const files = await must(rest<{ file_name: string; has_prices: boolean }[]>('admin', `attachments?rfq_id=eq.${rfq.id}&select=file_name,has_prices`))
     expect(files).toEqual([{ file_name: 'QTS-test-quote.pdf', has_prices: true }])

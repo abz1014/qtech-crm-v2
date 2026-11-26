@@ -5,7 +5,7 @@ import { axeViolations } from '../support/axe'
 /*
  * Forest lane A4 (Money hub; 50-money-hub, 51-to-collect, 52-payments): the Money home hero, the new Payments list (owner gate 2,
  * 13 Nov 2026: one read of payments_in, every paid via, voided ones left out, one month at a time, admin only) and Record payment
- * with no order, which asks "Which order?" first (F-287, F-642). Against the local CI stack, through the real login form.
+ * with no order, which asks "Choose the order" first (F-287, F-642). Against the local CI stack, through the real login form.
  */
 const today = () => karachiDay(0)
 const ref = (n: number) => `ORD-${String(n).padStart(4, '0')}`
@@ -57,10 +57,10 @@ test('Payments lists this month\'s payments, bank and cash, without the voided o
   await expect(rows).toHaveCount(2)
 })
 
-test('Record payment with no order asks "Which order?", then opens the form for the picked order and saves', async ({ page }) => {
+test('Record payment with no order asks "Choose the order", then opens the form for the picked order and saves', async ({ page }) => {
   const order = await seedOrder(10000)
   await openAs(page, 'admin', '/money/receivables?pay=1')
-  const pick = page.getByRole('dialog', { name: 'Which order?' })
+  const pick = page.getByRole('dialog', { name: 'Choose the order' })
   await expect(pick).toBeVisible()
   await expect(pick).toContainText('Record payment, step 1 of 2')
   await pick.getByRole('textbox', { name: 'Search open orders' }).fill(order.company.name)
@@ -81,7 +81,7 @@ test('Record payment with no order asks "Which order?", then opens the form for 
 test('Payments page: Record payment opens the same picker; Cancel closes it and records nothing', async ({ page }) => {
   await openAs(page, 'admin', '/money/payments')
   await page.getByRole('button', { name: 'Record payment' }).click()
-  const pick = page.getByRole('dialog', { name: 'Which order?' })
+  const pick = page.getByRole('dialog', { name: 'Choose the order' })
   await expect(pick).toBeVisible()
   await pick.getByRole('button', { name: 'Cancel' }).click()
   await expect(pick).toBeHidden()
@@ -99,7 +99,7 @@ for (const [label, size] of [['desktop', { width: 1440, height: 900 }], ['phone'
     await page.setViewportSize(size)
     await openAs(page, 'admin', '/money')
     const blocks = page.getByTestId('money-blocks')
-    await expect(blocks.getByRole('heading', { name: /Customers still owe us|Nothing to collect/ })).toBeVisible()
+    await expect(blocks.getByRole('heading', { name: /Due from customers|Nothing to collect/ })).toBeVisible()
     await expect(blocks.getByRole('link', { name: 'Open To collect' })).toHaveAttribute('href', '/money/receivables')
     await expect(blocks.getByRole('link')).toHaveCount(4)
     // nothing runs off the side of a phone

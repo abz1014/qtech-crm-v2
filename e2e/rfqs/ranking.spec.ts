@@ -196,7 +196,7 @@ test.describe('R25 supplier prices on the RFQ page: listed by name, nothing mark
     await expect(art.locator('li[data-lowest], li[data-recommended]')).toHaveCount(0)
     await expect(art.getByText('Recommended')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Show details for / })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'How are prices shown?' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'How prices are shown' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Show in PKR' })).toHaveCount(0)
     await expect(art.getByText(/Cheapest/)).toHaveCount(0)
 

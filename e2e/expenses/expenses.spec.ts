@@ -262,7 +262,7 @@ test.describe('expenses (M03, M11)', () => {
     const amt = 1500 + Math.floor(Math.random() * 900)
     const note = `Site taxi ${amt}`
     await openAs(page, 'engineer', '/my-expenses')
-    const which = page.getByRole('combobox', { name: /Which visit/ })
+    const which = page.getByRole('combobox', { name: /^Visit/ })
     // The page chooses today's visit only when the engineer has exactly ONE visit today. This engineer is shared with other specs (visits-multi
     // adds a visit for today too, and a loaded runner interleaves them), so the default can legitimately be "No visit". Wait for the options,
     // and choose it by hand when the page did not (the app is right; the old line failed whenever another spec's visit landed first).

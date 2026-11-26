@@ -8,7 +8,7 @@ import { MyClaimsPage } from '@/features/money/expenses/MyClaimsPage'
 import { installFakeDb, opArgs, type FakeCall } from '@/test/fakeSupabase'
 import { ToastProvider } from '@/ui/Toast'
 
-/* 0136 "Which visit?": an engineer's claim can name one of their visits; today's visit is already chosen; the order follows the visit. */
+/* 0136 "Visit": an engineer's claim can name one of their visits; today's visit is already chosen; the order follows the visit. */
 const ME = 'u-eng'
 const TODAY = businessToday()
 
@@ -38,14 +38,14 @@ afterEach(() => installFakeDb(() => ({})).uninstall())
 
 const claimUpserts = (db: ReturnType<typeof installFakeDb>) => db.calls.filter(c => c.target === 'expense_claims' && c.verb === 'upsert')
 
-describe('I paid: Which visit?', () => {
+describe('I paid: Visit', () => {
   it("has the engineer's visit of today already chosen, with its job, and sends the claim with that visit", async () => {
     const user = userEvent.setup()
     const db = setup([
       { id: 'v-today', order_id: 'o-42', visit_type: 'survey', visit_on: TODAY },
       { id: 'v-old', order_id: 'o-7', visit_type: 'installation', visit_on: '2026-01-05' },
     ])
-    const visit = await screen.findByRole('combobox', { name: /Which visit/ })
+    const visit = await screen.findByRole('combobox', { name: /^Visit/ })
     await waitFor(() => expect(visit).toHaveValue('v-today'))
     expect(screen.getByRole('combobox', { name: /^Job/ })).toHaveValue('o-42')
     await user.type(screen.getByRole('textbox', { name: 'How much, PKR' }), '350')
@@ -57,7 +57,7 @@ describe('I paid: Which visit?', () => {
   it('chooses none when there is no visit today, and the person can pick an older one, which sets its job', async () => {
     const user = userEvent.setup()
     const db = setup([{ id: 'v-old', order_id: 'o-7', visit_type: 'installation', visit_on: '2026-01-05' }])
-    const visit = await screen.findByRole('combobox', { name: /Which visit/ })
+    const visit = await screen.findByRole('combobox', { name: /^Visit/ })
     expect(visit).toHaveValue('')
     await user.selectOptions(visit, 'v-old')
     expect(screen.getByRole('combobox', { name: /^Job/ })).toHaveValue('o-7')
@@ -70,7 +70,7 @@ describe('I paid: Which visit?', () => {
   it('a claim for another job leaves no visit named', async () => {
     const user = userEvent.setup()
     const db = setup([{ id: 'v-today', order_id: 'o-42', visit_type: 'service', visit_on: TODAY }])
-    const visit = await screen.findByRole('combobox', { name: /Which visit/ })
+    const visit = await screen.findByRole('combobox', { name: /^Visit/ })
     await waitFor(() => expect(visit).toHaveValue('v-today'))
     await user.selectOptions(screen.getByRole('combobox', { name: /^Job/ }), 'o-7')
     expect(visit).toHaveValue('')
@@ -83,6 +83,6 @@ describe('I paid: Which visit?', () => {
   it('shows no visit box to a person with no visits', async () => {
     setup([])
     await screen.findByRole('textbox', { name: 'How much, PKR' })
-    await waitFor(() => expect(screen.queryByRole('combobox', { name: /Which visit/ })).toBeNull())
+    await waitFor(() => expect(screen.queryByRole('combobox', { name: /^Visit/ })).toBeNull())
   })
 })

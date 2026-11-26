@@ -399,7 +399,7 @@ export function suggestSuppliers(items: readonly SuggestionItem[], history: Supp
       tier = supplied.some((s) => s.row.best_tier === 0) ? 'same model' : tier
     }
     const demoted = isDemoted(history.recentAsks?.[sup.id])
-    if (demoted) reason += ' · no offer on 2 of the last 3 asks'
+    if (demoted) reason += ' · cannot quote on 2 of the last 3 RFQs'
     reason += '.'
 
     // The memory rows of the items this supplier was suggested for (any tier: a brand or family order is evidence too).

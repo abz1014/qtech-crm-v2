@@ -132,7 +132,7 @@ function LockBar({ month, entry }: { month: string; entry?: ClosedMonth }) {
     <div data-testid="lock-bar" className="flex flex-wrap items-start gap-x-3 gap-y-1 rounded-card bg-tone-info-bg px-card py-4 text-base text-tone-info-fg">
       <Icon icon={Lock} className="mt-1 shrink-0" />
       <p className="min-w-0 flex-[1_1_20rem] text-fg">
-        <b className="font-bold">{monthKeyLabel(month)} is locked.</b> Payments, expenses and invoices dated in {name} are frozen.{' '}
+        <b className="font-bold">{monthKeyLabel(month)} is locked.</b> Payments, expenses and invoices dated in {name} can no longer be changed.{' '}
         <span className="text-fg-2">Bank matching and the sent-to-customer and FBR dates stay open.</span>
         {entry ? (
           <span className="block text-sm text-fg-2" data-testid="lock-bar-who">
@@ -188,7 +188,7 @@ function Hero({ ctx, extra }: { ctx: MonthEndCtx; extra: number }) {
   const tip = (
     <InfoTip label="About locking a month" align="end">
       {state?.kind === 'not-ended' ? <>{name} can be locked once it has ended. </> : null}
-      Locking freezes payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. It can be reopened at any time. Both actions are written to the audit log. Months lock one at a time, oldest first, and only while they are on screen.
+      Locking stops changes to payments, expenses and invoices dated in {name}. Bank matching and the sent-to-customer and FBR dates stay open. It can be reopened at any time. Both actions are written to the audit log. Months lock one at a time, oldest first, and only while they are on screen.
     </InfoTip>
   )
   return (

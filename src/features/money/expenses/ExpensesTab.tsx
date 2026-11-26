@@ -184,7 +184,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                     <span className="num text-sm text-fg-2">{`${totals.count} ${totals.count === 1 ? 'expense' : 'expenses'}${filtered ? ' shown' : ''}`}</span>
                     {hiddenCounted.length > 0 ? <span className="num text-sm text-fg-2" data-testid="expenses-archived-note">{`(${hiddenCounted.length} in the Archive, not listed)`}</span> : null}
                     <InfoTip label="About this total" className="self-center">
-                      What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or cash in hand). A monthly bill paid this month for last month is in this total. The Expenses report counts it in the month it is for.
+                      What was paid in {monthKeyLabel(month)}, by the day paid, GST paid on purchases included (what left the bank or cash in hand). A monthly expense paid this month for last month is in this total. The Expenses report counts it in the month it is for.
                       {totals.inputTax > 0 ? ` GST paid on purchases, ${pkr(totals.inputTax)} of it, is claimed back, so the cost is ${pkr(totals.cost)}.` : ''}
                     </InfoTip>
                   </span>

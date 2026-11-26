@@ -1205,9 +1205,9 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
                 <h2 id="h-sup" className="type-section">
                   Suppliers
                 </h2>
-                <InfoTip label="How is this list ordered?">
+                <InfoTip label="How this list is ordered">
                   Suppliers who deal in the item's category come first, then those who carry its brand. Inside a group: how often we have ordered, how often they
-                  answered in this category, then overall, then the most recent contact. A supplier that said no offer on 2 of its last 3 asks goes last.
+                  answered in this category, then overall, then the most recent contact. A supplier that could not quote on 2 of its last 3 RFQs goes last.
                   Only suppliers who supplied these items before start ticked.
                 </InfoTip>
               </span>

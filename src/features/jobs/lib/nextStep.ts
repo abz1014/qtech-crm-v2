@@ -60,7 +60,7 @@ function stepFor({ stage, stageDetail: d, role }: NextInput): JobNext {
   const office = role === 'engineer'
   switch (stage) {
     // Quote first (owner, 24 Nov): asking suppliers in the CRM is optional, so a new or half-asked enquiry's step is the quotation.
-    // The button opens Issue quotation (typed prices are fine). Attach our quote sits beside it in the Quotations panel.
+    // The button opens Issue quotation (typed prices are fine). Attach our quotation sits beside it in the Quotations panel.
     case 'enquiry':
     case 'asking_suppliers':
       if (office) return { text: 'Office is preparing the quotation', tone: 'inert', button: null, on: null }

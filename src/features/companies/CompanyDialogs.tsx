@@ -118,7 +118,7 @@ function EditBody({ onOpenChange, company }: { onOpenChange: (o: boolean) => voi
         {codes ? (
           <FormField
             name="quote_code"
-            label="Quote code"
+            label="Quotation code"
             requirement="optional"
             help={`Printed in quotation numbers, for example QTS-${company.quoteCode ?? suggestQuoteCode(company.name)}-4810. 2 to 6 letters.`}
           >

@@ -14,7 +14,7 @@ import { ToastProvider } from '@/ui/Toast'
 
 /*
  * Archive on receivables: the To collect LIST and the To collect figures drop archived orders (owner decision 18 Nov 2026: the server's
- * receivables_summary leaves them out, and the page's own Not invoiced / Imported tiles count the live rows only); the pickers (Which order?,
+ * receivables_summary leaves them out, and the page's own Not invoiced / Imported tiles count the live rows only); the pickers (Choose the order,
  * Apply credit, the refund order) keep every order and tag the archived ones "In Archive". Archived ids come from v_order_state only.
  */
 const ROWS = [
@@ -135,11 +135,11 @@ describe('To collect page', () => {
   })
 })
 
-describe('Which order? picker', () => {
+describe('Choose the order picker', () => {
   it('offers the archived order too, tagged In Archive', async () => {
     const user = userEvent.setup()
     at('/money/receivables?pay=1')
-    const pick = await screen.findByRole('dialog', { name: 'Which order?' })
+    const pick = await screen.findByRole('dialog', { name: 'Choose the order' })
     const list = await within(pick).findByRole('list', { name: 'Open orders' })
     const buttons = within(list).getAllByRole('button')
     expect(buttons).toHaveLength(2)

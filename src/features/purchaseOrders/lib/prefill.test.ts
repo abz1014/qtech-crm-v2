@@ -27,7 +27,7 @@ describe('PO line prices and their sources (O07)', () => {
   it('words each of the four sources the way the dialog shows them', () => {
     expect(sourceText(order, {}, TODAY)).toEqual({ chip: 'order', detail: 'Agreed on the order' })
     expect(sourceText(lastPo, {}, TODAY)).toEqual({ chip: 'last PO', detail: 'PO-26-0009, 14 Aug 2026' })
-    expect(sourceText(quote, {}, TODAY)).toEqual({ chip: 'quote', detail: 'Their supplier price, RFQ-0162, 11 Oct' })
+    expect(sourceText(quote, {}, TODAY)).toEqual({ chip: 'supplier price', detail: 'Their supplier price, RFQ-0162, 11 Oct' })
     expect(sourceText(typed, {}, TODAY)).toEqual({ chip: 'typed', detail: 'Type a price' })
     expect(sourceText(typed, { i4: 18.5 }, TODAY)).toEqual({ chip: 'typed', detail: 'Entered manually, check it' })
   })

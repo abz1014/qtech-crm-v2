@@ -150,7 +150,7 @@ export function QuotationsPanel({ rfq, inquiries, itemCount }: { rfq: RfqHeader;
               ? 'Nothing issued yet. Sales issue the quotation.'
               : rfq.quotedOn
                 ? `Quotation sent on ${formatDay(rfq.quotedOn)}, made outside the CRM. The file is in Notes and files.`
-                : 'Nothing sent yet. Issue quotation makes the PDF here, with a price typed for each item or taken from a supplier reply. Attach our quote saves a quote made outside the CRM and marks it sent.'}
+                : 'Nothing sent yet. Issue quotation makes the PDF here, with a price typed for each item or taken from a supplier reply. Attach our quotation saves a quotation made outside the CRM and marks it sent.'}
           </p>
           {prices && isOpen ? (
             <div className="flex flex-wrap gap-2">

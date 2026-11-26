@@ -22,7 +22,7 @@ export const QUOTE_ACCEPT = [
 ] as const
 
 /*
- * "Attach our quote" (quote first, owner 24 Nov 2026): the quotation was made outside the CRM, so the file we sent the customer is
+ * "Attach our quotation" (quote first, owner 24 Nov 2026): the quotation was made outside the CRM, so the file we sent the customer is
  * saved with the job's files (tagged with prices, so an engineer never sees it) and the quotation is marked sent today, the same
  * as More, Mark quotation sent. The job then waits for the customer's order. A second file only adds the file.
  */
@@ -40,28 +40,28 @@ export function AttachQuote({ rfq }: { rfq: RfqHeader }) {
     try {
       const [taken] = await intakeFiles([file], { accept: QUOTE_ACCEPT })
       if (!taken || taken.error) {
-        toast({ title: 'The quote was not attached', body: `${file.name}: ${taken?.error ?? 'it could not be read.'}`, tone: 'danger' })
+        toast({ title: 'The quotation was not attached', body: `${file.name}: ${taken?.error ?? 'it could not be read.'}`, tone: 'danger' })
         return
       }
       await upload.mutateAsync({ clarificationId: null, file: taken.file, path: attachmentPath(rfq.id, crypto.randomUUID(), taken.file.name, taken.file.type) })
       if (rfq.quotedOn) {
-        toast({ title: 'Quote attached', body: `${taken.file.name} · ${ref}`, tone: 'success' })
+        toast({ title: 'Quotation attached', body: `${taken.file.name} · ${ref}`, tone: 'success' })
         return
       }
       await bid.mutateAsync(businessToday())
       toast({
-        title: 'Quote attached and marked sent',
+        title: 'Quotation attached and marked sent',
         body: `${taken.file.name} · ${ref}`,
         undo: {
           onUndo: async () => {
             await bid.mutateAsync(null)
           },
-          settledTitle: 'Quote attached and marked sent',
-          undoneTitle: 'Quote kept in the files, not marked sent',
+          settledTitle: 'Quotation attached and marked sent',
+          undoneTitle: 'Quotation kept in the files, not marked sent',
         },
       })
     } catch (err) {
-      toast({ title: 'Could not attach the quote', body: mapPgError(err, { entity: 'file' }).message, tone: 'danger' })
+      toast({ title: 'Could not attach the quotation', body: mapPgError(err, { entity: 'file' }).message, tone: 'danger' })
     } finally {
       setSending(false)
     }
@@ -84,7 +84,7 @@ export function AttachQuote({ rfq }: { rfq: RfqHeader }) {
         }}
       />
       <Button variant="secondary" icon={Paperclip} busy={sending} busyLabel="Attaching" onClick={() => input.current?.click()}>
-        Attach our quote
+        Attach our quotation
       </Button>
     </>
   )

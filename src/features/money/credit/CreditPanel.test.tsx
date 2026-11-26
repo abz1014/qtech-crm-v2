@@ -64,7 +64,7 @@ describe('Credit balance panel', () => {
     const panel = await screen.findByRole('region', { name: 'Credit balance' })
     expect(within(panel).queryByRole('button', { name: 'Refund' })).toBeNull()
     expect(within(panel).getByRole('button', { name: /Apply to an order/ })).toBeInTheDocument()
-    expect(within(panel).getByTestId('credit-owes')).toHaveTextContent('They still owe on their orders. Apply the credit there first.')
+    expect(within(panel).getByTestId('credit-owes')).toHaveTextContent('A balance is still to collect on their orders. Apply the credit there first.')
   })
 
   it('is not asked for and not drawn for anyone but the admin', async () => {
