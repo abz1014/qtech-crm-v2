@@ -223,10 +223,11 @@ export const Combobox = forwardRef<HTMLInputElement, ComboboxProps>(function Com
                   {o.meta ? <span className="min-w-0 truncate text-xs text-fg-muted" title={o.meta}>{o.meta}</span> : null}
                 </span>
               ) : (
-                <>
-                  <span className="line-clamp-2 min-w-0 [overflow-wrap:anywhere]" title={o.label}>{o.label}</span>
-                  {o.meta ? <span className="shrink-0 text-xs text-fg-muted">{o.meta}</span> : null}
-                </>
+                // On a phone the meta goes under the name, so the name has the row's full width and is not cut beside it.
+                <span className="flex min-w-0 flex-1 items-center gap-3 max-md:flex-col max-md:items-start max-md:gap-0">
+                  <span className="line-clamp-2 min-w-0 flex-1 [overflow-wrap:anywhere]" title={o.label}>{o.label}</span>
+                  {o.meta ? <span className="shrink-0 text-xs text-fg-muted max-md:shrink max-md:truncate max-md:max-w-full">{o.meta}</span> : null}
+                </span>
               )}
             </li>
           ))}
