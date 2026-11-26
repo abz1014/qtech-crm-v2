@@ -8,6 +8,7 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { Icon } from '@/ui/Icon'
 import { SegmentedControl } from '@/ui/SegmentedControl'
 import { TextField } from '@/ui/form/TextField'
+import { SpecText } from '@/ui/SpecText'
 import type { InquiryRow, RfqItemRow } from '@/features/rfqs/api'
 import { DetailPanel } from '@/features/rfqs/DetailPanel'
 import { qtyText } from '@/features/rfqs/lib/enquiryDraft'
@@ -273,7 +274,7 @@ export function CoverageBoard({
                       <span role="rowheader" className="sticky left-0 z-base grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 border-b border-r bg-surface px-4 py-2">
                         <span className="num mt-px grid h-6 min-w-6 place-items-center rounded-round border border-line-strong px-1 text-sm font-medium">{it.number}</span>
                         <span className="min-w-0">
-                          <span title={it.description} className="line-clamp-2 max-w-[16rem] text-base font-medium [overflow-wrap:anywhere]">{it.description}</span>
+                          <span title={it.description} className="line-clamp-2 max-w-[16rem] text-base font-medium [overflow-wrap:anywhere]"><SpecText>{it.description}</SpecText></span>
                           <span className="block text-sm text-fg-muted">{[it.brandName, q && `Qty ${q}`].filter(Boolean).join(' · ')}</span>
                         </span>
                       </span>
@@ -318,7 +319,7 @@ function ItemAnswers({ item, inquiries, onClose }: { item: RfqItemRow; inquiries
   return (
     <Dialog open onOpenChange={o => (o ? null : onClose())}>
       <DialogContent title={`Item ${item.number}`} context={[item.brandName, q && `Qty ${q}`].filter(Boolean).join(' · ')} placement="side">
-        <p className="text-base font-medium [overflow-wrap:anywhere]" data-item-text>{item.description}</p>
+        <p className="text-base font-medium [overflow-wrap:anywhere]" data-item-text><SpecText>{item.description}</SpecText></p>
         <p className="mt-3 text-sm text-fg-muted">{prices ? 'Suppliers in A to Z order. Prices are not ranked.' : 'Suppliers in A to Z order.'}</p>
         <ul className="mt-2 divide-y" data-item-answers={item.id}>
           {rows.map(i => {

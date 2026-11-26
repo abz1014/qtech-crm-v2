@@ -90,7 +90,9 @@ import {
  */
 const NO_DETAILS: readonly DetailUse[] = []
 const PHOTO_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif']
-const GRID = 'grid grid-cols-[28px_minmax(88px,112px)_minmax(0,1.25fr)_minmax(120px,176px)_minmax(88px,104px)_minmax(0,1.3fr)_minmax(96px,124px)_minmax(88px,104px)_minmax(96px,120px)_36px] items-start gap-x-3 gap-y-2 px-6'
+// The category column takes the larger share and never goes under 12.5rem, so a long name ("Office supplies & snacks") is read whole
+// in its field from 1366 (screen review 26: it was cut to "Office supplies & snac..."); the detail field gives up the room.
+const GRID = 'grid grid-cols-[28px_minmax(88px,112px)_minmax(12.5rem,1.6fr)_minmax(120px,152px)_minmax(88px,104px)_minmax(6rem,1fr)_minmax(96px,124px)_minmax(88px,104px)_minmax(96px,120px)_36px] items-start gap-x-3 gap-y-2 px-6'
 
 const NO_JOBS: readonly JobTagOption[] = []
 const NO_GROUPS: readonly ExpenseGroup[] = []

@@ -89,7 +89,7 @@ describe('Job page', () => {
     expect(within(track).getAllByRole('listitem')).toHaveLength(7)
     expect(within(track).getByRole('listitem', { current: 'step' })).toHaveTextContent(/^Supplier order, now/)
     // the way back is the lane the job is in (Supplier order is Deliver), and the owner line sits under the title
-    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Deliver' })).toHaveAttribute('href', '/jobs?lane=deliver')
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Back to Deliver' })).toHaveAttribute('href', '/jobs?lane=deliver')
     expect(container.querySelector('[data-job-owner]')).toHaveTextContent(/^Owner /)
     expect([...container.querySelectorAll('button.bg-primary, button.bg-lime-300')]).toHaveLength(1)
     // the steps are one hairline list, in their natural order, all closed; the one the job is at is marked by its state word, not opened
@@ -125,7 +125,7 @@ describe('Job page', () => {
     expect(money).toHaveTextContent('No money yet: no quotation has been sent.')
     expect(money).not.toHaveTextContent('Loading')
     // an RFQ with no order is in Sell, as the Jobs list puts it (laneOfJob)
-    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Sell' })).toHaveAttribute('href', '/jobs?lane=sell')
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Back to Sell' })).toHaveAttribute('href', '/jobs?lane=sell')
   })
 
   it('sales and engineers see no Money card on an enquiry-stage job', async () => {
@@ -148,7 +148,7 @@ describe('Job page', () => {
     expect(hero).toHaveTextContent(/^Where it stands/)
     expect(within(hero).queryByRole('button')).toBeNull()
     expect(within(screen.getByRole('list', { name: 'Stages of this job' })).getAllByRole('listitem').map(li => li.textContent?.replace(/,.*$/, ''))).toEqual(['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Billing', 'Payment'])
-    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Jobs' })).toHaveAttribute('href', '/jobs')
+    expect(within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', { name: 'Back to Jobs' })).toHaveAttribute('href', '/jobs')
     // Billing and Payment read "With the office", whatever the job's money
     expect(stagesOf(container).getByRole('button', { name: /Billing/ })).toHaveTextContent('With the office')
     expect(stagesOf(container).getByRole('button', { name: /^Payment/ })).toHaveTextContent('With the office')

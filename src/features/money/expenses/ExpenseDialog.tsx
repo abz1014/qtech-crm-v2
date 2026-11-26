@@ -45,7 +45,6 @@ import { forMonthChoices, isMonthlyBill, linkMonthlyBills } from '@/features/mon
 import { Checkbox } from '@/ui/form/Checkbox'
 import { InputTax } from '@/features/money/expenses/InputTax'
 import { clearExpenseDraft, expenseDraftKey, loadExpenseDraft, saveExpenseDraft } from '@/features/money/expenses/addDraft'
-import { FIELD } from '@/features/money/expenses/Panel'
 import {
   MISC_TITLE_ERROR,
   MISC_TITLE_LABEL,
@@ -432,7 +431,7 @@ function ExpenseFormReady({
             <div className="grid min-w-0 content-start gap-2">
               <span className="text-sm font-bold text-fg">Payee</span>
               <div className="flex h-control min-w-0 items-center justify-between gap-2 rounded-row border border-line-strong bg-sunken px-3 text-sm text-fg-2" role="group" aria-label="Payee, from the supplier order">
-                <span className="truncate">
+                <span className="truncate" title={context?.payeeName ?? undefined}>
                   {context?.payeeName}
                 </span>
                 <Icon icon={Lock} className="text-fg-muted" />
@@ -447,19 +446,14 @@ function ExpenseFormReady({
         {showFor && paidOnNow ? (
           <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-sunken px-3 py-3 text-base">
             <span className="font-bold">This bill is for</span>
-            <select
+            {/* the app's Select, as every other list in this dialog (screen review 27: this one was the bare browser select) */}
+            <Select
               value={forChoice ?? expense?.period ?? forMonthOf(paidOnNow, categoryId)}
               onChange={e => setForChoice(e.target.value)}
-              className={FIELD}
-            >
-              {forMonthChoices(paidOnNow)
-                .concat(expense?.period && !forMonthChoices(paidOnNow).some(o => o.value === expense.period) ? [{ value: expense.period, label: expense.period }] : [])
-                .map(o => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-            </select>
+              options={forMonthChoices(paidOnNow).concat(
+                expense?.period && !forMonthChoices(paidOnNow).some(o => o.value === expense.period) ? [{ value: expense.period, label: expense.period }] : [],
+              )}
+            />
             <span className="text-fg-2">Reports count it in that month.</span>
           </label>
         ) : null}

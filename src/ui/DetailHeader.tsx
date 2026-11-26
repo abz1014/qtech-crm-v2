@@ -1,17 +1,15 @@
 import { Children, Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Breadcrumb, type Crumb } from '@/ui/Breadcrumb'
-import { buttonStyles } from '@/ui/buttonStyles'
-import { Icon } from '@/ui/Icon'
+import { BackLink } from '@/ui/BackLink'
 
 /*
  * DetailHeader (round-2 spec 5.3, with the coordinator's decision): the head of a detail page (RFQ, Order, Company).
  *
- *   Breadcrumb (md+): Section › CODE, the default muted style; or, with `back`, the Forest way back (30-job-page, 71-company-page):
- *   one outline button "← Deliver" left of the title, the title's lines (h1, `sub`, chips, meta) beside it. It is still the
- *   page's Breadcrumb navigation, so a screen reader finds the way back where it was.
+ *   Breadcrumb (md+): Section › CODE, the default muted style; or, with `back`, the one way back every page uses (BackLink,
+ *   "< Deliver") above the title (screen review 27: this was an outline button beside the title, Money had a text link). It is
+ *   still the page's Breadcrumb navigation, so a screen reader finds the way back where it was.
  *   Row: [h1 = NAME (optionally a link: the company on RFQ and Order) + CODE as `num text-lg font-medium text-fg-muted`,
  *         the code hidden below md (the phone bar shows it)]   [right: the "More" menu only]
  *   Chip row (mt-2): at most 2 StatusBadges, never inside the h1
@@ -32,7 +30,7 @@ export interface DetailHeaderProps {
   code?: string
   /** md and up. Default style; identifiers `mono`. Not drawn when `back` is given. */
   breadcrumb?: readonly Crumb[]
-  /** md and up: the way back as an outline button left of the title (Forest). A phone has the bar's back arrow. */
+  /** md and up: the way back (BackLink) above the title. A phone has the bar's back arrow. */
   back?: { label: string; to: string }
   /** A line under the h1, in the title's column (the Job page's "Owner Omar · Lahore"). */
   sub?: ReactNode
@@ -42,8 +40,7 @@ export interface DetailHeaderProps {
   chips?: ReactNode
   /** At most 5 short items, joined with "·". Falsy items are skipped. */
   meta?: readonly ReactNode[]
-  /** One more line in the title's column, under the meta (a supplier's record line, "Last changed"): it lines up with the h1,
-   *  never with the back button (audit 2). */
+  /** One more line under the meta (a supplier's record line, "Last changed"): it lines up with the h1 (audit 2). */
   line?: ReactNode
   /** Under the header lines: the page's NextStepBox, then at most one facts strip. */
   children?: ReactNode
@@ -71,20 +68,21 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, back, sub, more
     if (items.length > 5) throw new Error(`DetailHeader: at most 5 meta items (got ${items.length}).`)
   }
   return (
-    // With `back`: from 768 px a two-column grid, the button in the first column beside every title line; children span both.
-    <header className={cn('grid grid-cols-[minmax(0,1fr)]', back && 'md:grid-cols-[auto_minmax(0,1fr)] md:gap-x-4', className)}>
+    <header className={cn('grid grid-cols-[minmax(0,1fr)]', className)}>
       {back ? (
-        <nav aria-label="Breadcrumb" className="row-span-4 self-start max-md:hidden">
-          <Link to={back.to} className={buttonStyles({ variant: 'secondary' })}>
-            <Icon icon={ArrowLeft} />
-            {back.label}
-          </Link>
+        <nav aria-label="Breadcrumb" className="mb-2 grid max-md:hidden">
+          <BackLink to={back.to} label={back.label} />
         </nav>
       ) : breadcrumb?.length ? (
         <Breadcrumb items={breadcrumb} className="mb-2 max-md:hidden" />
       ) : null}
-      <div className={cn('flex items-start justify-between gap-4', back && 'md:min-h-control md:items-center', phoneSrOnly && 'max-md:sr-only max-md:focus-within:not-sr-only')}>
-        <h1 className="min-w-0 text-2xl font-heavy tracking-tight text-pretty [overflow-wrap:anywhere] max-md:text-xl">
+      <div className={cn('flex items-start justify-between gap-4', phoneSrOnly && 'max-md:sr-only max-md:focus-within:not-sr-only')}>
+        {/* A very long name stops at three lines (a 300-character company ran 8 lines at 320 px: screen review 26); the whole name is
+            the hover title and what a screen reader reads. A name that is a link is not clamped: the clip would cut its focus ring. */}
+        <h1
+          className={cn('min-w-0 text-2xl font-heavy tracking-tight text-pretty [overflow-wrap:anywhere] max-md:text-xl', !nameHref && 'line-clamp-3')}
+          title={!nameHref && typeof name === 'string' ? name : undefined}
+        >
           {nameHref ? (
             <Link to={nameHref} className="rounded-control underline-offset-4 hover:underline">
               {name}
@@ -121,8 +119,8 @@ export function DetailHeader({ name, nameHref, code, breadcrumb, back, sub, more
           </span>
         </p>
       ) : null}
-      {line ? <div className={cn('grid min-w-0 grid-cols-[minmax(0,1fr)]', back && 'md:col-start-2')}>{line}</div> : null}
-      {back && children ? <div className="grid grid-cols-[minmax(0,1fr)] md:col-span-2">{children}</div> : children}
+      {line ? <div className="grid min-w-0 grid-cols-[minmax(0,1fr)]">{line}</div> : null}
+      {children}
     </header>
   )
 }

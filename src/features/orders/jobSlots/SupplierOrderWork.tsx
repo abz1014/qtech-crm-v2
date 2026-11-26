@@ -6,6 +6,7 @@ import { Button } from '@/ui/Button'
 import { Select } from '@/ui/form/Select'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
+import { SpecText } from '@/ui/SpecText'
 import type { JobSlotProps } from '@/features/jobs/slots'
 import { LegsPanel } from '@/features/orders/LegsPanel'
 import { useUpdateItem } from '@/features/orders/hooks'
@@ -39,7 +40,7 @@ function ChooseSuppliers({ order, items, legs }: { order: OrderHeader; items: re
         {unsourced.map(it => (
           <li key={it.id} className="grid gap-2 border-b py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,16rem)] sm:items-center">
             <span className="min-w-0 text-base [overflow-wrap:anywhere]">
-              <span className="font-medium">{it.description}</span> <span className="num text-fg-muted">{`× ${it.qty}`}</span>
+              <span className="font-medium"><SpecText>{it.description}</SpecText></span> <span className="num text-fg-muted">{`× ${it.qty}`}</span>
             </span>
             <Select
               aria-label={`Choose supplier, ${it.description}`}

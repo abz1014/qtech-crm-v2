@@ -22,6 +22,7 @@ import { ItemMenu } from '@/features/rfqs/ItemEdit'
 import { CategoryChip } from '@/features/rfqs/CategoryChip'
 import { RateBar } from '@/features/rfqs/RateBar'
 import { InfoTip } from '@/ui/InfoTip'
+import { SpecText } from '@/ui/SpecText'
 import { focusReplyInput } from '@/features/rfqs/replyFocus'
 import { buildRateBar } from '@/features/fx/ratesModel'
 import { lastPriceChip, type MemoryRow } from '@/lib/memory'
@@ -506,10 +507,10 @@ export function ItemsPanel({
                           onClick={() => setOpenItem(folded ? item.id : null)}
                           className="text-left after:absolute after:inset-0 after:content-['']"
                         >
-                          {item.description}
+                          <SpecText>{item.description}</SpecText>
                         </button>
                       ) : (
-                        item.description
+                        <SpecText>{item.description}</SpecText>
                       )}
                     </h3>
                   </div>

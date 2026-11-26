@@ -39,7 +39,7 @@ export function HeldAdvancesList({ rows }: { rows: readonly HeldAdvance[] }) {
           <li key={r.orderId} className="grid grid-cols-[20px_minmax(0,1fr)_auto] items-center gap-3 border-t border-dashed border-line-input px-5 py-3 text-sm first:border-t-0">
             <Icon icon={Wallet} size="md" className="text-fg-muted" />
             <span className="grid min-w-0">
-              <span className="truncate font-medium">{r.companyName}</span>
+              <span className="line-clamp-2 font-medium [overflow-wrap:anywhere]" title={r.companyName}>{r.companyName}</span>
               <span className="text-sm text-fg-muted">
                 <Link to={`/orders/${r.orderId}`} className="num underline decoration-1 underline-offset-2 hover:text-fg">
                   {orderRef(r.orderNumber)}

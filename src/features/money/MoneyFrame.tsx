@@ -1,12 +1,10 @@
-import { memo, useEffect, useRef, type ReactNode } from 'react'
+import { memo, type ReactNode } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useSession } from '@/app/session'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
-import { Icon } from '@/ui/Icon'
-import { useScrollFade } from '@/ui/useScrollFade'
+import { BackLink } from '@/ui/BackLink'
 import { MONEY_TABS, MORE_MONEY_PAGES, moneyTabLabel, type MoneyTab } from '@/features/money/moneyTabs'
 import { isMonthKey } from '@/features/money/monthKey'
 import { PageHeader } from '@/ui/PageHeader'
@@ -22,7 +20,7 @@ import { MoneyPagesSwitcher } from '@/features/money/MoneyPagesSheet'
  * number (redesign phase 0, plan section (c)): the one "needs you" count is Today's, and a late payment is a row on Today
  * (features/today/needsYou.ts).
  * Forest (50-money-hub.html#money-strip): the desktop tabs are one underlined strip on a hairline, the lit tab green with a 3 px
- * bar under it and scrolled into view when the window is narrow (R-023); Payments carries a small "New" word (gate 2).
+ * bar under it, wrapping onto a second line when the window is narrow (screen review 26); Payments carries a small "New" word (gate 2).
  */
 export function MoneyFrame({
   active,
@@ -73,19 +71,14 @@ export function MoneyFrame({
   return (
     // One column no wider than the screen (minmax(0, 1fr)): a wide child (a register's table) scrolls inside its own card
     // instead of stretching the column, and every card with it, past the right edge of a phone.
-    <div className="mx-auto grid w-full min-w-0 max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8 md:pt-6">
+    // A page with a back link draws it in the 24 px above the title (md:pt-0 and the link's -mb-4 cancel the row's gap), so the
+    // title, the tabs and everything under them sit at the same height on every Money page (screen review 27: it moved 24 px).
+    <div className={cn('mx-auto grid w-full min-w-0 max-w-table grid-cols-[minmax(0,1fr)] content-start gap-4 px-4 pb-12 pt-4 md:px-8', back ? 'md:pt-0' : 'md:pt-6')}>
       {/* The phone bar: "Money" on a tab (the switcher names the page); a page reached from a tab has its name and a back arrow. */}
       <FrameBar title={back ? heading : (barTitle ?? 'Money')} back={back?.to} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 md:gap-4">
         {back ? (
-          <Link
-            to={back.to}
-            className="-mb-2 inline-flex items-center gap-1 justify-self-start text-sm font-medium text-fg-2 hover:text-fg hover:underline max-md:hidden md:-mb-3"
-          >
-            <Icon icon={ChevronLeft} size="sm" />
-            <span className="sr-only">Back to </span>
-            {back.label}
-          </Link>
+          <BackLink to={back.to} label={back.label} className="md:-mb-4" />
         ) : null}
         {/* The list-page head (spec 5.2): the page's own name as the one h1 on every Money page (audit 1, item 22), and its one green action. */}
         <PageHeader
@@ -142,22 +135,13 @@ const FrameBar = memo(function FrameBar({ title, back }: { title: string; back?:
   return null
 })
 
-/** The desktop strip: it scrolls sideways only when the tabs are wider than the page, and the lit tab is brought into view. */
+/**
+ * The desktop strip. When the tabs are wider than the page (768, Larger text, 1024 beside the open rail) it wraps onto a second
+ * line rather than scroll: a scrolled strip showed "Re" at the cut edge, a tab nobody could read (screen review 26).
+ */
 function DesktopTabs({ tabs, active, toOf }: { tabs: readonly MoneyTab[]; active: string | null; toOf: (t: MoneyTab) => string }) {
-  const ref = useRef<HTMLElement>(null)
-  useEffect(() => {
-    ref.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-  }, [active])
-  // where the strip is cut (768, 1024 beside the open rail), the cut edge fades
-  const fade = useScrollFade(ref, active)
   return (
-    <nav
-      ref={ref}
-      aria-label="Money views"
-      className="hairline-under flex min-w-0 gap-1 overflow-x-auto overflow-y-hidden"
-      style={fade}
-      data-testid="money-tabs"
-    >
+    <nav aria-label="Money views" className="hairline-under flex min-w-0 flex-wrap gap-x-1" data-testid="money-tabs">
       {tabs.map(t => (
         <TabLink key={t.key} tab={t} to={toOf(t)} on={t.key === active} />
       ))}

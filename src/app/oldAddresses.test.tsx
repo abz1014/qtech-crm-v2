@@ -68,12 +68,12 @@ describe('old addresses open Jobs', () => {
 
   it('an id with no Job is page not found, not a blank page', async () => {
     mount('/rfqs/00000000-0000-4000-8000-000000000000')
-    expect(await screen.findByText(/not found/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
   })
 
   it('an id that is not even an id (a mistyped link) is page not found, not "check your connection"', async () => {
     mount('/rfqs/not-a-uuid', c => (c.target === 'v_jobs' ? { error: { message: 'invalid input syntax for type uuid' } } : { data: [] }))
-    expect(await screen.findByText(/not found/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
     expect(screen.queryByText(/check your connection/i)).toBeNull()
   })
 
@@ -134,7 +134,7 @@ describe('old addresses open Jobs', () => {
 
   it('an address deeper than an id is page not found', async () => {
     mount('/orders/o1/extra')
-    expect(await screen.findByText(/not found/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Page not found' })).toBeInTheDocument()
   })
 })
 

@@ -3,10 +3,8 @@ import { ArrowLeft } from 'lucide-react'
 import { navItems } from '@/app/navConfig'
 import { getHomeRoute } from '@/app/roleRoutes'
 import { ROLE_LABEL, useSession } from '@/app/session'
+import { PageFrame } from '@/app/pages/PageFrame'
 import { Button } from '@/ui/Button'
-import { EmptyState } from '@/ui/EmptyState'
-import { CARD } from '@/ui/card'
-import { cn } from '@/lib/utils'
 import { noAccessTitle } from '@/app/pages/noAccessTitle'
 
 /** What a person asks an admin for, per area. Anything not listed falls back to "access to <area>". */
@@ -31,24 +29,19 @@ export function NoAccessPage({ area, roles, adminNote }: { area?: string; roles?
       : `Your role is ${ROLE_LABEL[role] ?? role}. Ask an admin ${area ? (NEED[area] ?? `if you need access to ${area}`) : 'if you need access to this page'}.`
     : 'Your account has no role assigned. Ask an admin to set one on the Team screen.'
   return (
-    <div className="mx-auto grid max-w-list content-start px-gutter pb-12 pt-6 md:pt-12">
-      <h1 className="sr-only">{title}</h1>
-      {/* Forest (58 #money-checks-sales, 59 #rp-noaccess): the one white card, not a dashed placeholder box */}
-      <div className={cn(CARD, 'p-card')}>
-        <EmptyState
-          mood="warning"
-          title={title}
-          actions={
-            known ? (
-              <Button icon={ArrowLeft} onClick={() => navigate(home)}>
-                Go to Home
-              </Button>
-            ) : undefined
-          }
-        >
-          {body}
-        </EmptyState>
-      </div>
-    </div>
+    // Forest (58 #money-checks-sales, 59 #rp-noaccess): the shared state card, as Page not found draws it, one width everywhere
+    <PageFrame
+      mood="warning"
+      title={title}
+      actions={
+        known ? (
+          <Button icon={ArrowLeft} onClick={() => navigate(home)}>
+            Go to Home
+          </Button>
+        ) : undefined
+      }
+    >
+      {body}
+    </PageFrame>
   )
 }

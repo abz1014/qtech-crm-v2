@@ -10,6 +10,7 @@ import { Select } from '@/ui/form/Select'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Money } from '@/ui/Money'
 import { useToast } from '@/ui/useToast'
+import { SpecText } from '@/ui/SpecText'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useSetGroupPrice, useSetItemRates, useUpdateItem } from '@/features/orders/hooks'
 import { groupItems } from '@/features/orders/lib/splitGroups'
@@ -233,7 +234,7 @@ export function OrderItemsPanel({
       {r.kind === 'head' ? (
         <span className="grid min-w-0 gap-px">
           <span className="break-words font-medium">
-            {r.description}
+            <SpecText>{r.description}</SpecText>
           </span>
           <span className="inline-flex w-fit items-center gap-1 text-xs font-regular text-fg-muted">
             <Split size={12} aria-hidden="true" />
@@ -259,7 +260,7 @@ export function OrderItemsPanel({
       ) : (
         <span className="grid min-w-0 gap-px">
           <span className="break-words font-medium">
-            {r.description}
+            <SpecText>{r.description}</SpecText>
           </span>
           <span className="text-xs font-regular text-fg-muted">
             {r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}
@@ -441,7 +442,7 @@ export function OrderItemsPanel({
             <span className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2 gap-y-1">
               <span className="num pt-px text-sm text-fg-muted">{r.no}</span>
               <span className="grid min-w-0 gap-1">
-                <span className="break-words font-medium">{r.description}</span>
+                <span className="break-words font-medium"><SpecText>{r.description}</SpecText></span>
                 <span className="inline-flex flex-wrap items-center gap-x-1 text-sm text-fg-muted">
                   <span className="num">{qtyNumber(r.qty)}</span>
                   {` ${unitWord(r.qty, r.unit)}`}
