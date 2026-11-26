@@ -51,7 +51,7 @@ test.describe('a save that cannot reach the server', () => {
     const admin = await signedIn(browser, info, 'admin')
     const page = await open(admin, `/orders/${seed.order.id}`)
     // Record payment (an advance, before any invoice) is on the Invoice stage of the job page
-    await openStage(page, 'Billing')
+    await openStage(page, 'Invoice')
     await actions(page).getByRole('button', { name: R.order.actions.recordPayment }).first().click()
     const d = page.getByRole('dialog', { name: R.order.paymentDialog })
     const amountBox = d.getByRole('textbox', { name: R.order.amount })
@@ -86,7 +86,7 @@ test.describe('a save that cannot reach the server', () => {
       }
       await route.continue()
     })
-    await openStage(page, 'Billing')
+    await openStage(page, 'Invoice')
     await actions(page).getByRole('button', { name: R.order.actions.createInvoice }).click()
     const d = page.getByRole('dialog', { name: R.order.invoiceDialog })
     await expect(d.getByText(amount(40935.1), { exact: true })).toBeVisible()
@@ -132,7 +132,7 @@ test.describe('the session', () => {
     await expect(page).toHaveURL(/\/jobs\/O-\d+$/)
     await expect.poll(() => storedToken(page)).not.toBe(before)
     // 3 x 8,765.43 = 26,296.29 net; GST 4,733.33 -> 4,733; gross 31,029.29
-    await openStage(page, 'Billing')
+    await openStage(page, 'Invoice')
     await actions(page).getByRole('button', { name: R.order.actions.createInvoice }).click()
     const d = page.getByRole('dialog', { name: R.order.invoiceDialog })
     await expect(d.getByText(amount(31029.29), { exact: true })).toBeVisible()
@@ -219,7 +219,7 @@ test.describe('two people on the same record', () => {
     const pa = await open(a, `/orders/${seed.order.id}`)
     const pb = await open(b, `/orders/${seed.order.id}`)
     for (const p of [pa, pb]) {
-      await openStage(p, 'Billing')
+      await openStage(p, 'Invoice')
       await actions(p).getByRole('button', { name: R.order.actions.createInvoice }).click()
       await expect(p.getByRole('dialog', { name: R.order.invoiceDialog }).getByText(amount(61360.4), { exact: true })).toBeVisible()
     }

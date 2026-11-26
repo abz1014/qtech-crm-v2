@@ -234,7 +234,7 @@ test.describe('Forest review pictures (round 3, money)', () => {
     await openAs(page, 'admin', `/orders/${jobOrder}`)
     await eachWidth(page, async () => {
       await page.goto(`/orders/${jobOrder}`)
-      await openStage(page, 'Billing')
+      await openStage(page, 'Invoice')
       await page.waitForLoadState('networkidle')
       await pic(page, 'job-invoice')
       await openStage(page, 'Payment')

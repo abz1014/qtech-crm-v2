@@ -126,7 +126,7 @@ test.describe('a double tap makes one record', () => {
   test('Record payment (admin): one payment', async ({ page }) => {
     const before = (await rows(`payments_in?order_id=eq.${world.order.id}&select=id`)).length
     await openAs(page, 'admin', `/orders/${world.order.id}`)
-    await openStage(page, 'Billing')
+    await openStage(page, 'Invoice')
     await page.getByRole('button', { name: 'Record payment' }).first().click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await d.getByLabel('Amount received, PKR').fill('1234')

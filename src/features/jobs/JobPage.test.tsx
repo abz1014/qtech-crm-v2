@@ -366,8 +366,8 @@ describe('Job page: the stage list', () => {
     const invoice = [{ id: 'v1', number: 'PC-4F589H', invoiceDate: '2026-10-06', gross: 2035500 }]
     const { container } = mount(job({ stage: 'ordered', stageDetail: 'to source, advance received' }), 'admin', c => c.setQueryData([...qk.jobs.part('139', 'invoices'), 'o1'], invoice))
     await screen.findByRole('heading', { level: 1 })
-    const row = stagesOf(container).getByRole('button', { name: /^Billing / })
-    expect(row).toHaveAccessibleName(/^Billing Invoiced 1 invoice/)
+    const row = stagesOf(container).getByRole('button', { name: /^Invoice / })
+    expect(row).toHaveAccessibleName(/^Invoice Invoiced 1 invoice/)
     expect(row).not.toHaveTextContent('Not yet')
   })
 
@@ -379,7 +379,7 @@ describe('Job page: the stage list', () => {
       c.setQueryData(qk.orders.part('o1', 'header'), { ...header, state: { lifecycle: 'active', goods: 'to_source', commissioning: 'n_a', invoicing: 'part', dataTrust: 'ok', net: null, gst: null, gross: null, invoiced: null } })
     })
     await screen.findByRole('heading', { level: 1 })
-    expect(stagesOf(container).getByRole('button', { name: /^Billing / })).toHaveAccessibleName(/^Billing Part invoiced 1 invoice/)
+    expect(stagesOf(container).getByRole('button', { name: /^Invoice / })).toHaveAccessibleName(/^Invoice Part invoiced 1 invoice/)
   })
 
   it('the step that is yours names its action on its chip (owner, 16 Nov 2026: "Needs action for what?")', async () => {

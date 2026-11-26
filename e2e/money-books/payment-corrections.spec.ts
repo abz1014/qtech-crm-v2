@@ -81,7 +81,7 @@ test.describe('Print invoice button', () => {
       const ctx = await browser.newContext()
       const p = await ctx.newPage()
       await openAs(p, role, `/orders/${order.id}`)
-      await openStage(p, 'Billing')
+      await openStage(p, 'Invoice')
       await expect(p.getByRole('button', { name: 'Print invoice' })).toBeVisible()
       await ctx.close()
     }

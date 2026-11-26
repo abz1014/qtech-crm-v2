@@ -469,7 +469,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   await test.step('create the invoice: 2 taps, nothing typed', async () => {
     // everything is delivered, so Create invoice is the page's one action (lime on the hero, green on a phone) and the job is on its Invoice stage
     await expect(page.locator('#main :is(button.bg-primary, button.bg-lime-300):visible')).toHaveText(['Create invoice'])
-    await openStage(page, 'Billing')
+    await openStage(page, 'Invoice')
     await resetCount(page)
     await stagesOf(page).getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
@@ -496,7 +496,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
   await test.step('(admin) record the payment in full: 2 taps, the amount is the balance due', async () => {
     const admin = await openPage(adminCtx, `/orders/${order.id}`)
     await expect(admin.getByRole('heading', { level: 1 })).toContainText(`${rfqRef(rfq.number)}`)
-    await openStage(admin, 'Billing')
+    await openStage(admin, 'Invoice')
     await resetCount(admin)
     await stagesOf(admin).getByRole('button', { name: 'Record payment' }).first().click()
     const d = admin.getByRole('dialog', { name: 'Record payment' })
