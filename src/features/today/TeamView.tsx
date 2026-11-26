@@ -20,7 +20,7 @@ export const TEAM_JOBS = 3
  * who is slipping without those tasks crowding the admin's list. Older-than-30-days work stays visible, grey, "since <date>".
  *
  * Open jobs (owner 2026-11-17): under each name, how many open jobs are theirs (owned, or put on as the engineer) and the newest few,
- * each with its customer and where it stands in the Jobs list's own words ("RFQ · suppliers not asked yet"), linked to the job. "See all"
+ * each with its customer and where it stands in the Jobs list's own words ("RFQ · quotation not sent yet"), linked to the job. "See all"
  * opens Jobs filtered to that person (/jobs?person=), where Where it stands and Next step are the same columns as everywhere.
  */
 export function TeamView({ data, today, selfId }: { data: TodayData; today: string; selfId: string }) {

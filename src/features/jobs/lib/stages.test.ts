@@ -22,7 +22,7 @@ describe('the seven stops', () => {
 
   it('the current stop is the earliest one not finished, for every stage word the database sends', () => {
     expect(currentStopIndex('enquiry', null)).toBe(0)
-    expect(currentStopIndex('asking_suppliers', '1 of 3 suppliers replied')).toBe(1)
+    expect(currentStopIndex('asking_suppliers', 'quotation not sent yet')).toBe(1)
     expect(currentStopIndex('prices_in', '2 of 3 items priced')).toBe(1)
     expect(currentStopIndex('quoted', 'waiting for the customer')).toBe(2)
     expect(currentStopIndex('ordered', 'to source')).toBe(3)
@@ -57,7 +57,7 @@ describe('the seven stops', () => {
   })
 
   it('a job with an order and no enquiry (O-45) starts at Order: Enquiry and Quotation are "none"', () => {
-    const m = model('ordered', 'supplier order to place', 'direct')
+    const m = model('ordered', 'not placed yet', 'direct')
     expect(states(m)).toEqual(['none', 'none', 'done', 'current', 'future', 'future', 'future'])
     expect(m.phoneLabel).toBe('Stage 4 of 7 · Supplier order')
   })

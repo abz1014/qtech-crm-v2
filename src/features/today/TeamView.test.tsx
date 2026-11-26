@@ -15,12 +15,12 @@ const SALES = 'u-sales'
 const ENG = 'u-eng'
 const v = (key: string, over: Record<string, unknown> = {}) => ({
   job_key: key, kind: 'enquiry', rfq_id: `r${key}`, order_id: null, company_id: 'c1', site_id: null, owner_id: SALES, items_summary: 'Flow meter',
-  stage: 'enquiry', stage_detail: 'suppliers not asked yet', is_history: false, last_activity_on: '2026-10-19', repeat_of_job_key: null, cancelled_orders: 0, ...over,
+  stage: 'enquiry', stage_detail: 'quotation not sent yet', is_history: false, last_activity_on: '2026-10-19', repeat_of_job_key: null, cancelled_orders: 0, ...over,
 })
 const rows = [
   v('201', { last_activity_on: '2026-11-10' }),
-  v('202', { stage: 'asking_suppliers', stage_detail: '0 of 1 suppliers replied', last_activity_on: '2026-11-09' }),
-  v('203', { stage: 'ordered', stage_detail: 'supplier order to place', order_id: 'o203', last_activity_on: '2026-11-08' }),
+  v('202', { stage: 'asking_suppliers', stage_detail: 'quotation not sent yet', last_activity_on: '2026-11-09' }),
+  v('203', { stage: 'ordered', stage_detail: 'not placed yet', order_id: 'o203', last_activity_on: '2026-11-08' }),
   v('204', { last_activity_on: '2026-11-01' }),
   v('205', { stage: 'paid', stage_detail: null, is_history: true }),
 ]
@@ -64,7 +64,7 @@ describe('Team view, open jobs', () => {
     const links = [...panel.querySelectorAll('a[data-team-job]')]
     expect(links.map(a => a.getAttribute('data-team-job'))).toEqual(['201', '202', '203'])
     expect(links[0]).toHaveAttribute('href', '/jobs/201')
-    expect(links.map(a => a.querySelector('[data-stands]')?.textContent)).toEqual(['RFQ · suppliers not asked yet', 'Quotation · 0 of 1 suppliers replied', 'Supplier order · supplier order to place'])
+    expect(links.map(a => a.querySelector('[data-stands]')?.textContent)).toEqual(['RFQ · quotation not sent yet', 'Quotation · quotation not sent yet', 'Supplier order · not placed yet'])
     expect(within(panel).getByRole('link', { name: 'See all 4 open jobs' })).toHaveAttribute('href', `/jobs?person=${SALES}`)
     // history is never an open job
     expect(panel).not.toHaveTextContent('RFQ-0205')

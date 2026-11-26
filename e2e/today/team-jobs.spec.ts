@@ -18,7 +18,7 @@ test("the admin sees a team member's open jobs and where each stands, from Home'
   await expect(panel).toBeVisible()
   await expect(panel.getByRole('heading', { name: /Open jobs/ })).toBeVisible()
   await expect(panel.locator('[data-open-count]')).toHaveText(/^[1-9]\d*$/)
-  // every listed job says where it stands, in the Jobs list's words ("RFQ · suppliers not asked yet")
+  // every listed job says where it stands, in the Jobs list's words ("RFQ · quotation not sent yet")
   const first = panel.locator('a[data-team-job]').first()
   await expect(first.locator('[data-stands]')).toHaveText(/^(RFQ|Quotation|Order|Supplier order|Delivery|Invoice|Payment|Not started)\b/)
 

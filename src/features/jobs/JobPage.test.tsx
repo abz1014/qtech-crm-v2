@@ -274,7 +274,7 @@ describe('Job page', () => {
   })
 
   it('an imported job that still has a step says who acts next in its chips (the usual Needs action chip, never "Nothing to do" over a button)', async () => {
-    const { container } = mount(job({ key: 'O-2', kind: 'direct', rfqId: null, stage: 'ordered', stageDetail: 'supplier order to place', imported: true }), 'admin')
+    const { container } = mount(job({ key: 'O-2', kind: 'direct', rfqId: null, stage: 'ordered', stageDetail: 'not placed yet', imported: true }), 'admin')
     const hero = await waitFor(() => container.querySelector('[data-stage-block]') as HTMLElement)
     expect(hero).toHaveTextContent('Next step · ORD-0002 · Imported')
     expect(hero.querySelector('[data-next-text]')).toHaveTextContent(/^Place the supplier order$/)
@@ -420,10 +420,10 @@ describe('Job page: the stage list', () => {
     expect(row.textContent).not.toMatch(/No supplier asked/)
   })
 
-  it('quote first: the RFQ stop\'s "suppliers not asked yet" is a plain fact, drawn neutral, not in the warning colour', async () => {
-    mount(job({ stage: 'enquiry', stageDetail: 'suppliers not asked yet', orderId: null }), 'sales')
+  it('quote first: the RFQ stop\'s "quotation not sent yet" is a plain fact, drawn neutral, not in the warning colour', async () => {
+    mount(job({ stage: 'enquiry', stageDetail: 'quotation not sent yet', orderId: null }), 'sales')
     await screen.findByRole('heading', { level: 1 })
-    const note = within(screen.getByRole('list', { name: 'Stages of this job' })).getByText('suppliers not asked yet')
+    const note = within(screen.getByRole('list', { name: 'Stages of this job' })).getByText('quotation not sent yet')
     expect(note).not.toHaveClass('text-tone-warning-fg')
     expect(note).toHaveClass('text-fg-2')
   })
@@ -521,7 +521,7 @@ describe('Job page: the enquiry-side actions stay on the page (P5-D1)', () => {
 
   it('Send quotation opens the Quotation stage and the Issue quotation address, and does not leave the page', async () => {
     const user = userEvent.setup()
-    const { container } = mountAt(job({ stage: 'prices_in', stageDetail: '3 of 3 items priced', orderId: null }), 'sales')
+    const { container } = mountAt(job({ stage: 'prices_in', stageDetail: 'all 3 items priced', orderId: null }), 'sales')
     await screen.findByRole('heading', { level: 1 })
     await user.click(screen.getByRole('button', { name: 'Send quotation' }))
     expect(screen.getByTestId('where')).toHaveTextContent('/jobs/139?issue=1')

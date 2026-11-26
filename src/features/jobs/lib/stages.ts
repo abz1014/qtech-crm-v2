@@ -8,11 +8,11 @@
  * come from v_jobs.stage_detail, which is words only: no amount ever reaches an engineer's page through it.
  *
  *   stage             current stop              why
- *   enquiry           Enquiry (1)               suppliers not asked yet
+ *   enquiry           Enquiry (1)               quotation not sent yet
  *   asking_suppliers  Quotation (2)             being priced
  *   prices_in         Quotation (2)             priced, quotation to send
  *   quoted            Order (3)                 quotation sent, waiting for the customer's order
- *   ordered           Supplier order (4)        an item to source or a supplier order to place
+ *   ordered           Supplier order (4)        an item to source, or not placed yet
  *   supplier_ordered  Supplier order (4)        placed, goods not with us yet ... or Delivery (5) once they arrived / part delivered
  *   delivered         Invoice (6)               goods delivered (or none), not fully invoiced
  *   invoiced          Payment (7)               invoiced, not paid
