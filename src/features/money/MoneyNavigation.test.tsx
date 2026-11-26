@@ -320,3 +320,24 @@ describe('Expenses report (2026-10-22)', () => {
     for (const t of ['expenses', 'expense_groups', 'expense_categories', 'v_month_cash_flow']) expect(targets, t).not.toContain(t)
   })
 })
+
+describe('Payable to suppliers figures', () => {
+  it('rupee amounts are whole in every column, not "15,000.00" beside "20,000"; a foreign amount keeps its cents', async () => {
+    const leg = (id: string, currency: string, committed: number, paid: number, owed: number | null) => ({
+      supplier_order_id: id, supplier_id: `s-${id}`, supplier_name: `Supplier ${id}`, order_id: `o-${id}`, order_number: 7, currency, committed,
+      fx_rate: currency === 'PKR' ? 1 : 280.25, committed_pkr: owed === null ? null : committed, paid_pkr: paid, owed_pkr: owed, state: 'owing', flag: null, cancelled_with_supplier_on: null,
+    })
+    at(`/money/reports/owe?month=${MONTH}`, 'admin', c =>
+      c.target === 'rpc:payables_as_of'
+        ? { data: [leg('a', 'PKR', 35_000, 20_000, 15_000), leg('b', 'USD', 2_033.25, 0, null)] }
+        : c.target === 'month_snapshots'
+          ? { data: null } // read live, not from a closed month's snapshot
+          : respond(c),
+    )
+    const table = await screen.findByRole('table', { name: 'Payable to suppliers' })
+    await waitFor(() => expect(table).toHaveTextContent('Supplier a'))
+    expect(table).toHaveTextContent('PKR 35,000')
+    expect(table).toHaveTextContent('USD 2,033.25')
+    expect(table.textContent).not.toMatch(/(35,000|20,000|15,000)\.00/)
+  })
+})

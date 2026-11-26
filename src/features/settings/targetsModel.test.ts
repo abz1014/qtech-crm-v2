@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   compactPkr,
+  progressLabel,
   progressLine,
   shownQuarters,
   cellIntent,
@@ -162,6 +163,8 @@ describe('targets grid, audit 2026-10-22', () => {
     expect(progressLine({ achieved: 3_862_102, ahead: 1_950_000 }, 8_000_000)).toBe('Achieved 3,862,102 of 8,000,000 · 1.95 M ahead of pace')
     expect(progressLine({ achieved: 1_200_000, ahead: -300_000 }, 5_000_000)).toBe('Achieved 1,200,000 of 5,000,000 · 300,000 behind pace')
     expect(progressLine({ achieved: 10, ahead: 0 }, 100)).toBe('Achieved 10 of 100 · On pace')
+    expect(progressLabel({ achieved: 86_567.16, onPace: 1_234_567.5 }, 8_000_000)).toBe('Achieved PKR 86,567 of PKR 8,000,000, on pace PKR 1,234,568')
+    expect(progressLine({ achieved: 86_567.16, ahead: 0 }, 8_000_000)).toBe('Achieved 86,567 of 8,000,000 · On pace')
     expect(compactPkr(2_000_000)).toBe('2 M')
     expect(compactPkr(-1_234_567)).toBe('1.23 M')
   })

@@ -185,3 +185,8 @@ export function progressLine(p: Pick<CellProgress, 'achieved' | 'ahead'>, target
   if (p.ahead === 0) return `${head} · On pace`
   return `${head} · ${compactPkr(p.ahead)} ${p.ahead < 0 ? 'behind pace' : 'ahead of pace'}`
 }
+
+/** The progress bar's spoken name: whole rupees with separators like the line above it ("Achieved PKR 86,567 of PKR 8,000,000, on pace PKR 1,234,568"). */
+export function progressLabel(p: Pick<CellProgress, 'achieved' | 'onPace'>, target: number): string {
+  return `Achieved PKR ${grouped.format(p.achieved)} of PKR ${grouped.format(target)}, on pace PKR ${grouped.format(p.onPace)}`
+}
