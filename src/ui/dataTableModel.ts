@@ -227,3 +227,14 @@ export function readRowMetrics(
     head: Math.max(token('--head-h', fallback.head), Math.ceil(head - 0.01)),
   }
 }
+
+/**
+ * The noun for a count, from the plural the table is given: "1 group", "1 company", "1 kind of record", "7 RFQs"
+ * (screen review 2026-11-24, item 25: "Showing 1 of 1 groups").
+ */
+export function nounFor(noun: string, n: number): string {
+  if (n !== 1) return noun
+  const [head, ...rest] = noun.split(' ')
+  const one = /ies$/.test(head) ? `${head.slice(0, -3)}y` : /[^s]s$/.test(head) ? head.slice(0, -1) : head
+  return [one, ...rest].join(' ')
+}

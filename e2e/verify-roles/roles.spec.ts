@@ -60,7 +60,7 @@ async function stateOf(page: Page): Promise<Visit> {
   if (new URL(url).pathname.startsWith('/login')) return { state: 'login', url }
   const h1 = (await page.locator('h1').allInnerTexts().catch(() => [] as string[])).join(' | ')
   const titles = (await page.locator('[data-mood="warning"]').allInnerTexts().catch(() => [] as string[])).join(' | ')
-  if (/ is for (admins|admins and sales|sales and engineers)|has no access yet/.test(`${h1} ${titles}`)) return { state: 'no-access', url }
+  if (/ (is|are) for (admins|admins and sales|sales and engineers)|has no access yet/.test(`${h1} ${titles}`)) return { state: 'no-access', url }
   if (/Page not found/.test(h1)) return { state: 'not-found', url }
   return { state: 'page', url }
 }
@@ -206,7 +206,7 @@ async function crawl(page: Page, role: Staff, info: TestInfo): Promise<Watch> {
     await closeDialogs(page)
 
     if (v.state !== 'page') {
-      if (role === 'engineer') expect.soft(engineerTextLeaks(await visibleText(page), [], world).filter(x => !x.startsWith('money word')), `engineer ${r.path}: refused page shows money (its title names the area, e.g. "Expense categories is for admins")`).toEqual([])
+      if (role === 'engineer') expect.soft(engineerTextLeaks(await visibleText(page), [], world).filter(x => !x.startsWith('money word')), `engineer ${r.path}: refused page shows money (its title names the area, e.g. "Expense categories are for admins")`).toEqual([])
       continue
     }
 
@@ -324,7 +324,7 @@ test('signed out: every protected route and deep link goes to sign-in, then back
   await page.getByLabel('Password', { exact: true }).fill(FIXTURE_PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).toHaveURL(/\/money\/expenses$/)
-  await expect(page.getByRole('heading', { level: 1 })).toContainText(/is for admins/)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(/(is|are) for admins/)
 })
 
 for (const who of ['deactivated', 'norole'] as const) {
