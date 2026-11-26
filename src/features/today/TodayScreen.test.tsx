@@ -126,7 +126,7 @@ describe('Today screen', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Home' })).toBeInTheDocument()
     const hero = screen.getByRole('region', { name: 'Needs you now' })
     expect(hero).toHaveAttribute('data-surface', 'navy')
-    expect(hero).toHaveTextContent(/^Admin, Ayesha.*1 thing needs you$/)
+    expect(hero).toHaveTextContent(/^Ayesha · Admin.*1 thing needs you$/)
     expect(document.querySelectorAll('[data-needs-you-count]')).toHaveLength(1) // the hero repeats it; the count stays one element
   })
 
@@ -134,7 +134,7 @@ describe('Today screen', () => {
     fake = install()
     const s = renderAs('sales')
     await screen.findByText('Send the quotation')
-    expect(screen.getByRole('region', { name: 'Quotes to send or follow up' })).toHaveTextContent(/^Sales, Ayesha/)
+    expect(screen.getByRole('region', { name: 'Quotes to send or follow up' })).toHaveTextContent(/^Ayesha · Sales/)
     s.unmount()
     fake.uninstall()
     fake = install({ rfqs: [] })
