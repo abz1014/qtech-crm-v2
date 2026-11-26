@@ -35,7 +35,7 @@ const makeInvoice = (orderId: string, over: Record<string, unknown> = {}) =>
 async function openInvoiceFromJob(page: import('@playwright/test').Page, orderId: string, number: string) {
   await openAs(page, 'admin', `/orders/${orderId}`)
   await expect(page).toHaveURL(JOB_URL)
-  const stage = await openStage(page, 'Invoice')
+  const stage = await openStage(page, 'Billing')
   await stage.getByRole('link', { name: LINK }).click()
   await expect(page).toHaveURL(/\/money\/gst-register/)
   await page.getByRole('row', { name: new RegExp(number) }).first().click()
@@ -78,7 +78,7 @@ test('record a payment with withholding tax, tied to the second invoice, from th
   const second = await makeInvoice(order.id, { net_amount: 60000, gst_amount: 10800 })
   await openAs(page, 'admin', `/orders/${order.id}`)
   await expect(page).toHaveURL(JOB_URL)
-  const stage = await openStage(page, 'Invoice')
+  const stage = await openStage(page, 'Billing')
   await stage.getByRole('button', { name: 'Record payment' }).click()
   const d = page.getByRole('dialog', { name: 'Record payment' })
   await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('60800')

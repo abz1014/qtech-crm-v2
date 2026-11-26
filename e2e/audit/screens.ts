@@ -453,7 +453,7 @@ async function firstRow(page: Page): Promise<void> {
 }
 
 const STAGE_IDS = ['enquiry', 'quotation', 'order', 'supplier-order', 'delivery', 'invoice', 'payment'] as const
-const STAGE_NAMES = ['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'] as const
+const STAGE_NAMES = ['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Billing', 'Payment'] as const
 /** The folded control of one job step, found by the step's name at the start of its text, among the buttons that fold (a stage bar link of the same name is not one). Case-sensitive: the row's text is the title then the state word ("EnquiryDone"), so a case-insensitive lookahead for a lowercase letter never matched (L4) (it survives a change of the row markup). */
 const stageHead = (page: Page, i: number) =>
   page

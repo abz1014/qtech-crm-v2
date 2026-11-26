@@ -20,6 +20,12 @@ describe('the seven stops', () => {
     expect([...STOPS]).toEqual(['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Invoice', 'Payment'])
   })
 
+  it('draws the Invoice stop as Billing for the office too, the same word the engineer reads (screen review 29)', () => {
+    const m = stageModel({ stage: 'delivered', stageDetail: 'not invoiced yet', kind: 'enquiry' })
+    expect(m.stops.map(s => s.shown)).toEqual(['RFQ', 'Quotation', 'Order', 'Supplier order', 'Delivery', 'Billing', 'Payment'])
+    expect(m.phoneLabel).toBe('Stage 6 of 7 · Billing')
+  })
+
   it('the current stop is the earliest one not finished, for every stage word the database sends', () => {
     expect(currentStopIndex('enquiry', null)).toBe(0)
     expect(currentStopIndex('asking_suppliers', '1 of 3 suppliers replied')).toBe(1)

@@ -26,6 +26,7 @@ import { useCompanyProfile } from '@/features/settings/hooks'
 import { listQuoteCodes, setQuoteCode } from '@/features/companies/api'
 import { normalizeQuoteCode, quoteCodeProblem, suggestQuoteCode } from '@/features/companies/quoteCode'
 import { qk } from '@/features/queryKeys'
+import { qtyNumber, qtyWithUnit, unitWord } from '@/lib/quantity'
 import { StatementDownloads } from '@/features/statement/StatementDownloads'
 import { loadPdfData, loadSignatory, type PdfData, type QuotationRow, type PriceMemory, type QuoteItem } from '@/features/quotations/api'
 import { useCompanyContacts, useIssueQuotation, usePriceMemory, useQuoteItems, useQuotations, useStorePdf } from '@/features/quotations/hooks'
@@ -650,8 +651,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                       <div className={`grid min-w-0 content-start gap-1 ${on ? '' : 'text-fg-muted'}`}>
                         <p className={`break-words font-medium ${on ? 'text-fg' : ''}`}>{it.description}</p>
                         <p className="num text-sm text-fg-muted min-[832px]:hidden">
-                          {it.qty}
-                          {it.unit ? ` ${it.unit}` : ''}
+                          {qtyWithUnit(it.qty, it.unit)}
                         </p>
                         {replies > 0 ? (
                           <p className="text-sm text-fg-muted" data-testid={`supplier-replies-${n}`}>
@@ -685,8 +685,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                         ) : null}
                       </div>
                       <p className="num hidden whitespace-nowrap pt-2 text-right text-sm min-[832px]:block">
-                        {it.qty}
-                        {it.unit ? <span className="text-fg-muted">{`\u00A0${it.unit}`}</span> : null}
+                        {qtyNumber(it.qty)}
+                        <span className="text-fg-muted">{`\u00A0${unitWord(it.qty, it.unit)}`}</span>
                       </p>
                       <div className="col-start-2 grid grid-cols-[minmax(0,1fr)_minmax(0,8rem)] items-end gap-2 min-[832px]:contents">
                         <div className="grid min-w-0 gap-1 min-[832px]:block">

@@ -137,7 +137,7 @@ export function EditItemDialog({ rfq, item, onClose }: { rfq: RfqHeader; item: R
               <NumberInput value={qty} onChange={setQty} min={0} disabled={locked} />
             </Field>
             <Field label="Unit" requirement="optional">
-              <TextField value={unit} disabled={locked} onChange={e => setUnit(e.target.value)} placeholder="pcs" autoComplete="off" />
+              <TextField value={unit} disabled={locked} onChange={e => setUnit(e.target.value)} placeholder="nos" autoComplete="off" />
             </Field>
           </div>
           <Field label="Brand" requirement="optional">

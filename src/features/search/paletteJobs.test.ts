@@ -15,7 +15,7 @@ describe('Jobs in the palette', () => {
   const find = async (office: boolean) => (await searchPaletteSource(0, office).search!('Job 139', new AbortController().signal)).find(i => i.id === 'job-139')
 
   it('shows the stop and its words to the office', async () => {
-    expect((await find(false))?.meta).toMatch(/Invoice · partly invoiced, advance received/)
+    expect((await find(false))?.meta).toMatch(/Billing · partly invoiced, advance received/)
   })
 
   it('an engineer reads no money state and no Invoice word (it is Billing)', async () => {

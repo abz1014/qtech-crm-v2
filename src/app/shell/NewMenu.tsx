@@ -17,7 +17,7 @@ const NewMenuImpl = lazyWithReload(loadImpl)
  * live order and words (newEntries.ts):
  *   admin     New RFQ (N) · Expense (E) · Payment received · Order without RFQ (O)
  *   sales     New RFQ (N) · Order without RFQ (O)
- *   engineer  none: nothing is drawn (their lime button is Take photo, and their bar has Camera)
+ *   engineer  none: nothing is drawn (their lime button and their bar both have Photo or note)
  *   rail  the lime button at the top of the forest rail opens a menu under it (a lime + alone while the rail is 72 wide); key letters for a mouse
  *   tab   the + in the middle of the phone bar opens the same rows as a sheet, 64 tall each
  * Expense opens Quick add in a dialog (the E key does too).

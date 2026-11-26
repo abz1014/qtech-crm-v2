@@ -486,7 +486,7 @@ export interface EvidenceOrderRow {
   when: string
   /** "delivered after 19 days" or "not delivered yet". */
   result: string
-  /** "expected in 14 · late", "expected in 14 · on time", "5 days past expected", or null. */
+  /** "expected in 14 days · late", "expected in 14 days · on time", "5 days past expected", or null. */
   detail: string | null
   tone: 'late' | 'wait' | null
 }
@@ -514,8 +514,8 @@ function orderRow(ev: Evidence, today: string): EvidenceOrderRow {
   const whenParts = [ev.placedOn ? `placed ${dmy(ev.placedOn)}` : null, ev.expectedOn ? `expected ${dmy(ev.expectedOn)}` : null].filter(Boolean)
   const result = ev.deliveredAfterDays !== null ? `delivered after ${plural(ev.deliveredAfterDays, 'day', 'days')}` : ev.deliveredOn ? `delivered ${dmy(ev.deliveredOn)}` : 'not delivered yet'
   let detail: string | null = null
-  if (state.kind === 'on-time') detail = exp !== null ? `expected in ${exp} · on time` : 'on time'
-  else if (state.kind === 'late') detail = exp !== null ? `expected in ${exp} · late` : 'late'
+  if (state.kind === 'on-time') detail = exp !== null ? `expected in ${plural(exp, 'day', 'days')} · on time` : 'on time'
+  else if (state.kind === 'late') detail = exp !== null ? `expected in ${plural(exp, 'day', 'days')} · late` : 'late'
   else if (state.kind === 'waiting') detail = `${plural(state.daysPast ?? 0, 'day', 'days')} past expected`
   return { ref, what, when: whenParts.join(' · '), result, detail, tone: state.kind === 'late' ? 'late' : state.kind === 'waiting' ? 'wait' : null }
 }

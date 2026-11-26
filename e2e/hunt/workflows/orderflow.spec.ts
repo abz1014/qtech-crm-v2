@@ -66,7 +66,7 @@ async function legIn(p: Page, stage: StageName, supplierName: string): Promise<L
 }
 /** Opens the Invoice stage and returns one of its buttons (Create invoice, Print invoice, Record payment). */
 async function invoiceButton(p: Page, name: string): Promise<Locator> {
-  await openStage(p, 'Invoice')
+  await openStage(p, 'Billing')
   return stagesOf(p).getByRole('button', { name, exact: true }).first()
 }
 /** The balance the Payment step shows ("Still to collect PKR 1,234.56"); the old order page's order-balance cell is gone. NaN when the step does not say. */
@@ -1195,7 +1195,7 @@ test('hunt orderflow E: Back and reload with dialogs open, cancel with a PO sent
     }
     await salesCtx.close()
     await visit(ap, info, `/orders/${id}`)
-    for (const stage of ['Supplier order', 'Delivery', 'Invoice'] as const) {
+    for (const stage of ['Supplier order', 'Delivery', 'Billing'] as const) {
       await openStage(ap, stage)
       want(info, 'E cancelled page', (await actions(ap).getByRole('button', { name: /Record payment|Create invoice|Issue PO|Delivered today/ }).count()) === 0, `a cancelled order still offers a work button in its ${stage} step`)
     }
@@ -1280,7 +1280,7 @@ function patches(page: Page, table: string): { count: () => number } {
 
 /** Opens Print invoice on the order page; returns the dialog's Download (or Share) button once it is drawn. */
 async function invoicePdfDownload(page: Page): Promise<Locator> {
-  await openStage(page, 'Invoice')
+  await openStage(page, 'Billing')
   await page.getByRole('button', { name: 'Print invoice' }).first().click()
   const dl = page.getByRole('dialog', { name: 'Sales tax invoice' }).getByRole('button', { name: /^(Download|Share)$/ })
   await expect(dl).toBeVisible({ timeout: 15_000 })
@@ -1303,7 +1303,7 @@ test('HW-11 (fixed): a part invoice of exactly the 18% line of a mixed order get
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await ctx.newPage()
   await page.goto(`/orders/${seed.order.id}`)
-  await openStage(page, 'Invoice')
+  await openStage(page, 'Billing')
   await actions(page).getByRole('button', { name: 'Create invoice', exact: true }).first().click()
   const d = page.getByRole('dialog', { name: 'Create invoice' })
   await d.getByRole('button', { name: /Edit the amounts/ }).click()
@@ -1360,7 +1360,7 @@ test('HW-13 (fixed): Create invoice refuses a net amount above what is left to i
   const ctx = await ctxAs(browser, info, 'admin', 'desktop')
   const page = await ctx.newPage()
   await page.goto(`/orders/${seed.order.id}`)
-  await openStage(page, 'Invoice')
+  await openStage(page, 'Billing')
   await actions(page).getByRole('button', { name: 'Create invoice', exact: true }).first().click()
   const d = page.getByRole('dialog', { name: 'Create invoice' })
   await d.getByRole('button', { name: /Edit the amounts/ }).click()

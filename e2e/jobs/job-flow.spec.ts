@@ -103,7 +103,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
   await test.step('Create invoice on the Invoice stage: net and GST come from the lines', async () => {
     await page.reload()
     await expect(phoneLabel(page)).toContainText('Stage 6 of 7')
-    await openStage(page, /^Invoice/)
+    await openStage(page, /^Billing/)
     // the band's green "Create invoice" only opens this stage; the button that opens the dialog is the stage's own
     await stages(page).getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
@@ -118,7 +118,7 @@ test('RFQ to payment through the Job page, and the money reconciles to the paisa
   const paid = async (n: number, expectBalance: number) => {
     await page.goto(`/jobs/${rfq.number}`)
     // Record payment sits on the Invoice stage with Create invoice and the reminder (the Payment stage lists the payments made)
-    await openStage(page, /^Invoice/)
+    await openStage(page, /^Billing/)
     await stages(page).getByRole('button', { name: 'Record payment' }).first().click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     const box = d.getByRole('textbox', { name: 'Amount received, PKR' })

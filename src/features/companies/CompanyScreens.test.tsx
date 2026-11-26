@@ -262,12 +262,22 @@ describe('customer page', () => {
     expect(within(site).queryByText(/^quotation due/)).toBeNull()
     expect(document.querySelector('[data-density="compact"]')).toBeNull()
     const details = screen.getByRole('region', { name: 'Details' })
-    await waitFor(() => expect(details).toHaveTextContent('Customer since2024'))
+    // a prospect (no order yet) says when it was added, never "Customer since" beside its Prospect chip (screen review 29)
+    await waitFor(() => expect(details).toHaveTextContent('AddedMay 2023'))
+    expect(details).not.toHaveTextContent('Customer since')
     expect(details).toHaveTextContent('Also a supplierNo')
     expect(within(details).queryByRole('region', { name: 'Brands carried' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'New RFQ' })).toBeInTheDocument()
     expect(screen.queryByTestId('supplier-record-line')).not.toBeInTheDocument()
     expect(await axeViolations(document.body)).toEqual([])
+  })
+
+  it('a customer with an order says Customer since the year of its first RFQ or order', async () => {
+    installFakeDb(c => (c.target === 'v_company_roles' ? { data: { role: 'customer', is_customer: true, is_supplier: false } } : customerDb(c)))
+    mount('/companies/c1', <CompanyPage />)
+    const details = await screen.findByRole('region', { name: 'Details' })
+    await waitFor(() => expect(details).toHaveTextContent('Customer since2024'))
+    expect(within(details).queryByText('Added')).not.toBeInTheDocument()
   })
 
   it('a contact is first on a phone, with tap to call and WhatsApp', async () => {

@@ -367,7 +367,7 @@ test.describe('R26 intake: evidence in the list and in the memory card', () => {
     await expect(block).toContainText(ref)
     await expect(block).toContainText(`placed ${dmy(last.placed)}`)
     await expect(block).toContainText(`delivered after ${last.deliveredIn} days`)
-    await expect(block).toContainText('expected in 14 · on time')
+    await expect(block).toContainText('expected in 14 days · on time')
     await expect(block).toContainText('Deliveries')
     await expect(block).toContainText('3 of 3')
     expect(await block.innerText()).not.toMatch(/receiv/i)

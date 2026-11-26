@@ -29,7 +29,8 @@ import { guessCommissioning, TYPED, type ConvertItem, type SupplierChoice, type 
 import { CURRENCIES } from '@/features/orders/lib/currencies'
 import { FindSupplier } from '@/features/rfqs/FindSupplier'
 import { Select } from '@/ui/form/Select'
-import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
+import { orderTotals } from '@/features/orders/lib/orderMath'
+import { qtyNumber, unitWord } from '@/lib/quantity'
 import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
 import { buildSplitPayload, checkSplit, hasFreeQuote, isSplit, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
@@ -466,8 +467,8 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                         {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}
                       </div>
                       <span className="num text-sm lg:pt-2 lg:text-right">
-                        {it.qty}
-                        {it.unit ? <span className="text-fg-muted"> {unitWord(it.qty, it.unit)}</span> : null}
+                        {qtyNumber(it.qty)}
+                        <span className="text-fg-muted"> {unitWord(it.qty, it.unit)}</span>
                       </span>
                       {isSplitItem ? (
                         <>
