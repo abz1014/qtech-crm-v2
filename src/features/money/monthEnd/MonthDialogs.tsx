@@ -69,7 +69,7 @@ export function CloseMonthDialog({
           onOpenChange(false)
           toast.toast({
             title: `${label} locked`,
-            body: 'Payments, expenses and invoices dated in it are frozen.',
+            body: 'Payments, expenses and invoices dated in it can no longer be changed.',
             tone: 'success',
           })
         },
@@ -125,7 +125,7 @@ export function CloseMonthDialog({
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-control bg-sunken px-4 py-3 text-sm">
           <Icon icon={Info} className="mt-px text-fg-muted" />
           <p>
-            <span className="font-medium text-fg">These are warnings, not blockers.</span> Locking {label} freezes the payments, expenses and invoices dated in it.
+            <span className="font-medium text-fg">These are warnings, not blockers.</span> Locking {label} stops changes to the payments, expenses and invoices dated in it.
             No other month is changed. Bank matching and the TCS and FBR stamps stay editable. An admin can reopen {label} from the locked-months list.
           </p>
         </div>

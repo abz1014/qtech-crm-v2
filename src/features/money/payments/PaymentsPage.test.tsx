@@ -11,7 +11,7 @@ import { filterRows, installFakeDb, opArgs, type FakeCall, type FakeResult } fro
 import { receivablesListResult } from '@/test/receivablesFake'
 import { ToastProvider } from '@/ui/Toast'
 
-/* Money > Payments (owner gate 2, 13 Nov 2026; 52-payments.html) and Record payment with no order ("Which order?", F-287 / F-642). */
+/* Money > Payments (owner gate 2, 13 Nov 2026; 52-payments.html) and Record payment with no order ("Choose the order", F-287 / F-642). */
 
 const MONTH = businessToday().slice(0, 7)
 const PAYMENTS = [
@@ -123,25 +123,25 @@ describe('Money > Payments', () => {
   })
 })
 
-describe('Record payment with no order: "Which order?" first', () => {
+describe('Record payment with no order: "Choose the order" first', () => {
   it('lists the open orders only, most overdue first; picking one opens the Record payment form for it', async () => {
     const user = userEvent.setup()
     at('/money/payments')
     await user.click(await screen.findByRole('button', { name: 'Record payment' }))
-    const pick = await screen.findByRole('dialog', { name: 'Which order?' })
+    const pick = await screen.findByRole('dialog', { name: 'Choose the order' })
     expect(pick).toHaveTextContent('Record payment, step 1 of 2')
     const list = await within(pick).findByRole('list', { name: 'Open orders' })
     expect(within(list).getAllByRole('button')).toHaveLength(1) // the paid order is not listed
     expect(within(list).getByRole('button')).toHaveTextContent('ORD-0121 · INV-2284')
     await user.click(within(list).getByRole('button'))
     expect(await screen.findByRole('dialog', { name: 'Record payment' })).toBeInTheDocument()
-    expect(screen.queryByRole('dialog', { name: 'Which order?' })).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Choose the order' })).toBeNull()
   })
 
   it('search narrows the list; nothing matching says so', async () => {
     const user = userEvent.setup()
     at('/money/receivables?pay=1')
-    const pick = await screen.findByRole('dialog', { name: 'Which order?' })
+    const pick = await screen.findByRole('dialog', { name: 'Choose the order' })
     await within(pick).findByRole('list', { name: 'Open orders' })
     await user.type(within(pick).getByRole('textbox', { name: 'Search open orders' }), 'Kestrel')
     expect(within(pick).getByRole('status')).toHaveTextContent('No open order matches “Kestrel”.')
@@ -150,7 +150,7 @@ describe('Record payment with no order: "Which order?" first', () => {
   it('?pay=1 with no order opens the picker for an admin only; closing it drops ?pay from the address', async () => {
     const user = userEvent.setup()
     at('/money/receivables?pay=1')
-    const pick = await screen.findByRole('dialog', { name: 'Which order?' })
+    const pick = await screen.findByRole('dialog', { name: 'Choose the order' })
     await user.click(within(pick).getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent(/^\/money\/receivables$/))
   })
@@ -159,6 +159,6 @@ describe('Record payment with no order: "Which order?" first', () => {
     at('/money/receivables?pay=1', 'sales')
     await screen.findByRole('navigation', { name: 'Money views' })
     await new Promise(r => setTimeout(r, 30))
-    expect(screen.queryByRole('dialog', { name: 'Which order?' })).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Choose the order' })).toBeNull()
   })
 })

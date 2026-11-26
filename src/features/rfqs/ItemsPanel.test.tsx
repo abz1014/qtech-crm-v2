@@ -257,7 +257,7 @@ describe('the supplier comparison', () => {
     expect(document.querySelector('[data-own-price], [data-cheapest-tag], [data-cheapest], [data-price-detail]')).toBeNull()
     expect(screen.queryByRole('button', { name: /Show details for/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /More for (?!item)/ })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'How are prices shown?' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'How prices are shown' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Show in PKR' })).toBeNull()
   })
 
@@ -266,7 +266,7 @@ describe('the supplier comparison', () => {
     renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])])
     // The tip sits beside the heading, not in it: the heading's name is the title alone.
     expect(screen.getByRole('heading', { level: 2, name: 'Items and supplier prices' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'How are prices shown?' }))
+    await user.click(screen.getByRole('button', { name: 'How prices are shown' }))
     expect(await screen.findByText(/Suppliers are listed by name/)).toBeInTheDocument()
     expect(screen.queryByText(/cheapest|recommended|best/i)).toBeNull()
   })

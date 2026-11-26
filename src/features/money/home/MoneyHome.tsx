@@ -97,7 +97,7 @@ function Hero({ f }: { f: MoneyHomeFigures }) {
         <div className="grid min-w-0 flex-[1_1_14rem] gap-1">
           <p className="text-sm font-card text-fg-2">To collect</p>
           <h2 id="money-hero-h" className="text-2xl font-heavy tracking-tight text-pretty">
-            {t && t.total <= 0 ? 'Nothing to collect' : 'Customers still owe us'}
+            {t && t.total <= 0 ? 'Nothing to collect' : 'Due from customers'}
           </h2>
         </div>
         {t ? (

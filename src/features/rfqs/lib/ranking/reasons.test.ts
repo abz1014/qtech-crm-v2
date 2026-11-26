@@ -239,7 +239,7 @@ describe('a ranked row, Show in PKR off (the default): the quoted currency, no P
   })
   it('every quote in one currency is still the best price, in that currency', () => {
     const r = reasonsFor(row({ pkr_unit_price: null, fx_state: 'same_currency', currency: 'EUR', price: 95.5, pct_above_best: 0 }), { showSell: true, bandSize: 1 })
-    expect(r.full[0].text).toBe('Best price: EUR 95.50 each, every quote is in EUR')
+    expect(r.full[0].text).toBe('Best price: EUR 95.50 each, every supplier price is in EUR')
   })
   it('a PKR quote keeps its spread (no conversion behind it)', () => {
     const r = reasonsFor(row({ currency: 'PKR', price: 552_624 }), { showSell: true, bandSize: 2 })

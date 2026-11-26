@@ -50,7 +50,7 @@ import { AMOUNT_ABOVE_ZERO, pickableCategories, quickInsert, quickProblem, sessi
  * The six buttons are the categories used most in the last 30 days, then the everyday spends, and always "Other" (0091: a one-off
  * spend with a title typed in Detail, "What was it for?"). Typing what it was finds a category, or, when none matches, offers
  * Other: '<text>' under the group the words suggest. "More" lists every other one by group. Cash or bank comes from the category (one tap flips it). Date, detail, a receipt photo and "Has a GST invoice" (input tax,
- * 0025) are there but optional. A monthly bill (salaries, rent, a category with a monthly template) shows "This bill is for",
+ * 0025) are there but optional. A monthly bill (salaries, rent, a category with a monthly template) shows "This expense is for",
  * pre-filled with last month up to the 10th (expenses.period), and settles that month's template so it is not due again.
  * Supplier payments are not offered: Pay on the supplier order is their one door. The line above the row counts what was added
  * here and what was paid this month by the day paid (the Money "paid out" basis). 16 px text; 44 px taps.
@@ -415,7 +415,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
             {monthly && period ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-sunken px-3 py-2 text-base" data-testid="quick-for-month">
                 <label htmlFor={`${uid}-for`} className="font-bold">
-                  This bill is for
+                  This expense is for
                 </label>
                 <QuickSelect id={`${uid}-for`} value={period} onChange={e => setForChoice({ key: forKey, value: e.target.value })} className="w-auto">
                   {forMonthChoices(paidOn).map(o => (
@@ -500,7 +500,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
               {hasGst ? (
                 <div className="flex flex-wrap items-center gap-3 rounded-control bg-sunken px-3 py-2 text-base">
                   <label htmlFor={`${uid}-tax`} className="font-bold">
-                    GST on this bill, PKR
+                    GST on this expense, PKR
                   </label>
                   <NumberInput id={`${uid}-tax`} value={tax} min={0} onChange={setTax} className="num w-[10rem] text-base max-md:h-touch" />
                   <span className="text-fg-2">Counts toward GST paid on purchases, so less GST to pay FBR.</span>
@@ -537,7 +537,7 @@ export function QuickAdd({ categories, sheetOpen = false }: { categories: readon
   )
 }
 
-/** The Quick add selects (More..., Filed under, This bill is for): the page's NativeSelect, 44 px on a phone like the category buttons. */
+/** The Quick add selects (More..., Filed under, This expense is for): the page's NativeSelect, 44 px on a phone like the category buttons. */
 function QuickSelect({ className, children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <NativeSelect {...rest} className={cn('max-md:h-touch', className)}>

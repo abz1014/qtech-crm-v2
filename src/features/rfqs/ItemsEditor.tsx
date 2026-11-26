@@ -183,7 +183,7 @@ export function PasteZone({
             setDraft('')
           }
         }}
-        placeholder={touch ? 'Select here to paste, or type one item per line' : 'Click here and paste, or type one item per line'}
+        placeholder={touch ? 'Select here to paste, or type one item per line' : 'Select here and paste, or type one item per line'}
         className={cn(controlClass, 'h-auto resize-y py-2 font-sans leading-6')}
       />
       {touch ? (

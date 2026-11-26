@@ -375,7 +375,7 @@ test.describe('comparison', () => {
     const cny = art.locator('li[data-price-row]', { hasText: s.china.name })
     await expect(cny).toContainText('not compared, no rate')
     // The panel's tip says how the figures are shown, once, and names no better supplier.
-    await expect(page.getByRole('button', { name: 'How are prices shown?' })).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'How prices are shown' })).toHaveCount(1)
     // Item 2 has no prices.
     await expect(page.getByRole('article', { name: 'Item 2' }).locator('li[data-price-row]')).toHaveCount(0)
     await review(page, 'rfq-detail-02-rate-states-1440')
@@ -440,14 +440,14 @@ test.describe("cannot quote (Enter reply, Cannot quote, the reason)", () => {
     const s = await seed()
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const r = await row(page, s.germany.name)
-    await r.getByRole('button', { name: `Cannot offer item 2 from ${s.germany.name}` }).click()
+    await r.getByRole('button', { name: `Cannot quote item 2 from ${s.germany.name}` }).click()
     await page.getByRole('menuitem', { name: 'Item discontinued' }).click()
     await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[1].id, 'discontinued']])
     const after = await inquiryOf(s.germany.inquiryId)
     expect(after.notes).toBeNull()
     expect(after.no_offer_on).toBeNull()
     // The reply dialog says it at once; the page behind it (hidden while the dialog is open) shows it on the item once it closes.
-    await expect(r).toContainText('Cannot offer: Item discontinued')
+    await expect(r).toContainText('Cannot quote: Item discontinued')
     await page.keyboard.press('Escape')
     await expect(r).toHaveCount(0)
     await expect(page.getByRole('article', { name: 'Item 2' }).locator(`[data-declined="${s.germany.id}"]`)).toContainText('Item discontinued')
@@ -646,7 +646,7 @@ test.describe('the page as drawn in the mockup (parity audit Part C)', () => {
     await expect(page.locator(`[data-reply-row="${s.germany.id}"]`)).toHaveCount(1)
     // A reason for this one item is set in that supplier's reply.
     const r = await row(page, s.germany.name)
-    await r.getByRole('button', { name: `Cannot offer item 1 from ${s.germany.name}` }).click()
+    await r.getByRole('button', { name: `Cannot quote item 1 from ${s.germany.name}` }).click()
     await page.getByRole('menuitem', { name: 'Item discontinued' }).click()
     await expect.poll(async () => (await declinesOf(s.germany.inquiryId)).map(d => [d.rfq_item_id, d.reason])).toEqual([[s.items[0].id, 'discontinued']])
     await page.keyboard.press('Escape')
@@ -908,8 +908,8 @@ for (const width of [1440, 375]) {
     await review(page, `rfq-detail-populated-${width}`)
 
     // The tip that explains the order opens and is clean too.
-    await page.getByRole('button', { name: 'How are prices shown?' }).click()
-    await expect(page.getByRole('dialog', { name: 'How are prices shown?' })).toBeVisible()
+    await page.getByRole('button', { name: 'How prices are shown' }).click()
+    await expect(page.getByRole('dialog', { name: 'How prices are shown' })).toBeVisible()
     expect(await overlayViolations(page)).toEqual([])
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Ask more suppliers' }).click()

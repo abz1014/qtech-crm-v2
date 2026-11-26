@@ -60,7 +60,7 @@ const readDocument: typeof ReadDocument = (...args) => import('@/features/rfqs/l
  *   FE-2  supplier reply   Enter reply, one typed price per item, currency never typed, then Save reply
  *         cannot quote      Enter reply, Cannot quote, the reason (the five reasons sit behind one menu, not five buttons)
  *
- * "Cannot quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); "Cannot offer" beside an
+ * "Cannot quote" records one reason for the whole inquiry (no_offer_on and no_offer_reason, a stored key); "Cannot quote" beside an
  * item's price box records a reason for that one item, kept in inquiry_item_declines (see lib/cantQuote.ts). The notes stay free for people.
  * Closing with prices typed and not saved asks first (the Dialog's own discard guard).
  *
@@ -479,8 +479,8 @@ export function SupplierReplyDialog({
                         <span className="flex min-w-0 items-center gap-2 max-sm:flex-wrap">
                         {reason ? (
                           <>
-                            <span className="min-w-0 text-sm text-fg-muted">{`Cannot offer: ${reasonLabel(reason)}`}</span>
-                            <Button size="sm" variant="quiet" icon={Undo2} disabled={itemReason.isPending} aria-label={`Take back cannot offer, item ${it.number} from ${inquiry.supplierName}`} onClick={() => void setItem(it.id, null)}>
+                            <span className="min-w-0 text-sm text-fg-muted">{`Cannot quote: ${reasonLabel(reason)}`}</span>
+                            <Button size="sm" variant="quiet" icon={Undo2} disabled={itemReason.isPending} aria-label={`Take back cannot quote, item ${it.number} from ${inquiry.supplierName}`} onClick={() => void setItem(it.id, null)}>
                               Take back
                             </Button>
                           </>
@@ -519,10 +519,10 @@ export function SupplierReplyDialog({
                                 size="sm"
                                 icon={Ban}
                                 disabled={itemReason.isPending || inquiry.lines.some(l => l.itemId === it.id)}
-                                aria-label={`Cannot offer item ${it.number} from ${inquiry.supplierName}`}
+                                aria-label={`Cannot quote item ${it.number} from ${inquiry.supplierName}`}
                                 className="shrink-0"
                               >
-                                Cannot offer
+                                Cannot quote
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent variant="menu" align="end" side="bottom" aria-label="Reason">

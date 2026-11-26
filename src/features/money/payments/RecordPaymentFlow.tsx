@@ -49,7 +49,7 @@ export function WhichOrderDialog({ open, onOpenChange, onPick }: { open: boolean
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         icon={Banknote}
-        title="Which order?"
+        title="Choose the order"
         context="Record payment, step 1 of 2"
         size="md"
         footer={

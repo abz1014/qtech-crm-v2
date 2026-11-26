@@ -314,7 +314,7 @@ function Dot({ children }: { children: React.ReactNode }) {
 /** The panel's one explanation of the figures. It says nothing about which supplier is better: the CRM never suggests one. */
 function HowCompared({ showPkr }: { showPkr: boolean }) {
   return (
-    <InfoTip label="How are prices shown?">
+    <InfoTip label="How prices are shown">
       {showPkr ? (
         <>
           <p>Every price is shown in PKR at today&apos;s rate, with the supplier&apos;s own figure under it. Suppliers are listed by name.</p>

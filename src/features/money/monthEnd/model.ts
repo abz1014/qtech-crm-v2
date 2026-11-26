@@ -278,7 +278,7 @@ export function buildChecklist(rows: readonly StatusRow[], month: string, detail
         : details?.[c.key]
     const described = describe(c, month, n, detail)
     // A month closed before migration 0076 has no frozen details: its count is frozen but the figures under it are today's.
-    const line = detail?.live === true && n > 0 ? { ...described, parts: [...described.parts, ' (live figures, not frozen at close)'] } : described
+    const line = detail?.live === true && n > 0 ? { ...described, parts: [...described.parts, ' (live figures, not as locked)'] } : described
     return {
       key: c.key,
       label: c.label,

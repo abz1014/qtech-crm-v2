@@ -85,7 +85,7 @@ function ApplyLoader(props: { companyId: string; companyName: string; credit: Cr
   if (q.isPending || !q.isFetchedAfterMount)
     return (
       <ApplyFrame companyName={props.companyName} credit={props.credit} footer={close}>
-        <div className="grid gap-4" role="status" aria-busy="true" aria-label="Loading the orders that owe">
+        <div className="grid gap-4" role="status" aria-busy="true" aria-label="Loading the orders with a balance to collect">
           <Skeleton className="h-control-lg rounded-control" />
           <Skeleton className="h-control-lg rounded-control" />
           <Skeleton className="h-12 rounded-control" />

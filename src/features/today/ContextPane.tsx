@@ -631,7 +631,7 @@ function howTo(item: TodayItem): string {
     case 'relay_answers':
       return 'The customer has answered what this supplier asked. Open the RFQ to send the answers back to them.'
     case 'not_floated':
-      return 'No quotation has gone out yet. Open the job to issue the quotation, or attach the quote you sent. Asking suppliers in the CRM is optional.'
+      return 'No quotation has gone out yet. Open the job to issue the quotation, or attach the quotation you sent. Asking suppliers in the CRM is optional.'
     case 'bid_due':
       return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':
@@ -669,7 +669,7 @@ function howTo(item: TodayItem): string {
     case 'weekly_review':
       return 'Quotations with no decision, RFQs with no quotation, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
     case 'recurring_due':
-      return 'These recurring expenses have no entry for this month yet. Record them all at once, changing an amount first if the bill for this month is different.'
+      return 'These recurring expenses have no entry for this month yet. Record them all at once, changing an amount first if it is different this month.'
     default:
       return 'Open the record.'
   }

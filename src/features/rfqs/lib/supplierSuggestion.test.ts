@@ -203,7 +203,7 @@ describe('order inside a group: ordered, category reply rate, overall reply rate
   })
 })
 
-describe('no offer on 2 of the last 3 asks demotes a supplier', () => {
+describe('cannot quote on 2 of the last 3 RFQs demotes a supplier', () => {
   it('isDemoted reads the newest three', () => {
     expect(isDemoted(['no_offer', 'other', 'no_offer'])).toBe(true)
     expect(isDemoted(['no_offer', 'other', 'other', 'no_offer', 'no_offer'])).toBe(false)
@@ -219,7 +219,7 @@ describe('no offer on 2 of the last 3 asks demotes a supplier', () => {
     expect(ids(r)).toEqual(['good', 'bad'])
     expect(r.suppliers[1].demoted).toBe(true)
     expect(r.suppliers[1].preTicked).toBe(false)
-    expect(r.suppliers[1].reason).toContain('no offer on 2 of the last 3 asks')
+    expect(r.suppliers[1].reason).toContain('cannot quote on 2 of the last 3 RFQs')
   })
 })
 
