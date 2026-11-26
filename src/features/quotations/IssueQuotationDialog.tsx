@@ -21,6 +21,7 @@ import { NumberInput } from '@/ui/form/NumberInput'
 import { Select } from '@/ui/form/Select'
 import { TextArea, TextField } from '@/ui/form/TextField'
 import { useToast } from '@/ui/useToast'
+import { SpecText } from '@/ui/SpecText'
 import type { RfqHeader, InquiryRow } from '@/features/rfqs/api'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { listQuoteCodes, setQuoteCode } from '@/features/companies/api'
@@ -648,7 +649,7 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                         />
                       </div>
                       <div className={`grid min-w-0 content-start gap-1 ${on ? '' : 'text-fg-muted'}`}>
-                        <p className={`break-words font-medium ${on ? 'text-fg' : ''}`}>{it.description}</p>
+                        <p className={`break-words font-medium ${on ? 'text-fg' : ''}`}><SpecText>{it.description}</SpecText></p>
                         <p className="num text-sm text-fg-muted min-[832px]:hidden">
                           {it.qty}
                           {it.unit ? ` ${it.unit}` : ''}
@@ -794,7 +795,8 @@ export function IssueQuotationDialog({ rfq, inquiries, onClose }: { rfq: RfqHead
                 <TextField value={delivery} onChange={e => setDelivery(e.target.value)} placeholder="e.g. To your site, within the lead time on each line" />
               </Field>
               <Field label="Payment terms" requirement="optional" source={previous?.paymentTerms && payment === previous.paymentTerms ? 'from the last quotation' : undefined}>
-                <TextField value={payment} onChange={e => setPayment(e.target.value)} placeholder="e.g. 50% advance, balance against delivery" />
+                {/* two lines that wrap at a space: a one-line box cut long terms mid-word (screen review 26); it stays one line of text */}
+                <TextArea rows={2} value={payment} onChange={e => setPayment(e.target.value.replace(/\s*\n\s*/g, ' '))} placeholder="e.g. 50% advance, balance against delivery" />
               </Field>
             </div>
             <Field label="Standard terms" requirement="optional" help="From the company profile. Change them in Settings, or edit them for this quotation only.">

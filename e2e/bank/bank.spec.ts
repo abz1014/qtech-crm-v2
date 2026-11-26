@@ -175,7 +175,7 @@ test.describe('bank tick (M12)', () => {
   test('the month can be changed, and a link with ?month= lands on it', async ({ page }) => {
     await openAs(page, 'admin', `/money/month-end/bank?month=${OLDER.key}`)
     await expect(page.getByRole('group', { name: 'Statement month' })).toContainText(
-      new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', year: 'numeric' }).format(new Date(`${OLDER.start}T00:00:00Z`)),
+      new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(new Date(`${OLDER.start}T00:00:00Z`)),
     )
     await page.getByRole('button', { name: 'Next month' }).click()
     await expect(page).toHaveURL(new RegExp(`month=${STMT.key}`))

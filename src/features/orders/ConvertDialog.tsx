@@ -29,6 +29,7 @@ import { guessCommissioning, TYPED, type ConvertItem, type SupplierChoice, type 
 import { CURRENCIES } from '@/features/orders/lib/currencies'
 import { FindSupplier } from '@/features/rfqs/FindSupplier'
 import { Select } from '@/ui/form/Select'
+import { SpecText } from '@/ui/SpecText'
 import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
 import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
@@ -460,7 +461,7 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                       <div className="grid min-w-0 gap-[0.125rem]">
                         <b className="font-medium">
                           <span className="num hidden text-fg-muted lg:inline">{n}. </span>
-                          {it.description}
+                          <SpecText>{it.description}</SpecText>
                         </b>
                         {[it.brandName, it.familyName].filter(Boolean).length > 0 ? <span className="text-xs text-fg-muted">{[it.brandName, it.familyName].filter(Boolean).join(' · ')}</span> : null}
                         {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}

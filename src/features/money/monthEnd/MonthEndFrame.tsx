@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Icon } from '@/ui/Icon'
 import { StatusBadge } from '@/ui/StatusBadge'
-import { monthKeyLabel, monthKeyShort } from '@/features/money/monthEnd/model'
+import { monthKeyLabel } from '@/features/money/monthEnd/model'
 
 /*
  * The month controls Lock a month and the money reports share: the pager (the month rides in the address, ?month=2026-10) and the
@@ -49,9 +49,10 @@ export function PeriodStepper({
   )
 }
 
-/** Previous and next month, the month between them. Next stops at the current month. */
+/** Previous and next month, the month between them in full ("October 2026", as the page's own words say it: screen review 27
+ *  found "Oct 2026" in the pager beside "October 2026" in the heading). Next stops at the current month. */
 export function MonthPager({ month, thisMonth, go, label = 'Month' }: { month: string; thisMonth: string; go: (by: number) => void; label?: string }) {
-  return <PeriodStepper label={label} unit="month" text={monthKeyShort(month)} title={monthKeyLabel(month)} atNow={month >= thisMonth} go={go} />
+  return <PeriodStepper label={label} unit="month" text={monthKeyLabel(month)} atNow={month >= thisMonth} go={go} />
 }
 
 export function MonthStateChip({ closed }: { closed: boolean }) {

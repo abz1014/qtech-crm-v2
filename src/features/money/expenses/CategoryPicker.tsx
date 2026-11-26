@@ -239,7 +239,8 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
   const showList = open && !disabled
   const optionId = (i: number) => `${listId}-o${i}`
   const typing = query !== null && typed !== ''
-  const rowHeight = size === 'phone' ? 'min-h-touch' : 'h-control-sm'
+  // a row grows to a second line rather than cut a long name ("Office supplies & snac..." was not a category anyone could pick: screen review 26)
+  const rowHeight = size === 'phone' ? 'min-h-touch py-1' : 'min-h-control-sm py-1'
 
   return (
     <RadixPopover.Root open={showList}>
@@ -265,6 +266,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
             disabled={disabled}
             {...a11y}
             value={query ?? selected?.name ?? ''}
+            title={query === null ? selected?.name : undefined}
             onChange={e => {
               onUnmatched?.(null)
               setQuery(e.target.value)
@@ -326,7 +328,7 @@ export const CategoryPicker = forwardRef<HTMLInputElement, CategoryPickerProps>(
                   onClick={() => pick(c)}
                   className={cn('grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded px-2 text-sm', rowHeight, i === activeIndex && 'bg-selected')}
                 >
-                  <span className="truncate" title={c.name}>
+                  <span className="line-clamp-2 [overflow-wrap:anywhere]" title={c.name}>
                     <Highlight label={c.name} q={q} />
                   </span>
                   <span className="text-xs text-fg-muted">{q ? categoryMeta(c, groups) : c.defaultPaidVia}</span>
