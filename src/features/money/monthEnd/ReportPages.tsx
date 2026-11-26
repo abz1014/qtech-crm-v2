@@ -615,6 +615,11 @@ export function OwePage() {
 
 /** "USD 2,640.00": an amount in its own currency. */
 const inCurrency = (currency: string, v: Amount, paisa: 'always' | 'never' = 'never') => `${currency} ${formatPaisa(toPaisa(v), paisa)}`
+/**
+ * A table cell's amount in its own currency: rupees whole like the Paid column beside it ("PKR 15,000", never "PKR 15,000.00"
+ * next to "20,000", screen review 2026-11-24), a foreign currency to the cent ("USD 2,033.25").
+ */
+const inCurrencyCell = (currency: string, v: Amount) => inCurrency(currency, v, currency === 'PKR' ? 'never' : 'always')
 const rateTitle = (r: PayableRow) => (r.rate !== null && r.currency !== 'PKR' ? `At ${Number(r.rate).toFixed(2)} PKR per ${r.currency}` : undefined)
 
 /** What is owed on one supplier order, in words a person can act on: PKR when converted, its own currency when unpaid, else why not. */
@@ -622,11 +627,11 @@ function OwedCell({ r }: { r: PayableRow }) {
   if (r.owedPkr !== null)
     return (
       <span title={rateTitle(r)}>
-        <Money value={r.owedPkr} prefix={false} paisa="always" strong />
+        <Money value={r.owedPkr} prefix={false} paisa="never" strong />
       </span>
     )
   if (r.state === 'no_rate' && r.committed !== null)
-    return toPaisa(r.paidPkr) === 0n ? <span className="num font-medium">{inCurrency(r.currency, r.committed, 'always')}</span> : <span className="text-fg-2">Needs a rate</span>
+    return toPaisa(r.paidPkr) === 0n ? <span className="num font-medium">{inCurrencyCell(r.currency, r.committed)}</span> : <span className="text-fg-2">Needs a rate</span>
   return <span className="text-fg-muted">{'—'}</span>
 }
 
@@ -672,7 +677,7 @@ function OweBody({ ctx, setCsv }: { ctx: MonthEndCtx; setCsv: SetCsv }) {
             <span className="text-fg-muted">{'—'}</span>
           ) : (
             <span className="num" title={rateTitle(r)}>
-              {inCurrency(r.currency, r.committed, 'always')}
+              {inCurrencyCell(r.currency, r.committed)}
             </span>
           ),
       },
