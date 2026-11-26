@@ -84,7 +84,7 @@ const COMPANIES: ShellLink = { id: 'companies', label: 'Companies', to: '/compan
 const JOBS: ShellLink = { id: 'jobs', label: 'Jobs', to: '/jobs', icon: Truck }
 /** The engineer's own expense claims (owner decision 12 Nov 2026: on the engineer's bar; sales reach it from the account menu, admins have none). */
 const I_PAID: ShellLink = { id: 'ipaid', label: 'I paid', to: '/my-expenses', icon: HandCoins }
-const CAMERA: ShellLink = { id: 'camera', label: 'Photo or note', to: '/capture', icon: Camera }
+const CAMERA: ShellLink = { id: 'camera', label: 'Photo', to: '/capture', icon: Camera }
 
 const item = (key: NavKey) => navItems.find(i => i.key === key) as NavItem
 const reaches = (role: string, key: NavKey) => canAccess(role, item(key))

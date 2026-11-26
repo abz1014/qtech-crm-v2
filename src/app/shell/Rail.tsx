@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 /*
  * The forest rail (gate 2; 02-navigation.html "Option A, Lanes: desktop"), from 768 up. 240 wide from 1024, 72 (icons, words read out)
  * from 768 to 1023 (gate 2 question 2) and whenever the person collapses it (kept on this device). Top to bottom:
- *   the logo (home), the lime button (Create for admin and sales; Photo or note for an engineer, who starts nothing else),
+ *   the logo (home), the lime button (Create for admin and sales; Photo for an engineer, who starts nothing else),
  *   the lanes (admin and sales: Home, Sell, Deliver, Money, then Companies under a divider; engineer: Home, I paid, Jobs),
  *   Collapse (1024 up), and the person's name and role.
  * The current lane is the lime pill (word and pill, never colour alone: aria-current). Home carries the one number (what is due now),
@@ -65,9 +65,9 @@ export function Rail({ user, counts, dots, collapsed, onToggle, links: given, cu
 
       <div className={cn('shrink-0 pb-4 pt-2', collapsed ? 'px-3' : 'px-3 lg:px-4')}>
         {user.role === 'engineer' ? (
-          <Link to="/capture" title="Photo or note" className={limeButtonClass(collapsed)}>
+          <Link to="/capture" title="Photo" className={limeButtonClass(collapsed)}>
             <Icon icon={Camera} size="lg" />
-            <span className={text}>Photo or note</span>
+            <span className={text}>Photo</span>
           </Link>
         ) : (
           <NewMenu role={user.role} variant="rail" collapsed={collapsed} />

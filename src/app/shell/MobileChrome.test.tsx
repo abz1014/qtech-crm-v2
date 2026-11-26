@@ -74,7 +74,7 @@ describe('phone bottom bar (86-phone-shell.html#ps-bars)', () => {
     )
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(within(nav).getAllByRole('link').map(a => a.getAttribute('href'))).toEqual(['/todo', '/capture', '/my-expenses', '/jobs'])
-    expect(within(nav).getByRole('link', { name: 'Photo or note' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: 'Photo' })).toHaveAttribute('aria-current', 'page')
     expect(within(nav).queryByRole('button', { name: 'Create' })).toBeNull()
     expect(nav.textContent).not.toMatch(/Money|Sell|Deliver/)
   })
@@ -110,13 +110,13 @@ describe('the forest rail (768 up)', () => {
     expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('an engineer: Photo or note instead of Create, and Home, I paid, Jobs', () => {
+  it('an engineer: Photo instead of Create, and Home, I paid, Jobs', () => {
     render(
       <MemoryRouter initialEntries={['/todo']}>
         <Rail user={{ ...user, role: 'engineer' }} collapsed={false} onToggle={() => {}} />
       </MemoryRouter>,
     )
-    expect(screen.getByRole('link', { name: 'Photo or note' })).toHaveAttribute('href', '/capture')
+    expect(screen.getByRole('link', { name: 'Photo' })).toHaveAttribute('href', '/capture')
     expect(screen.queryByRole('button', { name: 'Create' })).toBeNull()
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(within(nav).getAllByRole('link').map(a => a.textContent)).toEqual(['Home', 'I paid', 'Jobs'])

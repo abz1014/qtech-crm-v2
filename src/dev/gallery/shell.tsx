@@ -16,7 +16,7 @@ const MONEY: ShellLink = { id: 'money', label: 'Money', to: '/money', icon: Wall
 const COMPANIES: ShellLink = { id: 'companies', label: 'Companies', to: '/companies', icon: Building2, apart: true }
 const JOBS: ShellLink = { id: 'jobs', label: 'Jobs', to: '/jobs', icon: Truck }
 const I_PAID: ShellLink = { id: 'ipaid', label: 'I paid', to: '/my-expenses', icon: HandCoins }
-const CAMERA: ShellLink = { id: 'camera', label: 'Photo or note', to: '/capture', icon: Camera }
+const CAMERA: ShellLink = { id: 'camera', label: 'Photo', to: '/capture', icon: Camera }
 
 const OFFICE = { rail: [HOME, SELL, DELIVER, MONEY, COMPANIES], tabs: [HOME, SELL, DELIVER, MONEY] }
 const ENGINEER = { rail: [HOME, I_PAID, JOBS], tabs: [HOME, CAMERA, I_PAID, JOBS] }

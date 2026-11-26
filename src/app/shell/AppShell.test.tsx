@@ -80,7 +80,7 @@ describe('page shell navigation, per role (Forest lanes: the rail, then the phon
     expect(navs()[1]).toEqual(navs()[0].slice(0, 4))
   })
 
-  it('engineer: their own lists, Home, I paid and Jobs on the rail, Home, Photo or note, I paid and Jobs on the bar; never Money, Sell or Create', () => {
+  it('engineer: their own lists, Home, I paid and Jobs on the rail, Home, Photo, I paid and Jobs on the bar; never Money, Sell or Create', () => {
     render(signedIn('engineer'), '/todo')
     expect(navs()[0]).toMatchInlineSnapshot(`
       [
@@ -92,7 +92,7 @@ describe('page shell navigation, per role (Forest lanes: the rail, then the phon
     expect(navs()[1]).toMatchInlineSnapshot(`
       [
         "Home -> /todo",
-        "Photo or note -> /capture",
+        "Photo -> /capture",
         "I paid -> /my-expenses",
         "Jobs -> /jobs",
       ]
@@ -102,8 +102,8 @@ describe('page shell navigation, per role (Forest lanes: the rail, then the phon
     expect(el.textContent).not.toContain('Sell')
     expect(el.querySelector('[data-create-tab]')).toBeNull()
     expect([...el.querySelectorAll('button')].some(b => b.textContent?.includes('Create'))).toBe(false)
-    // the lime button on an engineer's rail is Photo or note, to Capture
-    expect(el.querySelector('[data-rail] a[href="/capture"]')?.textContent).toContain('Photo or note')
+    // the lime button on an engineer's rail is Photo, to Capture
+    expect(el.querySelector('[data-rail] a[href="/capture"]')?.textContent).toContain('Photo')
   })
 
   it('unknown role: no destinations', () => {

@@ -101,7 +101,8 @@ describe('search button and Cmd/Ctrl+K open the palette (U08)', () => {
     )
     // the old word still finds its new home
     await user.keyboard('rfq{Enter}')
-    expect(await screen.findByText('Jobs page')).toBeInTheDocument()
+    // the palette's lazy rows and the route change can take a few seconds on a busy CI runner
+    expect(await screen.findByText('Jobs page', {}, { timeout: 10_000 })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 

@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 /* The forest rail's shared looks (Rail.tsx, the Create button in NewMenu.tsx). */
 
-/** The lime button at the top of the rail (Create, or the engineer's Photo or note). Lime only ever sits on the forest. */
+/** The lime button at the top of the rail (Create, or the engineer's Photo). Lime only ever sits on the forest. */
 export const limeButtonClass = (collapsed: boolean) =>
   cn(
     'flex h-control-lg w-full items-center gap-3 rounded-pill bg-lime-300 font-heavy text-lime-on shadow-e1 transition-colors duration-fast ease-out hover:bg-lime-hover active:bg-lime-press',
