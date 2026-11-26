@@ -118,7 +118,7 @@ describe('Money > Payments', () => {
 
   it('is admin only: sales get the no-access page and no payment read', async () => {
     const calls = at('/money/payments', 'sales')
-    expect(await screen.findByRole('heading', { name: /is for/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /(is|are) for/ })).toBeInTheDocument()
     expect(calls.some(c => c.target === 'payments_in')).toBe(false)
   })
 })

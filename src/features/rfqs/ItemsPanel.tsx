@@ -451,7 +451,7 @@ export function ItemsPanel({
         <div role="status" className="mt-3 flex items-start gap-3 rounded-control border border-tone-danger-fg/25 bg-tone-danger-bg px-4 py-3" data-many-uncovered={uncoveredIds.size}>
           <Icon icon={TriangleAlert} className="mt-1 text-tone-danger-fg" />
           <p className="text-fg-2">
-            <b className="font-semibold text-fg">{`${uncoveredIds.size} of ${items.length} items have no price.`}</b> The suppliers who replied did not quote them.{prices ? ' Type their prices in Issue quotation, or ask another supplier.' : ''}
+            <b className="font-semibold text-fg">{`${uncoveredIds.size} of ${items.length} items have no price.`}</b> {responders.length === 1 ? 'The supplier who replied' : 'The suppliers who replied'} did not quote them.{prices ? ' Type their prices in Issue quotation, or ask another supplier.' : ''}
           </p>
         </div>
       ) : null}
@@ -548,7 +548,9 @@ export function ItemsPanel({
                           <p className="text-fg-2">
                             <b className="font-semibold text-fg">
                               {itemResponders.length > 0
-                                ? `None of the ${itemResponders.length} ${itemResponders.length === 1 ? 'supplier' : 'suppliers'} who replied quoted this item.`
+                                ? itemResponders.length === 1
+                                  ? 'The supplier who replied did not quote this item.'
+                                  : `None of the ${itemResponders.length} suppliers who replied quoted this item.`
                                 : 'Every supplier asked said they cannot quote it.'}
                             </b>{' '}
                             {waiting.length > 0 ? `${waiting.map(w => w.supplierName).join(', ')} ${waiting.length === 1 ? 'has' : 'have'} not replied yet. ` : ''}

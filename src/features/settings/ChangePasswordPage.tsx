@@ -1,4 +1,4 @@
-import { passwordSchema, type PasswordValues } from '@/features/settings/passwordModel'
+import { NEW_PASSWORD_MIN, passwordSchema, type PasswordValues } from '@/features/settings/passwordModel'
 import { useChangePassword } from '@/features/settings/hooks'
 import { cn } from '@/lib/utils'
 import { Button } from '@/ui/Button'
@@ -35,6 +35,9 @@ export function ChangePasswordPage() {
     },
   })
 
+  // The hint and the error say the same thing: while the error shows, the hint steps aside (screen review 2026-11-24, item 25).
+  const nextHelp = sf.form.formState.errors.next ? undefined : `At least ${NEW_PASSWORD_MIN} characters.`
+
   return (
     <div className="grid content-start gap-card-gap">
       <PageHeader title="Change password" lede="Change the password for your own sign-in. You stay signed in on this device." />
@@ -44,7 +47,7 @@ export function ChangePasswordPage() {
           <FormField name="current" label="Current password">
             {f => <TextField {...f} type="password" autoComplete="current-password" />}
           </FormField>
-          <FormField name="next" label="New password" help="At least 12 characters.">
+          <FormField name="next" label="New password" help={nextHelp}>
             {f => <TextField {...f} type="password" autoComplete="new-password" />}
           </FormField>
           <FormField name="confirm" label="Confirm new password">

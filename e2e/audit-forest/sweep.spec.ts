@@ -79,7 +79,7 @@ async function pageKind(page: Page): Promise<'ok' | 'not-found' | 'no-access' | 
   const main = await page.locator('#main').innerText({ timeout: 2_000 }).catch(() => '')
   if (/page stopped working|something went wrong/i.test(main)) return 'crashed'
   if (/not found|doesn.t exist|no such/i.test(h)) return 'not-found'
-  if (/no access|not for your role|can.t open|is for admins?\b|for admin and sales|Your role is/i.test(`${h} ${main.slice(0, 300)}`)) return 'no-access'
+  if (/no access|not for your role|can.t open|(is|are) for admins?\b|for admin and sales|Your role is/i.test(`${h} ${main.slice(0, 300)}`)) return 'no-access'
   if (page.url().includes('/login')) return 'signed-out'
   return 'ok'
 }

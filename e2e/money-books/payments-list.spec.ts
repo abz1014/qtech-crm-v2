@@ -91,7 +91,7 @@ test('sales have no Payments tab and get the no-access page on its address', asy
   await openAs(page, 'sales', '/money/receivables')
   await expect(page.getByRole('navigation', { name: 'Money views' }).getByRole('link', { name: 'Payments' })).toHaveCount(0)
   await page.goto('/money/payments')
-  await expect(page.getByRole('heading', { name: /is for/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /(is|are) for/ })).toBeVisible()
 })
 
 for (const [label, size] of [['desktop', { width: 1440, height: 900 }], ['phone', { width: 375, height: 812 }]] as const) {

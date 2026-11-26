@@ -343,7 +343,15 @@ describe('supplier flow D: items a supplier was asked about (0140)', () => {
     expect(document.querySelector('[data-many-uncovered]')).toHaveTextContent('3 of 4 items have no price.')
     expect(document.querySelector('[data-many-uncovered]')).toHaveTextContent('Type their prices in Issue quotation, or ask another supplier.')
     expect(document.body.textContent).not.toMatch(/before the quotation is due/)
-    expect(screen.queryByText(/None of the 1 supplier who replied quoted this item/)).toBeNull()
+    expect(document.querySelector('[data-many-uncovered]')).toHaveTextContent('The supplier who replied did not quote them.')
+    expect(screen.queryByText(/The supplier who replied did not quote this item/)).toBeNull()
+  })
+
+  it('one supplier replied without a price for an item: the item says so in the singular (screen review item 25)', () => {
+    const two = Array.from({ length: 2 }, (_, n) => ({ ...item, id: `it-${n + 1}`, number: n + 1, description: `Part ${n + 1}` }))
+    renderPanel([inquiry('a', 'Lahore Flow Systems', [line('la', 'a', 100)])], two)
+    expect(screen.getByText('The supplier who replied did not quote this item.')).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/None of the 1 /)
   })
 
   it('a whole "cannot quote" from a supplier asked about item 1 only is not shown on item 2', () => {

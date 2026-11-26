@@ -81,4 +81,13 @@ describe('Lock month: the dialog counts the same checks as the page', () => {
     expect(within(dialog).getAllByRole('listitem')).toHaveLength(7)
     expect(dialog.textContent).toContain('4 of 7 checks have items')
   })
+
+  it('one check with items reads in the singular, and the note says what locking does (screen review item 25)', async () => {
+    const one = six.map(c => ({ ...c, n: c.key === 'bank_unticked' ? 3 : 0, clear: c.key !== 'bank_unticked' }))
+    setup('2026-09', ['2026-09'], one, 0)
+    const dialog = await screen.findByRole('dialog', { name: 'Lock September 2026?' })
+    expect(dialog.textContent).toContain('1 of 7 checks has items')
+    expect(dialog.textContent).toContain('Locking September 2026 freezes the payments, expenses and invoices dated in it.')
+    expect(dialog.textContent).not.toContain('Locking locks')
+  })
 })

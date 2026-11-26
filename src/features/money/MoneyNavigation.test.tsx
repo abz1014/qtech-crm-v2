@@ -172,7 +172,7 @@ describe('old addresses keep working', () => {
 
   it('/money/reports/margins gives sales the same no-access page as any money report', async () => {
     at('/money/reports/margins', 'sales')
-    expect(await screen.findByRole('heading', { name: /is for/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /(is|are) for/ })).toBeInTheDocument()
   })
 
   it('Margins opened from Reports keeps Reports lit', async () => {
@@ -183,7 +183,7 @@ describe('old addresses keep working', () => {
 
   it('sales get the no-access page on a money report', async () => {
     at('/money/reports/pnl', 'sales')
-    expect(await screen.findByRole('heading', { name: /is for/ })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /(is|are) for/ })).toBeInTheDocument()
   })
 })
 
@@ -315,7 +315,7 @@ describe('Expenses report (2026-10-22)', () => {
 
   it('sales get the no-access page and make no expense request', async () => {
     const db = at(`/money/reports/expenses?by=month&period=${MONTH}`, 'sales')
-    expect((await screen.findAllByText(/Money reports is for/)).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText(/Money reports are for/)).length).toBeGreaterThan(0)
     const targets = db.calls.map(c => c.target)
     for (const t of ['expenses', 'expense_groups', 'expense_categories', 'v_month_cash_flow']) expect(targets, t).not.toContain(t)
   })
