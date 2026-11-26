@@ -631,7 +631,7 @@ function howTo(item: TodayItem): string {
     case 'relay_answers':
       return 'The customer has answered what this supplier asked. Open the RFQ to send the answers back to them.'
     case 'not_floated':
-      return 'No quotation has gone out yet. Open the job to issue the quotation, or attach the quote you sent. Asking suppliers in the CRM is optional.'
+      return 'No quotation has gone out yet. Open the job to issue the quotation, or attach the quotation you sent. Asking suppliers in the CRM is optional.'
     case 'bid_due':
       return 'The quotation is still to send. Open the RFQ to issue it.'
     case 'decision_overdue':

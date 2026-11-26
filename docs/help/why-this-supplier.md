@@ -11,4 +11,4 @@ related: ask-suppliers
 3. Read the line under the name, for example "Deals in contactors: quoted 5 of 6". It is counted from the past asks and orders.
 4. Up to three suppliers are ticked: the ones that usually answer, or that you tagged. Tick or untick any.
 
-Tip: a supplier that said no offer on 2 of its last 3 asks is listed last in its group and is not ticked. "Supplied this item before" is a badge, not a group. If the list says no supplier deals in the category, ask a few: their answers build it.
+Tip: a supplier that could not quote on 2 of its last 3 RFQs is listed last in its group and is not ticked. "Supplied this item before" is a badge, not a group. If the list says no supplier deals in the category, ask a few: their answers build it.

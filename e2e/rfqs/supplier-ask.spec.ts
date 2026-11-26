@@ -5,7 +5,7 @@ import { fillReplyDetails } from '../support/replyDetails'
 
 /*
  * Asking suppliers from the RFQ page without leaving it (owner, 13 Nov 2026): "Search or add a supplier" in Suppliers to ask,
- * "Record as asked" without copying, "Enter reply from another supplier", and a visible "Cannot offer" beside each item's price.
+ * "Record as asked" without copying, "Enter reply from another supplier", and a visible "Cannot quote" beside each item's price.
  * Every test seeds its own customer, RFQ and suppliers (unique names).
  */
 
@@ -93,20 +93,20 @@ test.describe('supplier ask flow', () => {
     await expect.poll(async () => (await must(rest<unknown[]>('admin', `supplier_quote_lines?inquiry_id=eq.${made[0].id}&select=id`))).length).toBe(1)
   })
 
-  test('Cannot offer sits beside each price box, records the reason for that item, and can be taken back', async ({ page }) => {
+  test('Cannot quote sits beside each price box, records the reason for that item, and can be taken back', async ({ page }) => {
     const s = await seed({ asked: true })
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     await openStage(page, 'Quotation')
     await page.getByRole('button', { name: `Enter reply, ${s.asked!.name}`, exact: true }).click()
     const reply = page.getByRole('dialog', { name: s.asked!.name, exact: true })
-    await expect(reply.getByRole('button', { name: `Cannot offer item 2 from ${s.asked!.name}` })).toBeVisible()
-    await reply.getByRole('button', { name: `Cannot offer item 2 from ${s.asked!.name}` }).click()
+    await expect(reply.getByRole('button', { name: `Cannot quote item 2 from ${s.asked!.name}` })).toBeVisible()
+    await reply.getByRole('button', { name: `Cannot quote item 2 from ${s.asked!.name}` }).click()
     await page.getByRole('menuitem', { name: 'Item discontinued' }).click()
-    await expect(reply).toContainText('Cannot offer: Item discontinued')
+    await expect(reply).toContainText('Cannot quote: Item discontinued')
     await expect
       .poll(async () => (await must(rest<{ rfq_item_id: string; reason: string }[]>('admin', `inquiry_item_declines?inquiry_id=eq.${s.asked!.inquiryId}&select=rfq_item_id,reason`))).map(d => [d.rfq_item_id, d.reason]))
       .toEqual([[s.items[1].id, 'discontinued']])
-    await reply.getByRole('button', { name: `Take back cannot offer, item 2 from ${s.asked!.name}` }).click()
+    await reply.getByRole('button', { name: `Take back cannot quote, item 2 from ${s.asked!.name}` }).click()
     await expect.poll(async () => (await must(rest<unknown[]>('admin', `inquiry_item_declines?inquiry_id=eq.${s.asked!.inquiryId}&select=reason`))).length).toBe(0)
   })
 })

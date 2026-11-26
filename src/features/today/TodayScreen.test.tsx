@@ -134,7 +134,7 @@ describe('Today screen', () => {
     fake = install()
     const s = renderAs('sales')
     await screen.findByText('Send the quotation')
-    expect(screen.getByRole('region', { name: 'Quotes to send or follow up' })).toHaveTextContent(/^Ayesha · Sales/)
+    expect(screen.getByRole('region', { name: 'Quotations to send or follow up' })).toHaveTextContent(/^Ayesha · Sales/)
     s.unmount()
     fake.uninstall()
     fake = install({ rfqs: [] })

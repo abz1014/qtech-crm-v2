@@ -41,7 +41,7 @@ if (typeof window !== 'undefined' && window.matchMedia?.('(min-width: 768px)').m
 
 /*
  * Home (Forest, 10-home.html and 11-home-lists.html; the page was called To do, and before that Today: route /todo kept). On top a
- * forest hero per role with the one number (admin "Needs you now", sales "Quotes to send or follow up", engineer "My day"); at the foot
+ * forest hero per role with the one number (admin "Needs you now", sales "Quotations to send or follow up", engineer "My day"); at the foot
  * the money pulse for admin and sales (HomeMoney.tsx) and, on a phone, the Companies row (F-826: Companies is not on the bottom bar).
  *
  * The list (redesign phase 3, P3-A). ONE list that says "do this", three colour blocks (direction C): Late (red),
@@ -468,7 +468,7 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
  */
 const HERO: Record<Role, { role: string; title: string }> = {
   admin: { role: 'Admin', title: 'Needs you now' },
-  sales: { role: 'Sales', title: 'Quotes to send or follow up' },
+  sales: { role: 'Sales', title: 'Quotations to send or follow up' },
   engineer: { role: 'Engineer', title: 'My day' },
 }
 

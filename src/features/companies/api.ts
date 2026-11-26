@@ -776,7 +776,7 @@ export async function createCompany(input: NewCompany): Promise<{ id: string; na
 
 type CompanyEditable = { name?: string; country?: string | null; city?: string | null; notes?: string | null; quote_code?: string | null }
 const EDITABLE = ['name', 'country', 'city', 'notes', 'quote_code'] as const
-const EDITABLE_LABEL: Record<(typeof EDITABLE)[number], string> = { name: 'Company name', country: 'Country', city: 'City', notes: 'Notes', quote_code: 'Quote code' }
+const EDITABLE_LABEL: Record<(typeof EDITABLE)[number], string> = { name: 'Company name', country: 'Country', city: 'City', notes: 'Notes', quote_code: 'Quotation code' }
 
 /** HW-25: the code of the refusal when someone else changed a field this save would overwrite. */
 export const STALE_EDIT = 'stale-edit'

@@ -264,7 +264,7 @@ test('sales: from a WhatsApp enquiry to a payment on the books', async ({ browse
       await expect(r.art).not.toContainText(/Recommended|Cheapest|Lowest price|Best price/)
       await expect(r.art.locator('[data-sell-note]')).toHaveCount(0)
     }
-    await expect(page.getByRole('button', { name: 'How are prices shown?' })).toHaveCount(1)
+    await expect(page.getByRole('button', { name: 'How prices are shown' })).toHaveCount(1)
     fe2('Supplier prices: taps to see them', (await readCount(page)).mouse, 0)
   })
 
