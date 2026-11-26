@@ -42,7 +42,7 @@ export function sourceOf(row: PrefillRow, typed: Typed): PriceSource {
 }
 
 export interface SourceText {
-  /** The chip: "order", "last PO", "quote", "typed". */
+  /** The chip: "order", "last PO", "supplier price", "typed". */
   chip: string
   /** The line under it: "Agreed on the order", "PO-26-0009, 14 Aug 2026". */
   detail: string
@@ -53,7 +53,7 @@ export function sourceText(row: PrefillRow, typed: Typed, today: string): Source
   if (src === 'order') return { chip: 'order', detail: 'Agreed on the order' }
   if (src === 'quote') {
     return {
-      chip: 'quote',
+      chip: 'supplier price',
       detail: `Their supplier price${row.sourceNumber !== null ? `, ${rfqRef(row.sourceNumber)}` : ''}${row.sourceOn ? `, ${formatShortDate(row.sourceOn, today)}` : ''}`,
     }
   }
