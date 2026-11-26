@@ -669,7 +669,7 @@ function howTo(item: TodayItem): string {
     case 'weekly_review':
       return 'Quotations with no decision, RFQs with no quotation, goods and payments far past their date. Decide each one: still live, follow up, or close as lost.'
     case 'recurring_due':
-      return 'These recurring expenses have no entry for this month yet. Record them all at once, changing an amount first if the bill for this month is different.'
+      return 'These recurring expenses have no entry for this month yet. Record them all at once, changing an amount first if it is different this month.'
     default:
       return 'Open the record.'
   }

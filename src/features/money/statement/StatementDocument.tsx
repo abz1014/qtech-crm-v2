@@ -128,7 +128,7 @@ export function StatementDocument({
           <Text style={s.num}>PKR {fixed(statement.closing)}</Text>
         </View>
         <Text style={[s.muted, { marginTop: 6 }]}>
-          A positive balance is what {customerName} owes us. Charged {fixed(statement.charged)}, paid or credited {fixed(statement.credited)} in this period.
+          A positive balance is the amount due from {customerName}. Charged {fixed(statement.charged)}, paid or credited {fixed(statement.credited)} in this period.
         </Text>
         {bank ? <Text style={[s.muted, { marginTop: 8 }]}>{`Pay to ${bank}${profile.bank_iban ? `, IBAN ${profile.bank_iban}` : ''}`}</Text> : null}
 

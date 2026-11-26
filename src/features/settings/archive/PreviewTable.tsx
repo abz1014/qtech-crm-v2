@@ -45,7 +45,7 @@ export function PreviewTable({ cutoff }: { cutoff: string | null }) {
         footerLabel="Total"
         virtualAfter={100}
       />
-      <p className="text-sm text-fg-muted">Still open means money is still owed or work is not finished. Those records are hidden too, so check them before you switch on.</p>
+      <p className="text-sm text-fg-muted">Still open means money is still to collect or pay, or work is not finished. Those records are hidden too, so check them before you switch on.</p>
     </section>
   )
 }

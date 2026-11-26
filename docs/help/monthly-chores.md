@@ -10,8 +10,8 @@ related: month-end-close, approve-claims
 2. From the 1st until it is paid, a [GST to FBR] row shows last month's GST. It is grey to the 12th, amber from the 13th, red after the 15th.
 3. Pay by the 15th and file the return by the 18th. Select [Open GST], deposit the tax and record the payment slip number.
 4. When an engineer has paid for work, a [Staff claims: N awaiting approval] row appears. Select [Approve] to open the claims.
-5. When monthly bills are due, a [Record all] row appears. Change an amount if this month's bill differs, then select [Record all]. Doing it twice never doubles a bill.
+5. When monthly expenses are due, a [Record all] row appears. Change an amount if it is different this month, then select [Record all]. Doing it twice never doubles an expense.
 
 Tip: These rows are for the admin only. The GST row says how many invoices are unpaid, not the amount: the amount is on the Money screen.
 
-Tip: For a bill that is the same every month, such as rent, switch on Book it for me when you add or edit it in Expenses. It is booked on its day at 3 am and marked Auto. Open it and save it once you have checked it. Until then cash in hand does not count it. Leave it off for bills that change.
+Tip: For an expense that is the same every month, such as rent, switch on Book it for me when you add or edit it in Expenses. It is booked on its day at 3 am and marked Auto. Open it and save it once you have checked it. Until then cash in hand does not count it. Leave it off for expenses that change.

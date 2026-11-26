@@ -181,7 +181,7 @@ function StatementDialog({ companyId, companyName, onClose }: { companyId: strin
               </div>
             </div>
           ) : null}
-          <p className="text-sm text-fg-muted">A positive balance is the amount the customer owes. Invoices paid before the new system started are not listed.</p>
+          <p className="text-sm text-fg-muted">A positive balance is the amount to collect from the customer. Invoices paid before the new system started are not listed.</p>
         </div>
       </DialogContent>
     </Dialog>

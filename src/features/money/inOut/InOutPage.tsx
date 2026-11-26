@@ -326,7 +326,7 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
             </>
           )}
           <p className="type-body text-fg-2">
-            Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. The amount still payable to suppliers is in the Payable to suppliers report.
+            Unpaid supplier costs are not booked here, so they are not in profit yet. The amount still payable to suppliers is in the Payable to suppliers report.
           </p>
             </div>
           </FoldRow>
@@ -335,8 +335,8 @@ function Body({ v, onPick }: { v: InOutView; onPick: (p: Period) => void }) {
       <section aria-labelledby="in-out-why" className={cn(CARD, 'grid gap-2 p-card')} data-testid="in-out-why">
           <h2 id="in-out-why" className="type-section flex flex-wrap items-center gap-2">
             Why profit and cash differ in {v.label}
-            <InfoTip label="About supplier bills">
-              Supplier bills are not booked here, so a supplier cost still unpaid is not in profit yet. The amount still payable to suppliers is in the Payable to suppliers report.
+            <InfoTip label="About supplier costs">
+              Unpaid supplier costs are not booked here, so they are not in profit yet. The amount still payable to suppliers is in the Payable to suppliers report.
             </InfoTip>
           </h2>
           {whyLines.length === 0 ? (

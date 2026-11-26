@@ -103,7 +103,7 @@ export function PaymentsPage() {
           label={`Received in ${name}, includes GST`}
           items={[
             { label: `Received in ${name}`, amount: sum.total, sub: `${plural(sum.count)}, GST included` },
-            { label: 'GST inside it, about', amount: gst, tone: 'muted', sub: 'owed to FBR' },
+            { label: 'GST inside it, about', amount: gst, tone: 'muted', sub: 'payable to FBR' },
           ]}
         />
       ) : null}

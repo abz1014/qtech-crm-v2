@@ -87,7 +87,7 @@ describe('Lock month: the dialog counts the same checks as the page', () => {
     setup('2026-09', ['2026-09'], one, 0)
     const dialog = await screen.findByRole('dialog', { name: 'Lock September 2026?' })
     expect(dialog.textContent).toContain('1 of 7 checks has items')
-    expect(dialog.textContent).toContain('Locking September 2026 freezes the payments, expenses and invoices dated in it.')
+    expect(dialog.textContent).toContain('Locking September 2026 stops changes to the payments, expenses and invoices dated in it.')
     expect(dialog.textContent).not.toContain('Locking locks')
   })
 })

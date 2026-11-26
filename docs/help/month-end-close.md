@@ -14,4 +14,4 @@ related: match-bank, month-reports
 6. To reopen a month locked by mistake, select [Reopen] under [Locked months]. It is logged.
 7. Only the latest locked month has [Reopen]. To reopen an earlier month, reopen the newer ones first, newest first.
 
-Note: Locking freezes payments, expenses and invoices dated in that month.
+Note: Locking stops changes to payments, expenses and invoices dated in that month.

@@ -163,7 +163,7 @@ function MyClaims() {
   const visitField =
     (visits.data ?? []).length > 0 ? (
       <div className="grid min-w-0 gap-2">
-        <label htmlFor={visitFieldId} className="flex">{label('Which visit?', true)}</label>
+        <label htmlFor={visitFieldId} className="flex">{label('Visit', true)}</label>
         <NativeSelect
           id={visitFieldId}
           value={visitId}

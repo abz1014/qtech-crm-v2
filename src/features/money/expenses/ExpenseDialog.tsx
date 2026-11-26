@@ -445,7 +445,7 @@ function ExpenseFormReady({
 
         {showFor && paidOnNow ? (
           <label className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control bg-sunken px-3 py-3 text-base">
-            <span className="font-bold">This bill is for</span>
+            <span className="font-bold">This expense is for</span>
             {/* the app's Select, as every other list in this dialog (screen review 27: this one was the bare browser select) */}
             <Select
               value={forChoice ?? expense?.period ?? forMonthOf(paidOnNow, categoryId)}
@@ -547,7 +547,7 @@ function ExpenseFormReady({
         <p className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
           {!showNote ? (
             <span>
-              <LinkButton onClick={() => setShowNote(true)}>Add a detail</LinkButton> (car, bill), optional.
+              <LinkButton onClick={() => setShowNote(true)}>Add a detail</LinkButton> (car, office), optional.
             </span>
           ) : null}
           {!photo ? (
