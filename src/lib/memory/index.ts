@@ -13,6 +13,7 @@
 
 import { formatAmount, formatRate } from '@/lib/money'
 import { formatShortDate } from '@/lib/formatDay'
+import { qtyWithUnit } from '@/lib/quantity'
 
 // ------------------------------------------------------------------------------------------------ inputs
 
@@ -179,8 +180,7 @@ const NONE: PriceFact = { state: 'none', amount: null, figure: null, pkr: null, 
 
 function qtyText(qty: number | null | undefined, unit: string | null | undefined): string | null {
   if (qty === null || qty === undefined) return null
-  const n = formatAmount(qty, 'auto')
-  return unit && unit.trim() ? `${n} ${unit.trim()}` : n
+  return qtyWithUnit(qty, unit)
 }
 
 export interface PriceIn {

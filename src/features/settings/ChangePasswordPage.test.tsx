@@ -91,6 +91,11 @@ describe('Change password screen', () => {
     expect(h.update).not.toHaveBeenCalled()
   })
 
+  it('the new password field says once how long it must be', () => {
+    mount()
+    expect(screen.getByText('At least 12 characters.')).toBeInTheDocument()
+  })
+
   it('a new password under 12 characters is refused before any request', async () => {
     const user = userEvent.setup()
     mount()
@@ -98,6 +103,8 @@ describe('Change password screen', () => {
     await user.click(screen.getByRole('button', { name: 'Change password' }))
     expect(await screen.findAllByText('Use at least 12 characters.')).not.toHaveLength(0)
     expect(h.signIn).not.toHaveBeenCalled()
+    // the hint under the field steps aside while the error says the same thing
+    expect(screen.queryByText('At least 12 characters.')).toBeNull()
   })
 
   it('a mismatched confirmation is refused before any request', async () => {

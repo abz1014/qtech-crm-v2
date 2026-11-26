@@ -259,7 +259,7 @@ export function collect(opts: CollectOptions): Metrics {
   const h1s = Array.from(document.querySelectorAll('h1'))
   const h1 = h1s.find(h => main?.contains(h) && visible(h)) ?? h1s.find(h => visible(h)) ?? null
   const h1Text = (h1 ?? h1s[0])?.textContent?.replace(/\s+/g, ' ').trim() ?? null
-  const status: Metrics['status'] = /page not found/i.test(h1Text ?? '') ? 'not-found' : /is for (admins|sales|engineers)|has no access/i.test(h1Text ?? '') ? 'no-access' : 'ok'
+  const status: Metrics['status'] = /page not found/i.test(h1Text ?? '') ? 'not-found' : /(is|are) for (admins|sales|engineers)|has no access/i.test(h1Text ?? '') ? 'no-access' : 'ok'
 
   // ---------------------------------------------------------------- text, words and sizes
   const text: Metrics['text'] = { chars: 0, under14: 0, from14to16: 0, atLeast16: 0, foldChars: 0, foldUnder14: 0, minPx: null, sizes: {} }

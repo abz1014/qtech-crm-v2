@@ -77,7 +77,7 @@ export const jobLabel = (key: string) => jobRef(key)
 /*
  * The stage filter (2026-11-03): where a job stands on the StageBar ruler, so a filter and the bar always agree. The stop comes from
  * currentStopIndex (0 to 6, 7 = paid, null = lost or cancelled).
- *   rfq       RFQs (Sell only): stop 0, suppliers not asked yet
+ *   rfq       RFQs (Sell only): stop 0, quotation not sent yet
  *   quotation Quotations (Sell only): being priced, priced, or the quotation sent and the customer's order not in yet
  *   orders    the customer has ordered: a live order exists and the job is at or past "ordered" (an order job is also in one more filter)
  *   supplier  Waiting for supplier: stop 3 (an item to source, a supplier order to place, or placed and not here yet)

@@ -29,7 +29,9 @@ import { guessCommissioning, TYPED, type ConvertItem, type SupplierChoice, type 
 import { CURRENCIES } from '@/features/orders/lib/currencies'
 import { FindSupplier } from '@/features/rfqs/FindSupplier'
 import { Select } from '@/ui/form/Select'
-import { orderTotals, unitWord } from '@/features/orders/lib/orderMath'
+import { SpecText } from '@/ui/SpecText'
+import { orderTotals } from '@/features/orders/lib/orderMath'
+import { qtyNumber, unitWord } from '@/lib/quantity'
 import { prefillLines, priceWarnings, type PrefillQuote } from '@/features/orders/lib/sellPrefill'
 import { forItem, priceTexts, type RankedQuote } from '@/features/orders/lib/ranking'
 import { buildSplitPayload, checkSplit, hasFreeQuote, isSplit, orderLineCount, type Part, type SplitCheck } from '@/features/orders/lib/splitConvert'
@@ -460,14 +462,14 @@ function ConvertDialogBody({ rfq, onClose }: Props) {
                       <div className="grid min-w-0 gap-[0.125rem]">
                         <b className="font-medium">
                           <span className="num hidden text-fg-muted lg:inline">{n}. </span>
-                          {it.description}
+                          <SpecText>{it.description}</SpecText>
                         </b>
                         {[it.brandName, it.familyName].filter(Boolean).length > 0 ? <span className="text-xs text-fg-muted">{[it.brandName, it.familyName].filter(Boolean).join(' · ')}</span> : null}
                         {isSplitItem ? <span className="text-xs text-fg-2">split across {parts.length} suppliers</span> : null}
                       </div>
                       <span className="num text-sm lg:pt-2 lg:text-right">
-                        {it.qty}
-                        {it.unit ? <span className="text-fg-muted"> {unitWord(it.qty, it.unit)}</span> : null}
+                        {qtyNumber(it.qty)}
+                        <span className="text-fg-muted"> {unitWord(it.qty, it.unit)}</span>
                       </span>
                       {isSplitItem ? (
                         <>

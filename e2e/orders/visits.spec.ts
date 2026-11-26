@@ -95,5 +95,5 @@ test('the engineer sees the type on the job and on To do, can change it, and see
   await expect.poll(async () => (await visitOf(surveyOrder.order.id)).visit_type).toBe('service')
 
   await page.goto('/settings/tax-deadlines')
-  await expect(page.locator('#main')).toContainText('Tax deadlines is for')
+  await expect(page.locator('#main')).toContainText('Tax deadlines are for')
 })

@@ -32,6 +32,7 @@ import {
   type Density,
   type RowMetrics,
   type SortState,
+  nounFor,
 } from '@/ui/dataTableModel'
 
 export type { Column, Density, SortState } from '@/ui/dataTableModel'
@@ -877,7 +878,7 @@ function TableView<T>(props: DataTableProps<T>) {
   const hints = !cards && !loading && !error && dataRows.length > 0
   const shown = props.summary ?? (noun && !loading && !error && dataRows.length > 0 ? (
     <>
-      Showing <span className="num">{dataRows.length}</span> of <span className="num">{total ?? dataRows.length}</span> {noun}
+      Showing <span className="num">{dataRows.length}</span> of <span className="num">{total ?? dataRows.length}</span> {nounFor(noun, total ?? dataRows.length)}
     </>
   ) : undefined)
   const hintsNode = hints ? (
@@ -890,7 +891,7 @@ function TableView<T>(props: DataTableProps<T>) {
   ) : null
   // WCAG 4.1.3: a filter changes the count silently. One polite node, on the page from the start, says each new count
   // (not the first one: the page itself is being read then). Polite announcements of quick typing coalesce in screen readers.
-  const countText = loading || error ? '' : `Showing ${dataRows.length} of ${total ?? dataRows.length} ${noun ?? 'rows'}`
+  const countText = loading || error ? '' : `Showing ${dataRows.length} of ${total ?? dataRows.length} ${nounFor(noun ?? 'rows', total ?? dataRows.length)}`
   const [firstCount, setFirstCount] = useState<string | null>(null)
   useEffect(() => {
     if (firstCount === null && countText) setFirstCount(countText)

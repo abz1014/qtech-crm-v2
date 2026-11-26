@@ -49,9 +49,5 @@ export function isExemptAll(lines: ReadonlyArray<{ gstRate: number }>): boolean 
   return lines.length > 0 && lines.every(l => l.gstRate === 0)
 }
 
-/** The unit beside a quantity: "1 no", "2 nos" (the stored unit is "nos" whatever the count). Other units are shown as stored. */
-export function unitWord(qty: number, unit: string | null | undefined): string {
-  const u = (unit ?? '').trim()
-  if (/^nos?$/i.test(u)) return qty === 1 ? 'no' : 'nos'
-  return u
-}
+/** The unit beside a quantity: one helper for the whole app (src/lib/quantity). */
+export { unitWord } from '@/lib/quantity'

@@ -130,7 +130,7 @@ async function spaGo(page: Page, path: string): Promise<void> {
 
 async function refused(page: Page): Promise<boolean> {
   const t = await page.locator('#main').innerText({ timeout: 5_000 }).catch(() => '')
-  return /\bis for (admins|sales|engineers)|has no access yet|not available to your role/i.test(t)
+  return /\b(is|are) for (admins|sales|engineers)|has no access yet|not available to your role/i.test(t)
 }
 
 async function signIn(page: Page, email: string, password: string): Promise<void> {

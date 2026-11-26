@@ -5,7 +5,7 @@ import { DataTable, type Column } from '@/ui/DataTable'
 import { generateCSV } from '@/lib/csvExport'
 import { paisaToFixed, sumPaisa } from '@/lib/money'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { formatSortParam, parseSortParam, tableCsvRows } from '@/ui/dataTableModel'
+import { formatSortParam, nounFor, parseSortParam, tableCsvRows } from '@/ui/dataTableModel'
 import { StatusBadge } from '@/ui/StatusBadge'
 import { TableFilter } from '@/ui/TableFilter'
 
@@ -349,6 +349,18 @@ describe('DataTable: density, filter keys, focus memory, footer (A-108 to A-113)
     expect(el.textContent).toContain('move')
     expect(el.textContent).not.toContain('open')
     expect(el.textContent).not.toContain('select')
+  })
+
+  it('the footer names one row in the singular (screen review item 25: "Showing 1 of 1 groups")', () => {
+    mount(<DataTable label="x" noun="groups" columns={columns} rows={INVOICES.slice(0, 1)} getRowId={r => r.id} />)
+    expect(el.textContent).toContain('Showing 1 of 1 group')
+    expect(el.textContent).not.toContain('1 groups')
+    expect(nounFor('groups', 1)).toBe('group')
+    expect(nounFor('companies', 1)).toBe('company')
+    expect(nounFor('kinds of record', 1)).toBe('kind of record')
+    expect(nounFor('RFQs', 1)).toBe('RFQ')
+    expect(nounFor('RFQs', 7)).toBe('RFQs')
+    expect(nounFor('groups', 0)).toBe('groups')
   })
 
   it('the footer band keeps its size whether or not focus is in the table, so the page never moves when focus leaves it', () => {

@@ -1,15 +1,14 @@
 import { useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { ChevronLeft } from 'lucide-react'
 import { useMobileBar } from '@/app/shell/MobileBarContext'
 import { useSession } from '@/app/session'
 import { mapPgError } from '@/lib/pgErrors'
 import { pkr } from '@/lib/formRules'
 import { cn } from '@/lib/utils'
+import { BackLink } from '@/ui/BackLink'
 import { Button } from '@/ui/Button'
 import { EmptyState } from '@/ui/EmptyState'
-import { Icon } from '@/ui/Icon'
 import { NoPrimary } from '@/ui/NoPrimary'
 import { Skeleton } from '@/ui/Skeleton'
 import { useToast } from '@/ui/useToast'
@@ -145,9 +144,7 @@ function ReviewBody({ user }: { user: { id: string; role: Role } }) {
     <div className={cn('mx-auto grid max-w-list gap-5 px-4 py-5 md:px-6', selected.length > 0 && 'pb-[calc(var(--tabs-h,0px)+1.5rem)]')} data-review>
       <NoPrimary />
       <header className="grid gap-1">
-        <Link to="/todo" className="inline-flex min-h-touch items-center gap-1 justify-self-start rounded text-base font-medium text-primary underline-offset-2 hover:underline max-md:hidden">
-          <Icon icon={ChevronLeft} size="sm" /> Home
-        </Link>
+        <BackLink to="/todo" label="Home" />
         <h1 className="text-2xl font-heavy tracking-tight max-md:sr-only">Weekly review</h1>
         <p className="text-base text-fg-muted">
           {headerDate(today)}

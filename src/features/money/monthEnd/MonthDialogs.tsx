@@ -92,7 +92,8 @@ export function CloseMonthDialog({
         title={`Lock ${label}?`}
         context={
           <>
-            {longDay(ctx.today)} · <span className="num">{lockChecksWithItems(cards)}</span> of <span className="num">{cards.length}</span> checks have items
+            {longDay(ctx.today)} · <span className="num">{lockChecksWithItems(cards)}</span> of <span className="num">{cards.length}</span> checks{' '}
+            {lockChecksWithItems(cards) === 1 ? 'has' : 'have'} items
           </>
         }
         size="md"
@@ -124,8 +125,8 @@ export function CloseMonthDialog({
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-control bg-sunken px-4 py-3 text-sm">
           <Icon icon={Info} className="mt-px text-fg-muted" />
           <p>
-            <span className="font-medium text-fg">These are warnings, not blockers.</span> Locking locks {label}: payments, expenses and invoices dated in it are
-            frozen. No other month is changed. Bank matching and the TCS and FBR stamps stay editable. An admin can reopen {label} from the locked-months list.
+            <span className="font-medium text-fg">These are warnings, not blockers.</span> Locking {label} freezes the payments, expenses and invoices dated in it.
+            No other month is changed. Bank matching and the TCS and FBR stamps stay editable. An admin can reopen {label} from the locked-months list.
           </p>
         </div>
         {error ? (

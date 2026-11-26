@@ -2,6 +2,8 @@
  * What the cancel dialog says about a purchase order that was already sent (audit P2), and the message that asks the supplier to cancel.
  * One module so the sentence and the WhatsApp text cannot drift apart. No prices, only the PO, the items and the polite request.
  */
+import { qtyWithUnit } from '@/lib/quantity'
+
 export interface SentPo {
   /** 'PO-26-0017' */
   ref: string
@@ -14,7 +16,7 @@ export interface SentPo {
 /** "PO-26-0017 was sent to Alpenmark. Tell them it has been cancelled." One sentence per PO. */
 export const sentPoSentence = (po: SentPo): string => `${po.ref} was sent to ${po.supplierName}. Tell them it has been cancelled.`
 
-const qtyText = (i: SentPo['items'][number]): string => `${i.qty}${i.unit ? ` ${i.unit}` : ''}`
+const qtyText = (i: SentPo['items'][number]): string => qtyWithUnit(i.qty, i.unit)
 
 /** The WhatsApp-style message for one supplier. */
 export function cancellationMessage(po: SentPo, ourName: string): string {

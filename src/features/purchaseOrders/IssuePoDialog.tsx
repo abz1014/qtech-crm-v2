@@ -5,6 +5,7 @@ import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRevRef } from '@/lib/refs'
+import { qtyNumber, unitWord } from '@/lib/quantity'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { InfoTip } from '@/ui/InfoTip'
@@ -19,6 +20,7 @@ import { Icon } from '@/ui/Icon'
 import { Skeleton } from '@/ui/Skeleton'
 import { Tag } from '@/ui/Tag'
 import { useToast } from '@/ui/useToast'
+import { SpecText } from '@/ui/SpecText'
 import { useCompanyProfile } from '@/features/settings/hooks'
 import { profileGaps } from '@/features/quotations/lib/profileGaps'
 import { SettingsLink } from '@/features/quotations/SettingsLink'
@@ -231,7 +233,7 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       value: r => r.description,
       cell: r => (
         <span className="grid min-w-0 gap-px">
-          <span className="min-w-0 [overflow-wrap:anywhere]">{r.description}</span>
+          <span className="min-w-0 [overflow-wrap:anywhere]"><SpecText>{r.description}</SpecText></span>
           <span className="text-xs text-fg-muted">Order line {r.position + 1}</span>
         </span>
       ),
@@ -244,8 +246,8 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       width: 70,
       cell: r => (
         <span className="num">
-          {r.qty}
-          {r.unit ? <span className="text-fg-muted"> {r.unit}</span> : null}
+          {qtyNumber(r.qty)}
+          <span className="text-fg-muted"> {unitWord(r.qty, r.unit)}</span>
         </span>
       ),
     },
@@ -368,11 +370,13 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
                 />
               </Field>
               <Field label="Payment terms" className="md:col-span-1" source={!edited.payment ? source('payment') : undefined} edited={edited.payment}>
-                <TextField
+                {/* two lines that wrap at a space: a one-line box cut long terms mid-word (screen review 26); it stays one line of text */}
+                <TextArea
+                  rows={2}
                   value={payment}
                   onChange={e => {
                     touch('payment')
-                    setPayment(e.target.value)
+                    setPayment(e.target.value.replace(/\s*\n\s*/g, ' '))
                   }}
                   autoComplete="off"
                 />

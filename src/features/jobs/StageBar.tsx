@@ -39,7 +39,7 @@ const DOT: Record<StopState, string> = {
 }
 
 /** A stop's note that is a plain fact, not a task (quote first, owner 24 Nov 2026: asking suppliers is optional): drawn neutral. */
-const QUIET_NOTE = /suppliers not asked yet/
+const QUIET_NOTE = /quotation not sent yet/
 
 function Mark({ s }: { s: StopView }) {
   // A heavy stroke (the mockup's 3): at 16 px the default 1.75 stroke is too faint to read as a tick on the forest dot.

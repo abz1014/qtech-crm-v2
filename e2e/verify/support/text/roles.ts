@@ -1,7 +1,7 @@
 /** Words the verify-roles suite looks for. */
 export const ROLES = {
-  /** The no-access page's heading (src/app/pages/NoAccessPage.tsx): "<Area> is for admins", "Money is for admins and sales". */
-  noAccess: /\bis for (admins|sales|engineers)/,
+  /** The no-access page's heading (src/app/pages/NoAccessPage.tsx): "<Area> is for admins" or "<Areas> are for admins", "Money is for admins and sales". */
+  noAccess: /\b(is|are) for (admins|sales|engineers)/,
   nav: { main: 'Main' },
   navLabels: { admin: ['Home', 'Sell', 'Deliver', 'Money', 'Companies'], sales: ['Home', 'Sell', 'Deliver', 'Money', 'Companies'], engineer: ['Home', 'I paid', 'Jobs'] },
   order: {

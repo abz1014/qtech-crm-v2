@@ -115,12 +115,12 @@ describe('settings access (A04, A06)', () => {
 
       const second = at('/settings/targets', role)
       expect(screen.queryByText('Targets screen')).toBeNull()
-      expect(screen.getByRole('heading', { name: 'Targets is for admins' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Targets are for admins' })).toBeInTheDocument()
       second.unmount()
 
       at('/settings/categories', role)
       expect(screen.queryByText('Categories screen')).toBeNull()
-      expect(screen.getByRole('heading', { name: 'Expense categories is for admins' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Expense categories are for admins' })).toBeInTheDocument()
     })
   }
 
@@ -171,7 +171,7 @@ describe('settings access (A04, A06)', () => {
     }
     at('/settings/exchange-rates', 'engineer')
     expect(screen.queryByText('Exchange rates screen')).toBeNull()
-    expect(screen.getByRole('heading', { name: 'Exchange rates is for admins and sales' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Exchange rates are for admins and sales' })).toBeInTheDocument()
   })
 
   it('the real route table mounts Settings inside the shell guard', () => {

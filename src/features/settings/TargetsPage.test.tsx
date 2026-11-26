@@ -96,8 +96,20 @@ describe('Targets (M06)', () => {
     const c = document.querySelector('[data-cell="ayesha:4"]') as HTMLElement
     // one line and a bar, not three lines
     expect(within(c).getByText(/Achieved/).closest('p')).toHaveTextContent('Achieved 1,200,000 of 5,000,000 · 300,000 behind pace')
-    expect(within(c).getByRole('img', { name: 'Achieved 1200000 of 5000000, on pace 1500000' })).toBeInTheDocument()
+    expect(within(c).getByRole('img', { name: 'Achieved PKR 1,200,000 of PKR 5,000,000, on pace PKR 1,500,000' })).toBeInTheDocument()
     expect(document.body.textContent).not.toMatch(/\d\s?%/)
+  })
+
+  it('achieved with no target is whole rupees, never paisa (screen review 2026-11-24)', async () => {
+    h.progress.mockResolvedValue([
+      { user_id: 'bilal', year: 2026, quarter: 4, target_net: null, achieved_net: 86_567.16, on_pace_net: null, behind_pace: null, excluded_count: 0 },
+    ] satisfies ProgressRow[])
+    mount()
+    await screen.findByText('Ayesha Rana')
+    const c = document.querySelector('[data-cell="bilal:4"]') as HTMLElement
+    const line = await within(c).findByText(/no target/)
+    expect(line).toHaveTextContent(/^Achieved PKR\s?86,567, no target$/)
+    expect(line.textContent).not.toContain('.16')
   })
 
   it('ends with the count footer', async () => {

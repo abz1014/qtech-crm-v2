@@ -79,7 +79,7 @@ function routes(): { path: string; who: Role[] }[] {
 
 async function refused(page: Page): Promise<boolean> {
   const t = await page.locator('#main').innerText().catch(() => '')
-  return /\bis for (admins|sales|engineers)|has no access yet/i.test(t) || (await page.locator('h1', { hasText: /is for (admins|sales|engineers)/ }).count()) > 0
+  return /\b(is|are) for (admins|sales|engineers)|has no access yet/i.test(t) || (await page.locator('h1', { hasText: /(is|are) for (admins|sales|engineers)/ }).count()) > 0
 }
 
 const links = new Map<string, string>()

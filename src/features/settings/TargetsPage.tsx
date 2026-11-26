@@ -14,6 +14,7 @@ import {
   MIN_YEAR,
   planCopy,
   previousQuarter,
+  progressLabel,
   progressLine,
   quarterLabel,
   quarterMonths,
@@ -315,7 +316,7 @@ function TargetCell({ member, q, target, progress, today, editing, onEdit, onClo
           >
             {/* The name is the visible text with the person and quarter in front, so what is read out contains what is shown. */}
             <span className="sr-only">{what} target: </span>
-            {target ? <Money value={target.target_net_pkr} className="text-fg" /> : <span>{member.role === 'engineer' ? 'No target' : 'Set target'}</span>}
+            {target ? <Money value={target.target_net_pkr} paisa="never" className="text-fg" /> : <span>{member.role === 'engineer' ? 'No target' : 'Set target'}</span>}
           </button>
         )}
         {!editing ? <Progress p={p} target={target} year={year} quarter={quarter} /> : null}
@@ -328,7 +329,7 @@ function Progress({ p, target, year, quarter }: { p: ReturnType<typeof cellProgr
   if (p.kind === 'none') {
     return p.achieved > 0 ? (
       <p className="px-1 text-right text-sm text-fg-muted">
-        Achieved <Money value={p.achieved} className="text-fg-2" />, no target
+        Achieved <Money value={p.achieved} paisa="never" className="text-fg-2" />, no target
       </p>
     ) : null
   }
@@ -352,7 +353,7 @@ function Progress({ p, target, year, quarter }: { p: ReturnType<typeof cellProgr
         done={p.achieved}
         total={amount}
         marker={amount > 0 ? Math.min(100, Math.max(0, (p.onPace / amount) * 100)) : undefined}
-        label={`Achieved ${p.achieved} of ${amount}, on pace ${p.onPace}`}
+        label={progressLabel(p, amount)}
         // the current quarter's column is tinted with the track's own colour: a white track keeps the bar visible on it
         className="bg-surface"
       />

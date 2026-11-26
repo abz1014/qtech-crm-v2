@@ -36,7 +36,6 @@ import {
   listTotals,
   monthKey,
   monthKeyLabel,
-  monthKeyShort,
   pkr,
   sectionOf,
   sectionTotals,
@@ -176,7 +175,7 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
               </h2>
               {/* The month, its one total (by the day paid) and the report for it; then search and filters (60-expenses #ex-monthbar). */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-                <PeriodStepper label="Month" unit="month" text={monthKeyShort(month)} title={monthKeyLabel(month)} atNow={isCurrent} go={by => setMonth(m => shiftMonth(m, by))} />
+                <PeriodStepper label="Month" unit="month" text={monthKeyLabel(month)} atNow={isCurrent} go={by => setMonth(m => shiftMonth(m, by))} />
                 {list.isSuccess ? (
                   <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 text-base" data-testid="expenses-month-total" aria-live="polite">
                     <b className="num text-xl font-heavy tracking-snug">{pkr(totals.total)}</b>
@@ -195,11 +194,11 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
                 {phone ? null : (
                   <Link
                     to={`/money/reports/expenses?by=month&period=${month}`}
-                    aria-label={`Report for ${monthKeyShort(month)}`}
+                    aria-label={`Report for ${monthKeyLabel(month)}`}
                     className="ml-auto inline-flex min-h-control items-center gap-2 rounded-control px-2 text-sm font-bold text-primary underline-offset-2 hover:bg-selected hover:underline"
                   >
                     <Icon icon={ChartColumn} size="sm" />
-                    Report for {monthKeyShort(month)}
+                    Report for {monthKeyLabel(month)}
                   </Link>
                 )}
               </div>
@@ -225,11 +224,11 @@ export function ExpensesTab({ initialMonth }: ExpensesTabProps) {
         {phone ? (
           <Link
             to={`/money/reports/expenses?by=month&period=${month}`}
-            aria-label={`Report for ${monthKeyShort(month)}`}
+            aria-label={`Report for ${monthKeyLabel(month)}`}
             className="inline-flex min-h-touch items-center gap-2 justify-self-start rounded-control px-2 text-base font-bold text-primary underline-offset-2 hover:bg-selected hover:underline"
           >
             <Icon icon={ChartColumn} size="sm" />
-            Report for {monthKeyShort(month)}
+            Report for {monthKeyLabel(month)}
           </Link>
         ) : null}
       </section>

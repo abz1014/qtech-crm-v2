@@ -42,11 +42,11 @@ test('admin_health answers the admin and refuses sales and engineers', async () 
 
 test('sales has no Backups and usage page and no menu entry', async ({ page }) => {
   await openAs(page, 'sales', '/settings/backups')
-  await expect(page.locator('#main')).toContainText('Backups and usage is for')
+  await expect(page.locator('#main')).toContainText('Backups and usage are for')
   await expect(page.getByRole('link', { name: 'Backups and usage' })).toHaveCount(0)
 })
 
 test('an engineer has no Backups and usage page', async ({ page }) => {
   await openAs(page, 'engineer', '/settings/backups')
-  await expect(page.locator('#main')).toContainText('Backups and usage is for')
+  await expect(page.locator('#main')).toContainText('Backups and usage are for')
 })

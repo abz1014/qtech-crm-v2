@@ -1148,7 +1148,7 @@ function IntakeForm({ onAnother, mode, onFilePicked, doc }: { onAnother: () => v
                   setDueSource(null)
                 }}
                 defaultToday={false}
-                placeholder="e.g. 3 dec"
+                placeholder="e.g. 3 Dec"
               />
             </Field>
             {/* On a row with the date: the box sits level with the date field, under the line its label takes. */}

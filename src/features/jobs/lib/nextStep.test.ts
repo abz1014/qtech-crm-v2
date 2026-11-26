@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { jobNext } from '@/features/jobs/lib/nextStep'
 
 const STAGES = ['enquiry', 'asking_suppliers', 'prices_in', 'quoted', 'ordered', 'supplier_ordered', 'delivered', 'invoiced', 'paid', 'lost', 'cancelled']
-const DETAILS = [null, '1 of 3 suppliers replied', 'supplier late', 'arrived, not delivered', 'not invoiced yet', 'partly invoiced, advance received', 'part paid', 'installation to plan', 'quotation expired', 'money still open']
+const DETAILS = [null, 'quotation not sent yet', 'supplier late', 'arrived, not delivered', 'not invoiced yet', 'partly invoiced, advance received', 'part paid', 'installation to plan', 'quotation expired', 'money still open']
 
 describe('next step in words', () => {
   it('names a step for every stage and never carries an amount', () => {

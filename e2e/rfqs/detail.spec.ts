@@ -404,7 +404,7 @@ test.describe('comparison', () => {
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const art = page.getByRole('article', { name: 'Item 2' })
     await expect(art.getByText('No price yet', { exact: true })).toBeVisible()
-    await expect(art.getByText(/None of the 1 supplier who replied quoted this item/)).toBeVisible()
+    await expect(art.getByText(/The supplier who replied did not quote this item/)).toBeVisible()
   })
 })
 
@@ -784,7 +784,7 @@ test.describe('the rate bar and Exchange rates (R15)', () => {
 
   test('the Exchange rates page: an engineer is refused it (no currency amounts, 2026-10-22)', async ({ page }) => {
     await openAs(page, 'engineer', '/settings/exchange-rates')
-    await expect(page.getByRole('heading', { name: 'Exchange rates is for admins and sales' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Exchange rates are for admins and sales' })).toBeVisible()
     await expect(page.getByLabel('Rate, PKR for 1 unit')).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Exchange rates' })).toHaveCount(0) // not in the Settings list either
   })
@@ -863,7 +863,7 @@ test.describe('Suppliers asked, Ask more suppliers, and the empty state (C-42, C
     await openAs(page, 'sales', `/rfqs/${s.rfq.id}`)
     const one = page.getByRole('article', { name: 'Item 1' })
     await expect(one.getByText('No price yet', { exact: true })).toBeVisible()
-    await expect(one.getByText(/None of the 1 supplier who replied quoted this item/)).toBeVisible()
+    await expect(one.getByText(/The supplier who replied did not quote this item/)).toBeVisible()
     await expect(one.getByText(/Type its price in Issue quotation, or ask another supplier./)).toBeVisible()
     await resetClipboard(page)
     await one.getByRole('button', { name: `Copy message for ${s.carrier!.name}` }).click()

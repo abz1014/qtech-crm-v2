@@ -2,6 +2,7 @@ import { agedDate, priceFactOf, type PriceFact } from '@/lib/memory'
 import { poRef, poRevRef, orderRef, rfqRef } from '@/lib/refs'
 import { formatShortDate } from '@/lib/formatDay'
 import { daysLate, daysOverdue } from '@/lib/timeWords'
+import { qtyWithUnit } from '@/lib/quantity'
 import { reasonLabel } from '@/features/rfqs/lib/cantQuote'
 
 /*
@@ -176,7 +177,7 @@ const NONE_PRICE = priceFactOf({ on: null, price: null, currency: null, rate: nu
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const monthYear = (iso: string) => `${MON[+iso.slice(5, 7) - 1]} ${iso.slice(0, 4)}`
-const qtyOf = (qty: number, unit: string | null) => (qty ? `${qty}${unit ? ` ${unit}` : ''}` : null)
+const qtyOf = (qty: number, unit: string | null) => (qty ? qtyWithUnit(qty, unit) : null)
 
 export const QUOTE_ROWS_SHOWN = 10
 export const DELIVERY_ROWS_SHOWN = 8

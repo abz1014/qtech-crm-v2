@@ -203,8 +203,8 @@ select is((select owner_id from public.v_jobs where order_id = pg_temp.f('50')),
 -- ------------------------------------------------------------------ (c) the stage matrix
 create temp table want (label text, rfq uuid, ord uuid, stage text, detail text, hist boolean);
 insert into want values
-  ('enquiry', pg_temp.f('10'), null, 'enquiry', 'suppliers not asked yet', false),
-  ('asking suppliers', pg_temp.f('11'), null, 'asking_suppliers', '0 of 1 suppliers replied', false),
+  ('enquiry', pg_temp.f('10'), null, 'enquiry', 'quotation not sent yet', false),
+  ('asking suppliers', pg_temp.f('11'), null, 'asking_suppliers', 'quotation not sent yet', false),
   ('prices in', pg_temp.f('12'), null, 'prices_in', '1 of 2 items priced', false),
   ('quoted', pg_temp.f('13'), null, 'quoted', 'waiting for the customer', false),
   ('lost', pg_temp.f('14'), null, 'lost', 'price too high', true),

@@ -462,7 +462,10 @@ function TodayBody({ user, name, since }: { user: { id: string; role: Role }; na
   )
 }
 
-/** The hero's words per role (10-home.html): the role and first name, then what the one number counts. */
+/**
+ * The hero's words per role (10-home.html): the first name and the role, then what the one number counts. The name comes first
+ * ("Ayesha · Admin"): role first read as a reversed "Last, First" name ("Admin, Test" for Test Admin, screen review 2026-11-24).
+ */
 const HERO: Record<Role, { role: string; title: string }> = {
   admin: { role: 'Admin', title: 'Needs you now' },
   sales: { role: 'Sales', title: 'Quotes to send or follow up' },
@@ -479,7 +482,7 @@ function Hero({ role, name, count }: { role: Role; name: string; count: number }
   return (
     <section data-surface="navy" aria-labelledby="home-hero-title" data-home-hero={role} className="flex flex-wrap items-end justify-between gap-x-5 gap-y-2 rounded-card bg-chrome bg-hero p-card text-fg shadow-e2">
       <div className="min-w-0 flex-1">
-        <p className="text-base text-fg-2">{first ? `${h.role}, ${first}` : h.role}</p>
+        <p className="text-base text-fg-2">{first ? `${first} · ${h.role}` : h.role}</p>
         <h2 id="home-hero-title" className="text-2xl font-heavy tracking-tight max-md:text-xl">{h.title}</h2>
       </div>
       <p className="num text-hero font-heavy text-lime-300">

@@ -105,8 +105,10 @@ export interface ReceivableNextStep {
  *   inert    "Not invoiced yet"                         no invoice, so no due date
  *   waiting  "Invoiced, no due date"                    an invoice with no due date: counted in Not yet due, never "Not invoiced yet"
  *   done     "Paid"
+ * Beside a Due column (the To collect table) the date is already on the row, so an invoice not yet due reads as its step,
+ * "Wait for payment" · "In 4 days", and the Due cell holds the date alone (screen review 25 Nov, item 29: no repeat).
  */
-export function receivableNextStep(r: ReceivableRow, today: string): ReceivableNextStep {
+export function receivableNextStep(r: ReceivableRow, today: string, opts: { dueShown?: boolean } = {}): ReceivableNextStep {
   if (r.state === 'settled') return { tone: 'done', label: 'Paid' }
   if (r.state === 'overdue') {
     const late = r.dueOn ? overdueWords(daysBetween(r.dueOn, today), r.dueOn) : daysOverdue(1) // never a count above 30 days (redesign phase 0)
@@ -116,7 +118,7 @@ export function receivableNextStep(r: ReceivableRow, today: string): ReceivableN
   // Screen review 24 Nov 2026: an invoiced order with no due date read "Not invoiced yet" while Not yet due counted it as invoiced.
   if (!r.dueOn && isInvoiced(r)) return { tone: 'waiting', label: 'Invoiced, no due date' }
   if (!r.dueOn) return { tone: 'inert', label: r.imported ? 'Imported, to review' : 'Not invoiced yet' }
-  return { tone: 'waiting', label: `Due ${day(r.dueOn)}`, detail: inDays(daysBetween(today, r.dueOn)) }
+  return { tone: 'waiting', label: opts.dueShown ? 'Wait for payment' : `Due ${day(r.dueOn)}`, detail: inDays(daysBetween(today, r.dueOn)) }
 }
 
 /** The text Search balances matches (customer, order number, invoice numbers). */

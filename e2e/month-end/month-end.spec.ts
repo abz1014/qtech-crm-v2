@@ -194,7 +194,7 @@ test.describe('month-end (M10)', () => {
       })
       // one sign-in, then one visit to a month report (every month-end view and money report is behind the same admin check)
       await openAs(page, role, `/money/reports/pnl?month=${STMT.key}`)
-      await expect(page.getByRole('heading', { name: /is for admins|not available to your role/ })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /(is|are) for admins|not available to your role/ })).toBeVisible()
       expect(seen, `${role} must not fetch month-end data`).toEqual([])
       if (role === 'sales') {
         // already signed in: just navigate

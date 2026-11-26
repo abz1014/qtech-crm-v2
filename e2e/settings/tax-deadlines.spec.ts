@@ -112,7 +112,7 @@ test('sales can read the days and cannot change them', async ({ page }) => {
 
 test('an engineer sees nothing GST', async ({ page }) => {
   await openAs(page, 'engineer', '/settings/tax-deadlines')
-  await expect(page.locator('#main')).toContainText('Tax deadlines is for')
+  await expect(page.locator('#main')).toContainText('Tax deadlines are for')
   await expect(page.getByLabel(/Pay GST to FBR by day/)).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Tax deadlines' })).toHaveCount(0)
   await page.goto('/todo')

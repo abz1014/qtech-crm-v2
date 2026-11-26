@@ -663,14 +663,15 @@ function TaxDetails({ companyId, divided }: { companyId: string; divided: boolea
 /**
  * Details: what used to be the Roles and Brands carried panels, in one compact panel (UX audit 9b). The role chip is in the
  * header, so it is not repeated here. On the customer side: since when (the year of the first RFQ or order; "Added" for a
- * company with neither yet) and whether they also supply us (left out for "both": the header chip already says so). On the
+ * prospect, which has no order yet) and whether they also supply us (left out for "both": the header chip already says so). On the
  * supplier side, and for a company with no role yet: the brands they carry, with Add and remove.
  */
 function DetailsPanel({ company, customerSince, brands, taxDetails }: { company: CompanyDetail; customerSince: number | null; brands: boolean; taxDetails: boolean }) {
   const rows: { key: string; value: ReactNode }[] = []
   if (customerSince !== null) {
+    // A prospect (marked a customer, no RFQ or order yet) reads "Added", so the line agrees with its Prospect chip (screen review 29).
     rows.push(
-      company.isCustomer
+      company.isCustomer && company.role !== 'prospect'
         ? { key: 'Customer since', value: <span className="num">{customerSince}</span> }
         : { key: 'Added', value: <span className="num">{monthYearOf(company.createdAt)}</span> },
     )

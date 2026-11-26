@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { businessToday } from '@/lib/dates'
 import { formatShortDate } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
+import { qtyWithUnit } from '@/lib/quantity'
 import { FoldRow, type FoldRowChip, type FoldRowChipTone } from '@/ui/FoldRow'
 import { STEP_CHIP as CHIP } from '@/features/jobs/lib/stepChip'
 import type { StepTone } from '@/lib/status'
@@ -112,7 +113,7 @@ function buildSections(facts: JobFacts, d: JobData, model: StageModel, ctx: JobC
         {facts.dueOn ? <>Answer due {day(facts.dueOn)}.</> : null}
       </p>
       {items.length ? (
-        <Table head={['Item', 'Qty']} label="Items asked for" rows={items.map(i => [i.description, <span key="q" className="num">{`${i.qty}${i.unit ? ` ${i.unit}` : ''}`}</span>])} />
+        <Table head={['Item', 'Qty']} label="Items asked for" rows={items.map(i => [i.description, <span key="q" className="num">{qtyWithUnit(i.qty, i.unit)}</span>])} />
       ) : (
         <Note>No items yet.</Note>
       )}

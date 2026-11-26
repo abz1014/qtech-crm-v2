@@ -10,11 +10,13 @@ import { Select } from '@/ui/form/Select'
 import { DataTable, type Column } from '@/ui/DataTable'
 import { Money } from '@/ui/Money'
 import { useToast } from '@/ui/useToast'
+import { SpecText } from '@/ui/SpecText'
 import type { LegPo, OrderHeader, OrderItemRow, OrderLegRow } from '@/features/orders/api'
 import { useSetGroupPrice, useSetItemRates, useUpdateItem } from '@/features/orders/hooks'
 import { groupItems } from '@/features/orders/lib/splitGroups'
 import { legState, type LegState } from '@/features/orders/lib/legModel'
-import { gstOptions, isExemptAll, lineGstPaisa, lineNetPaisa, STANDARD_GST, unitWord } from '@/features/orders/lib/orderMath'
+import { gstOptions, isExemptAll, lineGstPaisa, lineNetPaisa, STANDARD_GST } from '@/features/orders/lib/orderMath'
+import { qtyNumber, unitWord } from '@/lib/quantity'
 import { formatAmount, formatPaisa } from '@/lib/money'
 import { lazyShown } from '@/lib/lazyDialog'
 import { useEntryAccess } from '@/features/records/useEntryAccess'
@@ -232,7 +234,7 @@ export function OrderItemsPanel({
       {r.kind === 'head' ? (
         <span className="grid min-w-0 gap-px">
           <span className="break-words font-medium">
-            {r.description}
+            <SpecText>{r.description}</SpecText>
           </span>
           <span className="inline-flex w-fit items-center gap-1 text-xs font-regular text-fg-muted">
             <Split size={12} aria-hidden="true" />
@@ -258,7 +260,7 @@ export function OrderItemsPanel({
       ) : (
         <span className="grid min-w-0 gap-px">
           <span className="break-words font-medium">
-            {r.description}
+            <SpecText>{r.description}</SpecText>
           </span>
           <span className="text-xs font-regular text-fg-muted">
             {r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}
@@ -277,8 +279,8 @@ export function OrderItemsPanel({
   )
   const qtyCell = (r: Row) => (
     <span className="num font-regular">
-      {r.qty}
-      {r.unit ? <span className="text-fg-muted"> {unitWord(r.qty, r.unit)}</span> : null}
+      {qtyNumber(r.qty)}
+      <span className="text-fg-muted"> {unitWord(r.qty, r.unit)}</span>
     </span>
   )
 
@@ -440,10 +442,10 @@ export function OrderItemsPanel({
             <span className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2 gap-y-1">
               <span className="num pt-px text-sm text-fg-muted">{r.no}</span>
               <span className="grid min-w-0 gap-1">
-                <span className="break-words font-medium">{r.description}</span>
+                <span className="break-words font-medium"><SpecText>{r.description}</SpecText></span>
                 <span className="inline-flex flex-wrap items-center gap-x-1 text-sm text-fg-muted">
-                  <span className="num">{r.qty}</span>
-                  {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''}
+                  <span className="num">{qtyNumber(r.qty)}</span>
+                  {` ${unitWord(r.qty, r.unit)}`}
                   <Split size={12} aria-hidden="true" className="ml-1" /> split across {r.members?.length ?? 0} suppliers
                 </span>
                 {money ? (
@@ -474,8 +476,8 @@ export function OrderItemsPanel({
                   <span className="text-xs text-fg-muted">{r.isService ? 'Service' : [r.brandName, r.model].filter(Boolean).join(' · ')}</span>
                 ) : null}
                 <span className="text-sm text-fg-2">
-                  <span className="num">{r.qty}</span>
-                  {r.unit ? ` ${unitWord(r.qty, r.unit)}` : ''}
+                  <span className="num">{qtyNumber(r.qty)}</span>
+                  {` ${unitWord(r.qty, r.unit)}`}
                   {money && r.unitPriceNet !== null ? (
                     <>
                       <span className="text-fg-muted"> × </span>

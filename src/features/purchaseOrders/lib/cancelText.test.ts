@@ -10,8 +10,8 @@ describe('cancel text for a sent PO', () => {
   it('names the PO and the items, asks politely, and carries no price', () => {
     const t = cancellationMessage(po, 'Q-Tech Solutions')
     expect(t).toContain('*PO-26-0017*')
-    expect(t).toContain('1. Cerabar PMC51, 3 ea')
-    expect(t).toContain('2. Cable set, 8')
+    expect(t).toContain('1. Cerabar PMC51, 3 nos')
+    expect(t).toContain('2. Cable set, 8 nos')
     expect(t.startsWith('Dear Sir/Madam,')).toBe(true)
     expect(t).toMatch(/ask you to cancel/)
     expect(t).toContain('We regret the inconvenience and thank you for your cooperation.')
