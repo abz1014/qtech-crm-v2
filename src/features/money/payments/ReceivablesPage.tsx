@@ -6,7 +6,6 @@ import { Dialog, DialogContent } from '@/ui/Dialog'
 import { businessToday } from '@/lib/dates'
 import { formatDay } from '@/lib/formatDay'
 import { orderRef } from '@/lib/refs'
-import { agoDays, inDays } from '@/lib/timeWords'
 import { matchesAllWords, useQueryParamText } from '@/lib/useQueryParamText'
 import { useSession } from '@/app/session'
 import { cn } from '@/lib/utils'
@@ -29,7 +28,6 @@ import { BelowTheFold } from '@/ui/BelowTheFold'
 import { lazyWithReload } from '@/lib/importWithReload'
 import { Skeleton } from '@/ui/Skeleton'
 import {
-  daysBetween,
   filterReceivables,
   isInvoiced,
   receivableNextStep,
@@ -75,8 +73,9 @@ const FILTER_WORD: Record<ReceivableFilter, string> = { open: 'Open', overdue: '
 const phoneMoney = (n: number) => Math.round(n).toLocaleString('en-US')
 const shortDay = (iso: string) => formatDay(iso).replace(/^\w+ /, '').replace(/ \d{4}$/, '')
 
-function NextStep({ r, today, onInvoice }: { r: ReceivableRow; today: string; onInvoice: (orderId: string) => void }) {
-  const s = receivableNextStep(r, today)
+/** dueShown: the table, where the Due column has the date (a card has none, so its step carries it). */
+function NextStep({ r, today, onInvoice, dueShown = false }: { r: ReceivableRow; today: string; onInvoice: (orderId: string) => void; dueShown?: boolean }) {
+  const s = receivableNextStep(r, today, { dueShown })
   // "Not invoiced yet" is a state, not a step: the step is to create the invoice, one tap from here (round 3).
   // An imported order is grey "Imported, to review": its invoices are not linked yet, so "Create invoice" could be wrong (owner decision 1b).
   if (r.state !== 'settled' && !isInvoiced(r) && !r.imported)
@@ -190,21 +189,13 @@ export function ReceivablesPage() {
         id: 'due',
         header: 'Due',
         value: r => r.dueOn,
-        cell: r => {
-          if (!r.dueOn) return <span className="text-fg-muted">{'—'}</span>
-          const d = daysBetween(today, r.dueOn)
-          // Words only: the row's one danger mark is its Next step (spec 1.2 rule 6).
-          return (
-            <span className="grid gap-px">
-              <span className="num font-medium">{shortDay(r.dueOn)}</span>
-              <span className="text-xs text-fg-muted">{d < 0 ? agoDays(-d) : inDays(d)}</span>
-            </span>
-          )
-        },
+        // The date alone: how late or how soon is said once, under the Next step (screen review 25 Nov, item 29). Words only: the
+        // row's one danger mark is its Next step (spec 1.2 rule 6).
+        cell: r => (r.dueOn ? <span className="num font-medium">{shortDay(r.dueOn)}</span> : <span className="text-fg-muted">{'—'}</span>),
       },
       // ONE Next step (R2-06): replaces the Payment chip and the Last reminder columns. Record payment lives in ONE place, the
       // panel of the picked row (round 3: the unlabelled icon button on every row is gone).
-      { id: 'next', header: 'Next step', sortable: false, cell: r => <NextStep r={r} today={today} onInvoice={setInvoicing} /> },
+      { id: 'next', header: 'Next step', sortable: false, cell: r => <NextStep r={r} today={today} onInvoice={setInvoicing} dueShown /> },
     ]
     return cols
   }, [today])

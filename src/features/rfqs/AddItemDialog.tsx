@@ -87,7 +87,7 @@ export function AddItemDialog({ rfq, onClose }: { rfq: RfqHeader; onClose: () =>
               <NumberInput value={qty} onChange={setQty} min={0} />
             </Field>
             <Field label="Unit" requirement="optional">
-              <TextField value={unit} onChange={e => setUnit(e.target.value)} placeholder="pcs" autoComplete="off" />
+              <TextField value={unit} onChange={e => setUnit(e.target.value)} placeholder="nos" autoComplete="off" />
             </Field>
           </div>
           <button type="submit" className="sr-only" tabIndex={-1}>

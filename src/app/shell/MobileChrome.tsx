@@ -107,8 +107,8 @@ export function BottomTabs({
     <nav
       aria-label="Main"
       data-tabbar={engineer ? 'engineer' : 'office'}
-      // The engineer's Camera pill is 48 tall (the others 32): the tabs sit on the bar's foot so every word shares one line (centred,
-      // "Camera" sat 8 px under Home, I paid and Jobs).
+      // The engineer's Photo or note pill is 48 tall (the others 32): the tabs sit on the bar's foot so every word shares one line (centred,
+      // "Photo or note" sat 8 px under Home, I paid and Jobs).
       className={cn(
         'grid min-h-tabbar gap-1 border-t bg-surface px-2 pb-[calc(var(--sp-2)+env(safe-area-inset-bottom,0px))] pt-2 shadow-e3 md:hidden',
         engineer ? 'items-end' : 'items-center',

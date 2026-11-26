@@ -695,7 +695,7 @@ test('books: two admins, one closes last month while the other has Add expense o
     await probe(info, a, 'Record payment dated in the locked month: the sentence, nothing saved', async () => {
       await visit(a, info, `/orders/${o.order.id}`, 'order A')
       // The job page: Record payment (an advance, before any invoice) is a button of the Invoice step.
-      await openStage(a, 'Invoice')
+      await openStage(a, 'Billing')
       await stagesOf(a).getByRole('button', { name: 'Record payment' }).first().click({ timeout: 10_000 })
       const d = a.getByRole('dialog', { name: 'Record payment' })
       await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
@@ -708,7 +708,7 @@ test('books: two admins, one closes last month while the other has Add expense o
 
     await probe(info, a, 'Create invoice dated in the locked month: the sentence, nothing saved', async () => {
       await visit(a, info, `/orders/${o.order.id}`, 'order A invoice')
-      await openStage(a, 'Invoice')
+      await openStage(a, 'Billing')
       await stagesOf(a).getByRole('button', { name: 'Create invoice', exact: true }).first().click({ timeout: 10_000 })
       const d = a.getByRole('dialog', { name: 'Create invoice' })
       await d.getByRole('textbox', { name: 'Invoice date' }).fill(typed(M1.day(6)))

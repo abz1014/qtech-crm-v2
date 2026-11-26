@@ -42,7 +42,7 @@ test('overpayment and advance: an advance before the invoice, then more than is 
   const payments = () => must(rest<{ amount: number }[]>('admin', `payments_in?order_id=eq.${o.order.id}&select=amount&order=created_at`))
   const record = async (amount: string) => {
     // no invoice yet: Record payment (an advance) is on the Invoice stage of the job page
-    await openStage(page, 'Invoice')
+    await openStage(page, 'Billing')
     await stagesOf(page).getByRole('button', { name: 'Record payment' }).first().click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await expect(d.getByRole('textbox', { name: 'Amount received, PKR' })).toHaveValue(/.+/) // the balance due is pre-filled
@@ -152,7 +152,7 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const o = await newOrder('Locked Payer', 50000)
     const ctx = await roleContext(browser, info, 'admin')
     const page = await openPage(ctx, `/orders/${o.order.id}`)
-    await openStage(page, 'Invoice')
+    await openStage(page, 'Billing')
     await stagesOf(page).getByRole('button', { name: 'Record payment' }).first().click()
     const d = page.getByRole('dialog', { name: 'Record payment' })
     await d.getByRole('textbox', { name: 'Amount received, PKR' }).fill('10,000')
@@ -168,7 +168,7 @@ test.describe('the closed-month refusal, in the screens, for a payment and an in
     const o = await newOrder('Locked Invoicer', 50000)
     const ctx = await roleContext(browser, info, 'sales')
     const page = await openPage(ctx, `/orders/${o.order.id}`)
-    await openStage(page, 'Invoice')
+    await openStage(page, 'Billing')
     await stagesOf(page).getByRole('button', { name: 'Create invoice' }).click()
     const d = page.getByRole('dialog', { name: 'Create invoice' })
     await d.getByRole('textbox', { name: 'Invoice date' }).fill(typed)

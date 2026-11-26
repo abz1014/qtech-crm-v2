@@ -156,7 +156,7 @@ test('order page by role: sales see no payment action or margin; the engineer se
   const sp = await open(sales, `/orders/${o.order.id}`)
   await openStage(sp, 'Order')
   await expect(sp.getByRole('region', { name: ROLES.order.items })).toContainText(amount(296296.29))
-  await openStage(sp, 'Invoice')
+  await openStage(sp, 'Billing')
   await expect(sp.getByRole('button', { name: ROLES.order.recordPayment })).toHaveCount(0)
   await expect(sp.getByRole('region', { name: ROLES.order.marginPanel, exact: true })).toHaveCount(0)
   await sales.close()

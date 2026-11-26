@@ -11,6 +11,7 @@
 //  - The text never states a reply-by date. computeReplyBy stays for the screens that show one.
 //  - Brand is shown only if the item has one and its description does not already say it.
 
+import { qtyWithUnit } from '@/lib/quantity'
 import { addDays, isWeekend, parseDay, weekdayOf } from './dateText'
 
 // ------------------------------------------------------------------------------------------------ types
@@ -106,8 +107,6 @@ export function computeReplyBy(dueOn: string | null | undefined, today: string):
 
 // ------------------------------------------------------------------------------------------------ text pieces
 
-const NOS_UNITS = new Set(['', 'no', 'nos', 'pc', 'pcs', 'piece', 'pieces', 'each', 'ea', 'unit', 'units'])
-
 function oneLine(s: string): string {
   return s.replace(/\s+/g, ' ').trim()
 }
@@ -115,10 +114,7 @@ function oneLine(s: string): string {
 /** "2 nos", "1 no", "150 m". Null when the quantity is unusable (never guessed). */
 export function qtyText(qty: number, unit?: string | null): string | null {
   if (!Number.isFinite(qty) || qty <= 0) return null
-  const n = qty.toLocaleString('en-US', { maximumFractionDigits: 3 })
-  const u = oneLine(unit ?? '')
-  if (NOS_UNITS.has(u.toLowerCase())) return `${n} ${qty === 1 ? 'no' : 'nos'}`
-  return `${n} ${u}`
+  return qtyWithUnit(qty, unit)
 }
 
 function itemTitle(item: EnquiryItem): string {

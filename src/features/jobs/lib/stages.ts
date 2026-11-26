@@ -43,7 +43,7 @@ export interface JobStanding {
   stage: string | null
   stageDetail: string | null
   kind: 'enquiry' | 'direct'
-  /** An engineer's page: money states are left out of the words and the Invoice stop is called Billing (an engineer's screen never says Invoice). */
+  /** An engineer's page: money states are left out of the words (the Invoice stop is called Billing for everyone, see stageModel). */
   office?: boolean
 }
 
@@ -52,7 +52,7 @@ export type StopState = 'done' | 'current' | 'future' | 'none' | 'stopped' | 'of
 
 export interface StopView {
   name: StopName
-  /** The word drawn: the name, or "Billing" for an engineer's Invoice stop. */
+  /** The word drawn: the name, or "Billing" for the Invoice stop. */
   shown: string
   index: number
   state: StopState
@@ -135,7 +135,9 @@ const parts = (detail: string | null) => (detail ?? '').split(', ').map(s => s.t
 
 export function stageModel(job: JobStanding): StageModel {
   const detail = job.office ? officeDetail(job.stageDetail) : job.stageDetail
-  const shownName = (name: StopName) => (job.office && name === 'Invoice' ? 'Billing' : name)
+  // The Invoice stop is drawn as Billing for every role (screen review 29: one name for one step). An engineer's screen never
+  // says Invoice (owner, audit 2), so the admin's and sales' ruler takes the engineer's word, not the other way round.
+  const shownName = (name: StopName) => (name === 'Invoice' ? 'Billing' : name)
   const cur = currentStopIndex(job.stage, detail)
   const lostOrCancelled = job.stage === 'lost' || job.stage === 'cancelled'
   const advance = parts(detail).some(p => p === 'advance received' || p === 'part paid')

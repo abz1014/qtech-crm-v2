@@ -82,6 +82,8 @@ describe('receivables, the mockup figures', () => {
     })
     expect(receivableNextStep(row({ state: 'overdue', dueOn: '2026-11-15', lastRemindedOn: TODAY, reminderCount: 1 }), TODAY).label).toBe('Reminded today')
     expect(receivableNextStep(row({ dueOn: '2026-12-03' }), TODAY)).toEqual({ tone: 'waiting', label: 'Due 3 Dec', detail: 'In 6 days' })
+    // beside the table's Due column the step does not repeat the date (screen review 29)
+    expect(receivableNextStep(row({ dueOn: '2026-12-03' }), TODAY, { dueShown: true })).toEqual({ tone: 'waiting', label: 'Wait for payment', detail: 'In 6 days' })
     expect(receivableNextStep(row({ dueOn: null, invoiceNumbers: [] }), TODAY)).toEqual({ tone: 'inert', label: 'Not invoiced yet' })
     // invoiced with no due date: counted in Not yet due ("orders, invoiced"), so never "Not invoiced yet" (screen review 24 Nov)
     expect(receivableNextStep(row({ dueOn: null, invoiceNumbers: ['INV-0042'] }), TODAY)).toEqual({ tone: 'waiting', label: 'Invoiced, no due date' })

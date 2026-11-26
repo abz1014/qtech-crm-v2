@@ -146,9 +146,9 @@ describe('the memory card evidence block: up to three recent orders', () => {
     expect(b.title).toBe('Recent orders of this item from Metro Process Controls')
     expect(b.countText).toBe('3 of 4')
     expect(b.orders.map(o => [o.ref, o.result, o.detail])).toEqual([
-      ['ORD-0031', 'delivered after 19 days', 'expected in 14 · late'],
-      ['ORD-0024', 'delivered after 18 days', 'expected in 21 · on time'],
-      ['ORD-0016', 'delivered after 12 days', 'expected in 14 · on time'],
+      ['ORD-0031', 'delivered after 19 days', 'expected in 14 days · late'],
+      ['ORD-0024', 'delivered after 18 days', 'expected in 21 days · on time'],
+      ['ORD-0016', 'delivered after 12 days', 'expected in 14 days · on time'],
     ])
     expect(b.order).toEqual(b.orders[0])
     expect(b.counts.map(c => [c.label, c.value])).toContainEqual(['Ordered from', '4 times'])

@@ -5,6 +5,7 @@ import { businessToday } from '@/lib/dates'
 import { formatAmount } from '@/lib/money'
 import { mapPgError } from '@/lib/pgErrors'
 import { orderRef, poRevRef } from '@/lib/refs'
+import { qtyNumber, unitWord } from '@/lib/quantity'
 import { cn } from '@/lib/utils'
 import { Banner } from '@/ui/Banner'
 import { InfoTip } from '@/ui/InfoTip'
@@ -244,8 +245,8 @@ export function IssuePoDialog({ order, leg, onClose }: { order: OrderHeader; leg
       width: 70,
       cell: r => (
         <span className="num">
-          {r.qty}
-          {r.unit ? <span className="text-fg-muted"> {r.unit}</span> : null}
+          {qtyNumber(r.qty)}
+          <span className="text-fg-muted"> {unitWord(r.qty, r.unit)}</span>
         </span>
       ),
     },

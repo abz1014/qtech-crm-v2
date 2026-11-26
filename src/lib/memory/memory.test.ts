@@ -85,7 +85,7 @@ describe('memory card', () => {
     expect(c.quote.pkr).toBe('551,034')
     expect(c.quote.rate).toBe('278.30 · 14 Jun')
     expect(c.quote.note).toBeNull()
-    expect(c.quote.qty).toBe('1 pcs')
+    expect(c.quote.qty).toBe('1 no')
   })
   it('(n) a legacy line with no captured rate shows the original currency only', () => {
     const c = buildMemoryCard(

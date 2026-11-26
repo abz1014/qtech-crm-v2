@@ -144,7 +144,9 @@ test.describe('company page', () => {
     await expect(page.getByRole('region', { name: 'Contacts' }).getByText('Finance')).toBeVisible() // the job title under the name
     // Roles and Brands carried are one Details panel now (UX audit 9b); the role chip is said once, in the header.
     const details = page.getByRole('region', { name: 'Details', exact: true })
-    await expect(details.getByText('Customer since')).toBeVisible()
+    // still a prospect (no order): Added, never "Customer since" beside the Prospect chip (screen review 29)
+    await expect(details.getByText('Added', { exact: true })).toBeVisible()
+    await expect(details.getByText('Customer since')).toHaveCount(0)
     await expect(details.getByText('Also a supplier')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Roles' })).toHaveCount(0)
     await expect(page.getByRole('region', { name: 'Brands carried' })).toHaveCount(0) // a customer carries no brands
