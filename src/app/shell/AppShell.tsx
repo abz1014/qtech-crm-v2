@@ -18,6 +18,7 @@ import { usePageSettled } from '@/app/usePageSettled'
 import { markContentDrawn, whenContentDrawn } from '@/lib/afterContent'
 import { preloadPopover } from '@/ui/popoverStore'
 import { preloadDialog } from '@/ui/dialogStore'
+import { preloadTooltip } from '@/ui/tooltipStore'
 import { NavCountsContext } from '@/app/shell/navCountsContext'
 import { useRouteFocus } from '@/app/shell/useRouteFocus'
 import { useKeyboardScroll } from '@/app/shell/useKeyboardScroll'
@@ -84,13 +85,13 @@ function Frame({ user, counts: given }: { user: SessionUser; counts?: Partial<Re
   useEffect(() => {
     if (settled) markContentDrawn()
   }, [settled])
-  // The Radix half of every popover and menu is downloaded once the content is drawn (src/ui/Popover.tsx), not with the first page.
+  // The Radix half of every popover, menu and tooltip is downloaded once the content is drawn (src/ui/Popover.tsx), not with the first page.
   useEffect(() => {
     if (import.meta.env.MODE === 'test') return // loaded up front by src/test/setup.ts
     let t: number | undefined
     whenContentDrawn(() => {
       t = window.setTimeout(() => {
-        void Promise.all([preloadPopover(), preloadDialog()]).then(() => void (document.documentElement.dataset.radixReady = '1')) // e2e waits for this: the swap rebuilds triggers
+        void Promise.all([preloadPopover(), preloadDialog(), preloadTooltip()]).then(() => void (document.documentElement.dataset.radixReady = '1')) // e2e waits for this: the swap rebuilds triggers
       }, 1500)
     })
     return () => window.clearTimeout(t)

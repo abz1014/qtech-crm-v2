@@ -11,6 +11,8 @@ const { preloadPopover } = await import('@/ui/popoverStore')
 await preloadPopover()
 const { preloadDialog } = await import('@/ui/dialogStore')
 await preloadDialog()
+const { preloadTooltip } = await import('@/ui/tooltipStore')
+await preloadTooltip()
 
 /*
  * findBy*, waitFor and waitForElementToBeRemoved give up after 1000 ms by default. Vitest runs ~200 jsdom files in parallel
