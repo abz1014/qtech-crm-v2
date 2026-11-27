@@ -1,117 +1,60 @@
-import { useRef, useState, type CSSProperties, type ReactElement, type ReactNode } from 'react'
-import * as RadixTooltip from '@radix-ui/react-tooltip'
+import { cloneElement, useState, type CSSProperties, type FocusEvent, type PointerEvent, type ReactElement, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { Kbd } from '@/ui/Kbd'
+import { preloadTooltip, useTooltipImpl } from '@/ui/tooltipStore'
+import type { TooltipProps } from '@/ui/tooltipImpl'
 
 /*
  * Tooltip (INVENTORY: U03; D08 section 10). Short, optional, never the only place
  * something is said. Forest .qb-tip__body: brand-950, e3 shadow, 12 px corners, no arrow, 300px max. Opens after 400 ms
  * of hover or at once on keyboard focus; closes on Esc, blur or leaving.
  * Phones have no hover: put the text on screen instead.
+ *
+ * Light and Radix halves (perf, as Popover.tsx): Radix Tooltip and its positioning library are about 15 KB compressed, on every list
+ * and the Job page. Until the Radix half (tooltipImpl.tsx) is here, a tooltip draws only its element, and the first hover or focus
+ * fetches it. AppShell fetches it once the page's content is drawn, so on a normal visit it is there before anyone points at anything.
+ * A tooltip focused before the swap opens as soon as the Radix half arrives.
  */
-interface TooltipProps {
-  /** One short sentence or label. */
-  content: ReactNode
-  /** Two-line form: a semibold title above `content`. */
-  title?: ReactNode
-  /** Shortcut keys shown after the label ("C", or ["⌘", "↵"]). */
-  shortcut?: string | string[]
-  /** The element that is described. A single element that takes a ref. */
-  children: ReactElement
-  /** Wrap a disabled control so the tooltip (and keyboard focus) still reach it: a disabled button never fires hover. */
-  forDisabled?: boolean
-  side?: 'top' | 'bottom' | 'left' | 'right'
-}
-
-export function Tooltip({ content, title, shortcut, children, forDisabled = false, side = 'bottom' }: TooltipProps) {
-  const keys = shortcut === undefined ? [] : Array.isArray(shortcut) ? shortcut : [shortcut]
-  return (
-    <RadixTooltip.Provider delayDuration={400} skipDelayDuration={150}>
-      <RadixTooltip.Root>
-        <RadixTooltip.Trigger asChild>
-          {forDisabled ? (
-            <span tabIndex={0} className="inline-flex rounded-control">
-              {children}
-            </span>
-          ) : (
-            children
-          )}
-        </RadixTooltip.Trigger>
-        <RadixTooltip.Portal>
-          <RadixTooltip.Content
-            side={side}
-            sideOffset={6}
-            collisionPadding={8}
-            className="z-dialog max-w-[300px] animate-fade-in rounded-control bg-tone-ink-bg px-3 py-2 text-xs font-medium text-tone-ink-fg shadow-e3"
-          >
-            {title ? (
-              <div className="grid gap-[2px]">
-                <b className="font-bold">{title}</b>
-                <span className="text-pretty">{content}</span>
-                {keys.length ? <KeyRow keys={keys} /> : null}
-              </div>
-            ) : (
-              <span className="flex items-center gap-2 font-medium text-pretty">
-                {content}
-                {keys.length ? <KeyRow keys={keys} /> : null}
-              </span>
-            )}
-          </RadixTooltip.Content>
-        </RadixTooltip.Portal>
-      </RadixTooltip.Root>
-    </RadixTooltip.Provider>
-  )
-}
-
-function KeyRow({ keys }: { keys: string[] }) {
-  return (
-    <span className="inline-flex gap-1">
-      {keys.map(k => (
-        <Kbd key={k} size="inline" className="border-tone-ink-fg/30 bg-transparent text-tone-ink-fg">
-          {k}
-        </Kbd>
-      ))}
-    </span>
-  )
+export function Tooltip(props: TooltipProps) {
+  const mod = useTooltipImpl()
+  const [wanted, setWanted] = useState(false)
+  if (mod) return <mod.TooltipImpl {...props} defaultOpen={wanted} />
+  const child = props.children as ReactElement<{ onPointerEnter?: (e: PointerEvent) => void; onFocus?: (e: FocusEvent) => void }>
+  const reach = () => void preloadTooltip()
+  const focus = () => {
+    setWanted(true)
+    reach()
+  }
+  if (props.forDisabled) {
+    return (
+      <span tabIndex={0} className="inline-flex rounded-control" onPointerEnter={reach} onFocus={focus}>
+        {child}
+      </span>
+    )
+  }
+  return cloneElement(child, {
+    onPointerEnter: (e: PointerEvent) => {
+      child.props.onPointerEnter?.(e)
+      reach()
+    },
+    onFocus: (e: FocusEvent) => {
+      child.props.onFocus?.(e)
+      focus()
+    },
+  })
 }
 
 /*
  * TruncateTip (components-10 "Long label, revealed"; DataTable cells with a fixed width): text that truncates with an
  * ellipsis and shows the full text in a tooltip on hover, but only when it is actually cut off. The tooltip text is the
  * element's own text, so pass plain text as children. The full text is also what a screen reader reads (nothing is removed).
+ * Until the Radix half is here it is the same span, and pointing at it fetches the Radix half.
  */
 export function TruncateTip({ children, className, style }: { children: ReactNode; className?: string; style?: CSSProperties }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const [open, setOpen] = useState(false)
-  const [text, setText] = useState('')
+  const mod = useTooltipImpl()
+  if (mod) return <mod.TruncateTipImpl className={className} style={style}>{children}</mod.TruncateTipImpl>
   return (
-    <RadixTooltip.Provider delayDuration={400} skipDelayDuration={150}>
-      <RadixTooltip.Root
-        open={open}
-        onOpenChange={next => {
-          const el = ref.current
-          if (next && el && el.scrollWidth > el.clientWidth) {
-            setText(el.textContent ?? '')
-            setOpen(true)
-          } else setOpen(false)
-        }}
-      >
-        <RadixTooltip.Trigger asChild>
-          <span ref={ref} data-truncate="" style={style} className={cn('block truncate', className)}>
-            {children}
-          </span>
-        </RadixTooltip.Trigger>
-        <RadixTooltip.Portal>
-          <RadixTooltip.Content
-            side="bottom"
-            sideOffset={6}
-            collisionPadding={8}
-            className="z-dialog max-w-[300px] animate-fade-in rounded-control bg-tone-ink-bg px-3 py-2 text-xs font-medium text-tone-ink-fg shadow-e3"
-          >
-            {text}
-          </RadixTooltip.Content>
-        </RadixTooltip.Portal>
-      </RadixTooltip.Root>
-    </RadixTooltip.Provider>
+    <span data-truncate="" style={style} className={cn('block truncate', className)} onPointerEnter={() => void preloadTooltip()}>
+      {children}
+    </span>
   )
 }
